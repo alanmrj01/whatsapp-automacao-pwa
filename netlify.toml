@@ -1,0 +1,30 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Keep auth/session same-origin from the browser's perspective. The PWA calls
+# /api/* on its own origin and Netlify proxies to Cloud Run server-side.
+[[redirects]]
+  from = "/api/*"
+  to = "https://whatsapp-backend-186627697999.southamerica-east1.run.app/api/:splat"
+  status = 200
+  force = true
+
+# SPA deep-link fallback. Keep this after the API proxy so /api is never served
+# by the React shell.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Cache-Control = "no-store"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
