@@ -1,7 +1,7 @@
 // A non-sensitive boolean, never a token or user identifier. Keeping the intent
 // across reloads prevents an unrevoked HttpOnly cookie from silently signing the
 // user back in after an offline logout. Only a confirmed revocation clears it.
-const marker = 'atende_logout_pending'
+const marker = 'alovia_logout_pending'
 
 export function hasPendingLogout(): boolean {
   return typeof document !== 'undefined' && document.cookie.split(';').some(value => value.trim() === `${marker}=1`)
