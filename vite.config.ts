@@ -14,8 +14,8 @@ export default defineConfig({
         'app-icon-maskable-512.png',
       ],
       manifest: {
-        name: 'Atende — Automação e agenda',
-        short_name: 'Atende',
+        name: 'Alôvia — Automação e agenda',
+        short_name: 'Alôvia',
         description: 'Atendimento automatizado e agenda em um só lugar.',
         theme_color: '#1769e0',
         background_color: '#f5f7fb',

@@ -29,7 +29,7 @@ export function LoginPage() {
   }
 
   return <main className="login-page">
-    <div className="login-brand"><BrandMark /><strong>Atende</strong></div>
+    <div className="login-brand"><BrandMark /><strong>Alôvia</strong></div>
     <section className="login-card">
       <span className="eyebrow">Seu atendimento, em um só lugar</span>
       <h1>Bom ter você aqui</h1>
