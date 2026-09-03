@@ -2,7 +2,8 @@ import { Check, Info, MessageCircleMore, ShieldCheck, Smartphone } from 'lucide-
 import type { LucideIcon } from 'lucide-react'
 import { PrimaryButton } from '../../components/PrimaryButton'
 import { StatusBadge } from '../../components/StatusBadge'
-import type { WhatsAppConnectionMode } from '../../lib/mocks'
+import type { WhatsAppConnectionMode } from './types'
+import { OnboardingPlanStatus } from './OnboardingPlanStatus'
 import { connectionModeLabels } from './connectionPresentation'
 
 type ConnectionInfoPageProps = {
@@ -49,6 +50,7 @@ export function ConnectionInfoPage({
       <PrimaryButton fullWidth disabled icon={<ShieldCheck size={18} />}>
         Conexão pela Meta será habilitada após configuração
       </PrimaryButton>
+      <OnboardingPlanStatus mode={mode} />
       <div className="connection-mode-symbols" aria-hidden="true">
         <MessageCircleMore size={19} />
         <span />

@@ -1,4 +1,4 @@
-import type { WhatsAppConnectionMode } from '../../lib/mocks'
+import type { WhatsAppConnectionMode } from './types'
 
 export const connectionModeLabels: Record<WhatsAppConnectionMode, string> = {
   coexistence: 'WhatsApp Business + Automação',

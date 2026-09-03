@@ -10,14 +10,19 @@ import { ActionCard } from '../../components/ActionCard'
 import { ListRow } from '../../components/ListRow'
 import { Section } from '../../components/Section'
 import { StatusBadge } from '../../components/StatusBadge'
-import { mockBusiness, mockDashboard } from '../../lib/mocks'
+import { mockDashboard } from '../../lib/mocks'
+import { useAuth } from '../auth/useAuth'
+import { useConnection } from '../whatsapp/useConnection'
+import { ConnectionStatusBadge } from '../whatsapp/ConnectionStatusBadge'
 
 export function DashboardPage() {
+  const {membership} = useAuth()
+  const connection = useConnection()
   return (
     <div className="page-stack dashboard-page">
       <section className="welcome-block">
         <span className="eyebrow">Visão geral</span>
-        <h1>Olá, {mockBusiness.name}</h1>
+        <h1>Olá, {membership?.business_name}</h1>
         <p>Veja o que precisa da sua atenção agora.</p>
       </section>
 
@@ -53,8 +58,8 @@ export function DashboardPage() {
           <ListRow
             icon={MessageCircleMore}
             title="WhatsApp"
-            subtitle="Conecte para começar"
-            trailing={<StatusBadge>Não conectado</StatusBadge>}
+            subtitle="Seu canal de atendimento"
+            trailing={connection.data && !connection.isError ? <ConnectionStatusBadge status={connection.data.status} /> : <StatusBadge>{connection.isError?'Indisponível':'Carregando'}</StatusBadge>}
             to="/app/whatsapp"
           />
         </div>
@@ -70,8 +75,8 @@ export function DashboardPage() {
           />
           <ActionCard
             icon={MessageCircleMore}
-            title="Conectar WhatsApp"
-            description="Prepare seu atendimento"
+            title="Abrir WhatsApp"
+            description="Consulte seu canal"
             to="/app/whatsapp"
           />
         </div>
@@ -81,8 +86,8 @@ export function DashboardPage() {
         <span className="next-step-card__icon"><Sparkles size={21} /></span>
         <div>
           <span className="eyebrow">Próximo passo</span>
-          <strong>Conecte seu WhatsApp</strong>
-          <p>Depois disso, você poderá configurar automação e agendamentos.</p>
+          <strong>Acompanhe seu WhatsApp</strong>
+          <p>Consulte a situação do seu canal. Agenda e resumo operacional ainda usam dados demonstrativos.</p>
         </div>
       </section>
     </div>
