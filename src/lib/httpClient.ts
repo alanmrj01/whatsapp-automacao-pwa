@@ -67,7 +67,7 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
         }
         // Serialize refresh across tabs when supported; never share a token.
         if (typeof navigator !== 'undefined' && navigator.locks) {
-          await navigator.locks.request('atende-refresh', rotate)
+          await navigator.locks.request('alovia-refresh', rotate)
         } else { await rotate() }
       })().catch(error => {
         if (generation === expected) expire()
