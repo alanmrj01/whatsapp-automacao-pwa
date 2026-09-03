@@ -1,9 +1,11 @@
 import { NavLink } from 'react-router-dom'
-import { mockBusiness } from '../lib/mocks'
+import { useAuth } from '../features/auth/useAuth'
 import { BrandMark } from './BrandMark'
 import { navigationItems } from './navigation'
 
 export function DesktopSidebar() {
+  const {membership} = useAuth()
+  const name = membership?.business_name ?? 'Sua empresa'
   return (
     <aside className="desktop-sidebar">
       <div className="desktop-sidebar__brand">
@@ -29,10 +31,10 @@ export function DesktopSidebar() {
         ))}
       </nav>
       <div className="desktop-sidebar__business">
-        <div className="business-avatar" aria-hidden="true">{mockBusiness.initials}</div>
+        <div className="business-avatar" aria-hidden="true">{name.slice(0,2).toUpperCase()}</div>
         <div>
-          <strong>{mockBusiness.name}</strong>
-          <span>Ambiente de demonstração</span>
+          <strong>{name}</strong>
+          <span>Empresa ativa</span>
         </div>
       </div>
     </aside>

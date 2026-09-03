@@ -48,7 +48,9 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,woff2}'],
         navigateFallback: '/index.html',
-        navigateFallbackAllowlist: [/^\/$/, /^\/app(?:\/|$)/],
+        // Login/admin cache only the static React shell, never API responses.
+        navigateFallbackAllowlist: [/^\/$/, /^\/app(?:\/|$)/, /^\/login$/, /^\/admin(?:\/|$)/],
+        navigateFallbackDenylist: [/^\/api(?:\/|$)/, /^\/auth(?:\/|$)/, /^\/internal(?:\/|$)/],
         runtimeCaching: [],
         cleanupOutdatedCaches: true,
       },

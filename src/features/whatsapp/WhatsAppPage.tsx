@@ -1,12 +1,23 @@
 import { ArrowRight, Cable, LockKeyhole, MessageCircleMore } from 'lucide-react'
 import { useState } from 'react'
 import { PrimaryButton } from '../../components/PrimaryButton'
-import { mockWhatsAppConnection } from '../../lib/mocks'
+import { LoadingState } from '../../components/LoadingState'
+import { ErrorState } from '../../components/ErrorState'
+import { useAuth } from '../auth/useAuth'
+import { canConfigureWhatsApp } from '../auth/types'
+import { useConnection } from './useConnection'
+import { connectionModeLabels } from './connectionPresentation'
 import { ConnectWhatsAppSheet } from './ConnectWhatsAppSheet'
 import { ConnectionStatusBadge } from './ConnectionStatusBadge'
 
 export function WhatsAppPage() {
   const [isSheetOpen, setIsSheetOpen] = useState(false)
+  const {membership} = useAuth()
+  const connection = useConnection()
+  if (connection.isPending) return <LoadingState />
+  if (connection.isError) return <ErrorState onRetry={()=>void connection.refetch()} />
+  const {status,mode} = connection.data
+  const canConnect = canConfigureWhatsApp(membership?.role) && (status === 'disconnected' || status === 'error')
 
   return (
     <div className="page-stack whatsapp-page">
@@ -17,17 +28,21 @@ export function WhatsAppPage() {
         </div>
         <span className="eyebrow">Canal de atendimento</span>
         <h1>WhatsApp</h1>
-        <ConnectionStatusBadge status={mockWhatsAppConnection.status} />
+        <ConnectionStatusBadge status={status} />
+        {mode && <p>{connectionModeLabels[mode]}</p>}
         <p>
-          Conecte seu número para ativar automação de atendimento e agendamentos.
+          {status === 'connected' ? 'Seu canal está conectado à plataforma.' :
+            status === 'pending' ? 'Sua conexão está em preparação. Aguarde a configuração oficial.' :
+            'Conecte seu número para ativar automação de atendimento e agendamentos.'}
         </p>
-        <PrimaryButton
+        {canConnect && <PrimaryButton
           fullWidth
           icon={<ArrowRight size={19} />}
           onClick={() => setIsSheetOpen(true)}
         >
           Conectar WhatsApp
-        </PrimaryButton>
+        </PrimaryButton>}
+        {!canConfigureWhatsApp(membership?.role) && <p>Acesso de leitura. A configuração é gerenciada pelo administrador.</p>}
       </section>
 
       <section className="security-note">
@@ -40,10 +55,10 @@ export function WhatsAppPage() {
 
       <section className="feature-note">
         <Cable size={20} />
-        <p>Nenhum dado será enviado à Meta nesta demonstração.</p>
+        <p>Esta etapa não realiza conexões nem envia dados à Meta.</p>
       </section>
 
-      <ConnectWhatsAppSheet open={isSheetOpen} onClose={() => setIsSheetOpen(false)} />
+      {canConnect && <ConnectWhatsAppSheet open={isSheetOpen} onClose={() => setIsSheetOpen(false)} />}
     </div>
   )
 }

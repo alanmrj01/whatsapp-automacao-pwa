@@ -1,5 +1,5 @@
 import { StatusBadge, type StatusTone } from '../../components/StatusBadge'
-import type { WhatsAppConnectionStatus } from '../../lib/mocks'
+import type { WhatsAppConnectionStatus } from './types'
 
 const statusPresentation: Record<WhatsAppConnectionStatus, { label: string; tone: StatusTone }> = {
   disconnected: { label: 'Não conectado', tone: 'neutral' },

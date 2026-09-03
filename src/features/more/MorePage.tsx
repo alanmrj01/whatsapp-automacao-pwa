@@ -1,18 +1,21 @@
 import { Bell, Building2, CircleHelp, Settings2, ShieldCheck } from 'lucide-react'
 import { ListRow } from '../../components/ListRow'
 import { Section } from '../../components/Section'
-import { mockBusiness } from '../../lib/mocks'
+import { useAuth } from '../auth/useAuth'
+import { SessionActions } from '../auth/SessionActions'
 
 export function MorePage() {
+  const {membership} = useAuth()
+  const name = membership?.business_name ?? 'Sua empresa'
   return (
     <div className="page-stack compact-page">
       <section className="business-profile">
         <div className="business-avatar business-avatar--large" aria-hidden="true">
-          {mockBusiness.initials}
+          {name.slice(0,2).toUpperCase()}
         </div>
         <div>
           <span className="eyebrow">Empresa</span>
-          <h1>{mockBusiness.name}</h1>
+          <h1>{name}</h1>
           <p>Configurações do ambiente</p>
         </div>
       </section>
@@ -29,6 +32,7 @@ export function MorePage() {
           <ListRow icon={ShieldCheck} title="Privacidade e segurança" iconTone="slate" />
         </div>
       </Section>
+      <SessionActions />
     </div>
   )
 }
