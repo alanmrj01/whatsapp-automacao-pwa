@@ -15,7 +15,7 @@ test('offline logout persists only a boolean and is cleared after confirmed revo
     assert.equal(hasPendingLogout(),false)
     markPendingLogout()
     assert.equal(hasPendingLogout(),true)
-    assert.match(lastWrite,/^atende_logout_pending=1;/)
+    assert.match(lastWrite,/^alovia_logout_pending=1;/)
     assert.match(lastWrite,/SameSite=Strict; Secure$/)
     assert.equal(hasPendingLogout(),true)
     clearPendingLogout()
