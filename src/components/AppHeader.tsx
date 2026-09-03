@@ -27,7 +27,7 @@ export function AppHeader({ title, showBack = false }: AppHeaderProps) {
         )}
         <span className="app-header__title">{title}</span>
       </div>
-      {!showBack && <span className="app-header__brand-name">Alôvia</span>}
+      {!showBack && <span className="app-header__brand-name">Alovia</span>}
     </header>
   )
 }
