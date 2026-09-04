@@ -1,0 +1,126 @@
+:root {
+  --alovia-blue: #0b67f0;
+  --alovia-blue-deep: #0a4f80;
+  --alovia-blue-soft: #eaf3ff;
+  --alovia-ice: #f6faff;
+}
+
+/* Final visual reference: approved blue mobile mockups. */
+.app-header {
+  min-height: calc(72px + env(safe-area-inset-top));
+  padding: calc(10px + env(safe-area-inset-top)) 20px 10px;
+  border-bottom: 1px solid #edf1f5;
+  color: var(--color-text);
+  background: rgb(255 255 255 / 97%);
+  box-shadow: none;
+  backdrop-filter: blur(14px);
+}
+
+.app-header__title {
+  color: #121b2b;
+  font-size: 1.12rem;
+  font-weight: 800;
+}
+
+.app-header .icon-button { color: #121b2b; }
+
+.app-header__brand-name {
+  color: var(--alovia-blue);
+  font-size: 1.05rem;
+  font-weight: 850;
+  letter-spacing: -0.02em;
+}
+
+.brand-mark {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  color: var(--alovia-blue);
+  background: transparent;
+  box-shadow: none;
+}
+
+.brand-mark::after { content: none !important; }
+
+.brand-mark svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.brand-mark svg path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 4.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.brand-mark__snow {
+  position: relative;
+  z-index: 1;
+  color: currentColor;
+}
+
+.brand-mark--inverse { color: #fff; }
+
+.primary-button {
+  background: var(--alovia-blue);
+  box-shadow: 0 8px 22px rgb(11 103 240 / 20%);
+}
+.primary-button:active:not(:disabled) { background: #075bd7; }
+
+.bottom-nav {
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  border-top-color: #edf1f5;
+  background: rgb(255 255 255 / 98%);
+  box-shadow: 0 -4px 18px rgb(15 31 56 / 5%);
+}
+.bottom-nav__item.is-active { color: var(--alovia-blue); }
+
+.login-page {
+  background: linear-gradient(180deg,#f7fbff 0%,#eef6ff 100%);
+}
+.login-brand { color: #121b2b; }
+.login-brand strong { font-size: 1.35rem; }
+.login-card { border-color: #e3ebf3; }
+
+.platform-admin__hero {
+  background: linear-gradient(145deg,#fff 0%,#f8fbff 100%);
+}
+.platform-admin__hero .primary-button {
+  background: var(--alovia-blue);
+}
+.platform-admin__hero-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.platform-admin__preview-button {
+  min-height: 50px;
+  padding: 12px 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 1px solid #cfe0f6;
+  border-radius: 14px;
+  color: #0959c6;
+  background: #f4f9ff;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+@media (min-width: 700px) {
+  .platform-admin__hero-actions { flex-direction: row; }
+}
