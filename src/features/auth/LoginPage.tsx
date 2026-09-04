@@ -31,9 +31,9 @@ export function LoginPage() {
   return <main className="login-page">
     <div className="login-brand"><BrandMark /><strong>Alovia</strong></div>
     <section className="login-card">
-      <span className="eyebrow">Seu atendimento, em um só lugar</span>
+      <span className="eyebrow">Sua operação técnica, em um só lugar</span>
       <h1>Bom ter você aqui</h1>
-      <p>Entre para acompanhar sua empresa e suas conversas.</p>
+      <p>Entre para acompanhar atendimento, agenda e rotina da sua empresa.</p>
       <form onSubmit={submit} className="auth-form">
         <label htmlFor="login-email">Email</label>
         <input id="login-email" type="email" inputMode="email" autoComplete="username" autoCapitalize="none" spellCheck={false} maxLength={254} required value={email} onChange={event=>setEmail(event.target.value)} disabled={busy} />
