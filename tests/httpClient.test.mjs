@@ -191,16 +191,37 @@ test('concurrent bootstraps share one refresh; logout blocks all late results', 
   assert.equal(refreshCalls, 1)
 })
 
-test('failed refresh by network clears session and does not retry', async () => {
-  let calls = 0, expired = 0
-  const api = createApiClient('', async url => {
-    calls++
-    if (url.endsWith('/refresh')) throw new Error('offline')
-    return response(401)
+test('network failure during refresh keeps the session recoverable', async () => {
+  let refreshCalls = 0, expired = 0
+  const api = createApiClient('', async (url, options) => {
+    if (url.endsWith('/refresh')) {
+      refreshCalls++
+      if (refreshCalls === 1) throw new Error('offline')
+      return response(200, {access_token:secret()})
+    }
+    return options.headers.Authorization ? response(200, {ok:true}) : response(401)
   })
   api.onExpired(() => expired++)
   await assert.rejects(api.request('/me'), {status:0})
-  await assert.rejects(api.request('/me'), {status:401})
-  assert.equal(calls, 2)
-  assert.equal(expired, 1)
+  assert.equal(expired, 0)
+  assert.deepEqual(await api.request('/me'), {ok:true})
+  assert.equal(refreshCalls, 2)
+  assert.equal(expired, 0)
+})
+
+test('server failure during refresh keeps the session recoverable', async () => {
+  let refreshCalls = 0, expired = 0
+  const api = createApiClient('', async (url, options) => {
+    if (url.endsWith('/refresh')) {
+      refreshCalls++
+      if (refreshCalls === 1) return response(503)
+      return response(200, {access_token:secret()})
+    }
+    return options.headers.Authorization ? response(200, {ok:true}) : response(401)
+  })
+  api.onExpired(() => expired++)
+  await assert.rejects(api.request('/me'), {status:503})
+  assert.equal(expired, 0)
+  assert.deepEqual(await api.request('/me'), {ok:true})
+  assert.equal(expired, 0)
 })
