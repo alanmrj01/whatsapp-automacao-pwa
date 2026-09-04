@@ -1,5 +1,6 @@
-import { Building2, CirclePower, Plus, RefreshCw, ShieldCheck } from 'lucide-react'
+import { Building2, CirclePower, Eye, Plus, RefreshCw, ShieldCheck } from 'lucide-react'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { AppHeader } from '../../components/AppHeader'
 import { PrimaryButton } from '../../components/PrimaryButton'
 import { ApiError } from '../../lib/httpClient'
@@ -20,6 +21,7 @@ const whatsappLabel: Record<PlatformBusiness['whatsapp_status'], string> = {
 }
 
 export function AdminPage() {
+  const navigate = useNavigate()
   const [businesses, setBusinesses] = useState<PlatformBusiness[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -93,9 +95,12 @@ export function AdminPage() {
           <h1>Empresas da Alovia</h1>
           <p>Crie tenants, defina o primeiro OWNER e acompanhe o estado operacional de cada empresa.</p>
         </div>
-        <PrimaryButton icon={<Plus size={18}/>} onClick={()=>setShowCreate(value=>!value)}>
-          {showCreate ? 'Fechar cadastro' : 'Nova empresa'}
-        </PrimaryButton>
+        <div className="platform-admin__hero-actions">
+          <button className="platform-admin__preview-button" type="button" onClick={()=>navigate('/admin/preview')}><Eye size={18}/> Prévia do aplicativo</button>
+          <PrimaryButton icon={<Plus size={18}/>} onClick={()=>setShowCreate(value=>!value)}>
+            {showCreate ? 'Fechar cadastro' : 'Nova empresa'}
+          </PrimaryButton>
+        </div>
       </section>
 
       {showCreate && <section className="platform-admin__panel">
