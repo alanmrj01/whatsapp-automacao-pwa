@@ -6,6 +6,9 @@ import type { SessionUser } from './types'
 import { AuthContext, type AuthState } from './context'
 import { clearPendingLogout, hasPendingLogout, markPendingLogout } from './logoutIntent'
 
+const BOOTSTRAP_RETRY_DELAYS_MS = [750, 1500]
+const wait = (milliseconds: number) => new Promise(resolve => setTimeout(resolve, milliseconds))
+
 export function AuthProvider({children}: {children:ReactNode}) {
   const [user, setUser] = useState<SessionUser | null>(null)
   const [state, setState] = useState<AuthState>(() => hasPendingLogout() ? 'logout_failed' : 'loading')
@@ -22,19 +25,33 @@ export function AuthProvider({children}: {children:ReactNode}) {
     if (logoutBlocked.current) return
     if (bootstrapping.current) return bootstrapping.current
     const expected = operation.current
+    setState('loading')
     bootstrapping.current = (async () => {
-      try {
-        await api.refresh()
-        if (operation.current !== expected) return
-        const me = await api.request<SessionUser>('/me')
-        if (operation.current !== expected) return
-        setUser(me)
-        setState('authenticated')
-      } catch(error) {
-        if (operation.current !== expected) return
-        api.clear()
-        dropPrivateState()
-        setState(error instanceof ApiError && error.status === 401 ? 'anonymous' : 'unavailable')
+      for (let attempt = 0; attempt <= BOOTSTRAP_RETRY_DELAYS_MS.length; attempt++) {
+        try {
+          await api.refresh()
+          if (operation.current !== expected) return
+          const me = await api.request<SessionUser>('/me')
+          if (operation.current !== expected) return
+          setUser(me)
+          setState('authenticated')
+          return
+        } catch(error) {
+          if (operation.current !== expected) return
+          if (error instanceof ApiError && error.status === 401) {
+            dropPrivateState()
+            setState('anonymous')
+            return
+          }
+          if (attempt < BOOTSTRAP_RETRY_DELAYS_MS.length) {
+            await wait(BOOTSTRAP_RETRY_DELAYS_MS[attempt])
+            if (operation.current !== expected || logoutBlocked.current) return
+            continue
+          }
+          // A transient network/server failure does not invalidate the refresh
+          // cookie. Keep the session recoverable and let the user retry.
+          setState('unavailable')
+        }
       }
     })()
     try { await bootstrapping.current }
@@ -100,8 +117,8 @@ export function AuthProvider({children}: {children:ReactNode}) {
       setState('authenticated')
     } catch(error) {
       if (operation.current === expected) {
-        dropPrivateState()
-        setState('unavailable')
+        if (error instanceof ApiError && error.status === 401) dropPrivateState()
+        setState(error instanceof ApiError && error.status === 401 ? 'anonymous' : 'unavailable')
       }
       throw error
     }
