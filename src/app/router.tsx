@@ -10,6 +10,7 @@ import { AppShell } from './AppShell'
 import { LoginPage } from '../features/auth/LoginPage'
 import { AdminPage } from '../features/auth/AdminPage'
 import { ProtectedRoute, RoleGuard } from '../features/auth/ProtectedRoute'
+import { PlatformPreviewPage } from '../features/preview/PlatformPreviewPage'
 
 export function AppRouter() {
   return (
@@ -18,6 +19,7 @@ export function AppRouter() {
       <Route path="/login" element={<LoginPage />} />
       <Route element={<ProtectedRoute platform />}>
         <Route path="/admin" element={<AdminPage />} />
+        <Route path="/admin/preview" element={<PlatformPreviewPage />} />
       </Route>
       <Route element={<ProtectedRoute />}>
       <Route path="/app" element={<AppShell />}>
