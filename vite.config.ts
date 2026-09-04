@@ -3,6 +3,18 @@ import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://alovia.netlify.app',
+        changeOrigin: true,
+        secure: true,
+        headers: {
+          Origin: 'https://alovia.netlify.app',
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({
