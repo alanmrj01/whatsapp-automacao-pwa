@@ -52,7 +52,7 @@ function HomePreview() {
         <p>Tudo pronto para otimizar seus atendimentos em refrigeração.</p>
         <button type="button"><MessageCircle size={18}/> Conectar WhatsApp</button>
       </div>
-      <img src="/refrigeration-hero.png" alt="Ar-condicionado e condensadora" />
+      <img src="/refrigeration-hero.svg" alt="Ar-condicionado e condensadora" />
     </section>
 
     <h2 className="preview-section-title">Visão geral</h2>
