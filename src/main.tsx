@@ -8,6 +8,7 @@ import { queryClient } from './app/queryClient'
 import { AuthProvider } from './features/auth/AuthProvider'
 import { OfflineBanner } from './components/OfflineBanner'
 import './styles/global.css'
+import './styles/alovia-theme.css'
 
 registerSW({ immediate: true })
 
