@@ -1,9 +1,9 @@
+import { Snowflake } from 'lucide-react'
+
 export function BrandMark() {
   return (
     <div className="brand-mark" aria-hidden="true">
-      <span />
-      <span />
-      <span />
+      <Snowflake size={19} strokeWidth={2.35} />
     </div>
   )
 }
