@@ -9,6 +9,7 @@ import { AuthProvider } from './features/auth/AuthProvider'
 import { OfflineBanner } from './components/OfflineBanner'
 import './styles/global.css'
 import './styles/alovia-theme.css'
+import './styles/approved-mockups.css'
 
 registerSW({ immediate: true })
 
