@@ -1,5 +1,5 @@
 import { Building2, CirclePower, Eye, Plus, RefreshCw, ShieldCheck } from 'lucide-react'
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppHeader } from '../../components/AppHeader'
 import { PrimaryButton } from '../../components/PrimaryButton'
@@ -20,6 +20,13 @@ const whatsappLabel: Record<PlatformBusiness['whatsapp_status'], string> = {
   error: 'Erro no WhatsApp',
 }
 
+const emptyForm = () => ({
+  name: '',
+  owner_email: '',
+  owner_password: '',
+  timezone: 'America/Sao_Paulo',
+})
+
 export function AdminPage() {
   const navigate = useNavigate()
   const [businesses, setBusinesses] = useState<PlatformBusiness[]>([])
@@ -28,12 +35,8 @@ export function AdminPage() {
   const [creating, setCreating] = useState(false)
   const [busyId, setBusyId] = useState('')
   const [showCreate, setShowCreate] = useState(false)
-  const [form, setForm] = useState({
-    name: '',
-    owner_email: '',
-    owner_password: '',
-    timezone: 'America/Sao_Paulo',
-  })
+  const [form, setForm] = useState(emptyForm)
+  const creationKey = useRef('')
 
   const load = useCallback(async () => {
     setError('')
@@ -49,24 +52,58 @@ export function AdminPage() {
 
   useEffect(() => { void Promise.resolve().then(load) }, [load])
 
+  function changeForm(field: keyof ReturnType<typeof emptyForm>, value: string) {
+    creationKey.current = ''
+    setForm(current => ({...current, [field]: value}))
+  }
+
+  function finishCreation(created: PlatformBusiness, currentBusinesses = businesses) {
+    setBusinesses([...currentBusinesses.filter(item => item.id !== created.id), created]
+      .sort((a,b) => a.name.localeCompare(b.name)))
+    creationKey.current = ''
+    setForm(emptyForm())
+    setShowCreate(false)
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (!form.name.trim() || !form.owner_email.trim() || form.owner_password.length < 12) return
+    const idempotencyKey = creationKey.current || crypto.randomUUID()
+    creationKey.current = idempotencyKey
     setCreating(true)
     setError('')
     try {
       const created = await createPlatformBusiness({
         ...form,
+        idempotency_key: idempotencyKey,
         name: form.name.trim(),
         owner_email: form.owner_email.trim(),
       })
-      setBusinesses(current => [...current, created].sort((a,b) => a.name.localeCompare(b.name)))
-      setForm({name:'', owner_email:'', owner_password:'', timezone:'America/Sao_Paulo'})
-      setShowCreate(false)
+      finishCreation(created)
     } catch (requestError) {
-      setError(requestError instanceof ApiError && requestError.status === 409
-        ? 'Este e-mail já está cadastrado na Alovia.'
-        : 'Não foi possível criar a empresa. Revise os dados e tente novamente.')
+      const transient = requestError instanceof ApiError &&
+        (requestError.status === 0 || requestError.status >= 500)
+      if (transient) {
+        // The POST may have committed even if its response was lost. Reconcile
+        // by the operation UUID before asking the administrator to retry.
+        try {
+          const refreshed = await listPlatformBusinesses()
+          const recovered = refreshed.find(item => item.id === idempotencyKey)
+          if (recovered) {
+            finishCreation(recovered, refreshed)
+            return
+          }
+          setBusinesses(refreshed)
+        } catch {
+          // Keep the same idempotency key for a later retry.
+        }
+        setError('A conexão oscilou durante a criação. Tente novamente; a Alovia reutilizará a mesma solicitação sem duplicar a empresa.')
+      } else {
+        creationKey.current = ''
+        setError(requestError instanceof ApiError && requestError.status === 409
+          ? 'Este e-mail já está cadastrado na Alovia.'
+          : 'Não foi possível criar a empresa. Revise os dados e tente novamente.')
+      }
     } finally {
       setCreating(false)
     }
@@ -109,17 +146,17 @@ export function AdminPage() {
         </div>
         <form className="platform-admin__form" onSubmit={event=>void submit(event)}>
           <label>Nome da empresa
-            <input value={form.name} maxLength={255} autoComplete="organization" required
-              onChange={event=>setForm({...form,name:event.target.value})} placeholder="Ex.: Refrigeração Piloto" />
+            <input value={form.name} maxLength={255} autoComplete="organization" required disabled={creating}
+              onChange={event=>changeForm('name', event.target.value)} placeholder="Ex.: Refrigeração Piloto" />
           </label>
           <label>E-mail do OWNER
-            <input value={form.owner_email} type="email" maxLength={254} autoComplete="email" required
-              onChange={event=>setForm({...form,owner_email:event.target.value})} placeholder="proprietario@empresa.com.br" />
+            <input value={form.owner_email} type="email" maxLength={254} autoComplete="email" required disabled={creating}
+              onChange={event=>changeForm('owner_email', event.target.value)} placeholder="proprietario@empresa.com.br" />
           </label>
           <label>Senha inicial do OWNER
             <input value={form.owner_password} type="password" minLength={12} maxLength={1024}
-              autoComplete="new-password" required
-              onChange={event=>setForm({...form,owner_password:event.target.value})} placeholder="Mínimo de 12 caracteres" />
+              autoComplete="new-password" required disabled={creating}
+              onChange={event=>changeForm('owner_password', event.target.value)} placeholder="Mínimo de 12 caracteres" />
           </label>
           <label>Fuso horário
             <input value={form.timezone} readOnly aria-readonly="true" />
