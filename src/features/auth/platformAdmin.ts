@@ -12,6 +12,7 @@ export type PlatformBusiness = {
 type PlatformBusinessList = { businesses: PlatformBusiness[] }
 
 export type CreatePlatformBusiness = {
+  idempotency_key: string
   name: string
   timezone: string
   owner_email: string
