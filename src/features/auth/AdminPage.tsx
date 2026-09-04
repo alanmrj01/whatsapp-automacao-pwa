@@ -45,7 +45,7 @@ export function AdminPage() {
     }
   }, [])
 
-  useEffect(() => { void load() }, [load])
+  useEffect(() => { void Promise.resolve().then(load) }, [load])
 
   async function submit(event: FormEvent) {
     event.preventDefault()
