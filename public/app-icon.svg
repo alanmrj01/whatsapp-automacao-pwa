@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
   <title id="title">Ícone Alovia</title>
-  <rect width="512" height="512" rx="118" fill="#073b5c"/>
-  <path d="M122 157c0-25 20-45 45-45h178c25 0 45 20 45 45v140c0 25-20 45-45 45h-116l-86 63 27-63h-3c-25 0-45-20-45-45V157Z" fill="#fff"/>
-  <g fill="none" stroke="#0f6f9e" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M256 176v132M198 209l116 66M198 275l116-66"/>
-    <path d="m256 176-16 21m16-21 16 21m-16 111-16-21m16 21 16-21"/>
-    <path d="m198 209 26 3m-26-3 11 24m105 42-26-3m26 3-11-24"/>
-    <path d="m198 275 11-24m-11 24 26-3m90-63-11 24m11-24-26 3"/>
+  <rect width="512" height="512" rx="120" fill="#0b67f0"/>
+  <path d="M256 100c-92.8 0-168 65.8-168 147 0 44.6 22.7 84.6 58.6 111.6L126 421l68.9-38.2c19.1 7.2 39.8 11.2 61.1 11.2 92.8 0 168-65.8 168-147s-75.2-147-168-147Z" fill="none" stroke="#fff" stroke-width="28" stroke-linejoin="round"/>
+  <g fill="none" stroke="#fff" stroke-width="15" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M256 172v150M191 209l130 76M191 285l130-76"/>
+    <path d="M256 190l-18-13M256 190l18-13M256 304l-18 13M256 304l18 13"/>
+    <path d="M207 218l-3-22M207 218l-21 9M305 276l3 22M305 276l21-9"/>
+    <path d="M207 276l-21-9M207 276l-3 22M305 218l21 9M305 218l3-22"/>
   </g>
 </svg>
