@@ -12,7 +12,6 @@ export type PlatformBusiness = {
 type PlatformBusinessList = { businesses: PlatformBusiness[] }
 
 export type CreatePlatformBusiness = {
-  idempotency_key: string
   name: string
   timezone: string
   owner_email: string
@@ -23,9 +22,10 @@ export async function listPlatformBusinesses() {
   return (await api.request<PlatformBusinessList>('/admin/businesses')).businesses
 }
 
-export async function createPlatformBusiness(payload: CreatePlatformBusiness) {
+export async function createPlatformBusiness(payload: CreatePlatformBusiness, idempotencyKey: string) {
   return api.request<PlatformBusiness>('/admin/businesses', {
     method: 'POST',
+    headers: {'Idempotency-Key': idempotencyKey},
     body: JSON.stringify(payload),
   })
 }
