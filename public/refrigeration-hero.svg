@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 250" role="img" aria-labelledby="title">
+  <title id="title">Ar-condicionado e condensadora</title>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#f7fbff"/>
+      <stop offset="1" stop-color="#e5f2ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="360" height="250" rx="28" fill="url(#bg)"/>
+  <path d="M8 104c65-27 121-12 178 5s111 24 166-9M10 125c61-24 116-10 169 5s111 25 171-6M13 146c61-20 116-7 168 8s109 22 165-2" fill="none" stroke="#bedcff" stroke-width="3" stroke-linecap="round"/>
+  <g transform="translate(132 35)">
+    <rect width="164" height="60" rx="14" fill="#fff" stroke="#d6dde4" stroke-width="2"/>
+    <rect x="18" y="44" width="128" height="7" rx="3.5" fill="#c7d0d8"/>
+    <path d="M23 51h118" stroke="#8693a0" stroke-width="2"/>
+    <circle cx="146" cy="18" r="3" fill="#b5c0ca"/>
+  </g>
+  <g transform="translate(72 116)">
+    <rect width="128" height="105" rx="10" fill="#fff" stroke="#cfd8e1" stroke-width="2"/>
+    <circle cx="54" cy="52" r="35" fill="#f4f6f8" stroke="#aab5c0" stroke-width="2"/>
+    <circle cx="54" cy="52" r="7" fill="#758290"/>
+    <g stroke="#758290" stroke-width="3" stroke-linecap="round">
+      <path d="M54 20v64M22 52h64M31 29l46 46M77 29 31 75"/>
+    </g>
+    <rect x="98" y="15" width="16" height="16" rx="3" fill="#eef2f5" stroke="#cbd4dc"/>
+  </g>
+  <g transform="translate(188 139)">
+    <circle cx="55" cy="55" r="48" fill="#dcebff" stroke="#9bc7ff" stroke-width="2"/>
+    <g fill="none" stroke="#0b67f0" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M55 25v60M29 40l52 30M29 70l52-30"/>
+      <path d="M55 33l-8-6M55 33l8-6M55 77l-8 6M55 77l8 6"/>
+      <path d="M36 44l-2-9M36 44l-9 4M74 66l2 9M74 66l9-4"/>
+      <path d="M36 66l-9-4M36 66l-2 9M74 44l9 4M74 44l2-9"/>
+    </g>
+  </g>
+</svg>
