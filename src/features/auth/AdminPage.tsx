@@ -75,10 +75,9 @@ export function AdminPage() {
     try {
       const created = await createPlatformBusiness({
         ...form,
-        idempotency_key: idempotencyKey,
         name: form.name.trim(),
         owner_email: form.owner_email.trim(),
-      })
+      }, idempotencyKey)
       finishCreation(created)
     } catch (requestError) {
       const transient = requestError instanceof ApiError &&
