@@ -1,8 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
-  <title id="title">Ícone adaptável Atende</title>
-  <rect width="512" height="512" fill="#1769e0"/>
-  <path d="M157 157c0-21 17-38 38-38h122c21 0 38 17 38 38v112c0 21-17 38-38 38h-56l-57 57c-11 11-30 3-30-12v-45h-6c-21 0-38-17-38-38V157Z" fill="#fff"/>
-  <circle cx="209" cy="213" r="16" fill="#1769e0"/>
-  <circle cx="256" cy="213" r="16" fill="#1769e0"/>
-  <circle cx="303" cy="213" r="16" fill="#1769e0"/>
+  <title id="title">Ícone adaptável Alovia</title>
+  <rect width="512" height="512" fill="#073b5c"/>
+  <path d="M138 168c0-22 18-40 40-40h156c22 0 40 18 40 40v122c0 22-18 40-40 40H232l-75 55 24-55h-3c-22 0-40-18-40-40V168Z" fill="#fff"/>
+  <g fill="none" stroke="#0f6f9e" stroke-width="16" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M256 185v112M207 213l98 56M207 269l98-56"/>
+    <path d="m256 185-14 18m14-18 14 18m-14 94-14-18m14 18 14-18"/>
+    <path d="m207 213 22 3m-22-3 9 20m89 36-22-3m22 3-9-20"/>
+    <path d="m207 269 9-20m-9 20 22-3m76-53-9 20m9-20-22 3"/>
+  </g>
 </svg>
