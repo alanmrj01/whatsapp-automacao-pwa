@@ -1,11 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
   <title id="title">Ícone adaptável Alovia</title>
   <rect width="512" height="512" fill="#0b67f0"/>
-  <path d="M256 122c-79.6 0-144 56.4-144 126 0 38.2 19.5 72.5 50.2 95.7L145 396l59.1-32.8c16.4 6.2 34.1 9.6 51.9 9.6 79.6 0 144-56.4 144-126s-64.4-124.8-144-124.8Z" fill="none" stroke="#fff" stroke-width="25" stroke-linejoin="round"/>
-  <g fill="none" stroke="#fff" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M256 184v126M201 215l110 64M201 279l110-64"/>
-    <path d="M256 200l-16-12M256 200l16-12M256 294l-16 12M256 294l16 12"/>
-    <path d="M214 223l-3-19M214 223l-18 8M298 271l3 19M298 271l18-8"/>
-    <path d="M214 271l-18-8M214 271l-3 19M298 223l18 8M298 223l3-19"/>
+  <g transform="translate(96 96) scale(5)" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M32 7a24 24 0 1 1-12.7 44.4L7 55l3.6-12.4A24 24 0 0 1 32 7Z" stroke-width="6" stroke-linejoin="miter"/>
+    <g transform="translate(32 31)" stroke-width="2.4">
+      <path d="M0-12V0m-3-10 3 3 3-3" transform="rotate(0)"/>
+      <path d="M0-12V0m-3-10 3 3 3-3" transform="rotate(60)"/>
+      <path d="M0-12V0m-3-10 3 3 3-3" transform="rotate(120)"/>
+      <path d="M0-12V0m-3-10 3 3 3-3" transform="rotate(180)"/>
+      <path d="M0-12V0m-3-10 3 3 3-3" transform="rotate(240)"/>
+      <path d="M0-12V0m-3-10 3 3 3-3" transform="rotate(300)"/>
+    </g>
   </g>
 </svg>

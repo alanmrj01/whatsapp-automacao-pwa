@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  Gauge,
   Headphones,
   Home,
   Menu,
@@ -13,6 +14,7 @@ import {
   MessagesSquare,
   Search,
   Snowflake,
+  Sparkles,
   Store,
   Wrench,
 } from 'lucide-react'
@@ -48,11 +50,11 @@ function HomePreview() {
     <PreviewHeader title="Início" />
     <section className="preview-home-hero">
       <div>
-        <h1>Olá, PEMA TESTE!</h1>
+        <h1>Olá, PEMA Ar Condicionado!</h1>
         <p>Tudo pronto para otimizar seus atendimentos em refrigeração.</p>
         <button type="button"><MessageCircle size={18}/> Conectar WhatsApp</button>
       </div>
-      <img src="/refrigeration-hero.svg" alt="Ar-condicionado e condensadora" />
+      <img src="/refrigeration-hero.webp" width="720" height="540" alt="Ar-condicionado split e condensadora" />
     </section>
 
     <h2 className="preview-section-title">Visão geral</h2>
@@ -68,8 +70,8 @@ function HomePreview() {
       <div className="preview-service-grid">
         <div><Snowflake/><span>Instalação</span><strong>23%</strong></div>
         <div><Wrench/><span>Manutenção</span><strong>45%</strong></div>
-        <div><span className="preview-spark">✦</span><span>Limpeza</span><strong>15%</strong></div>
-        <div><span className="preview-gauge">◴</span><span>Carga de gás</span><strong>17%</strong></div>
+        <div><Sparkles aria-hidden="true"/><span>Limpeza</span><strong>15%</strong></div>
+        <div><Gauge aria-hidden="true"/><span>Carga de gás</span><strong>17%</strong></div>
       </div>
     </section>
 
@@ -89,7 +91,7 @@ function ConversationsPreview() {
   return <div className="customer-preview__screen">
     <div className="preview-page-title"><h1>Conversas</h1><button type="button">+</button></div>
     <label className="preview-search"><Search size={19}/><input placeholder="Buscar conversas" /></label>
-    <div className="preview-filters"><button className="is-active">Leads <span>12</span></button><button>Orçamentos <span>8</span></button><button>Suporte <span>5</span></button><button>Pós-venda</button></div>
+    <div className="preview-filters"><button className="is-active">Aguardando atendimento <span>12</span></button><button>Orçamentos <span>8</span></button><button>Suporte <span>5</span></button><button>Pós-venda</button></div>
     <div className="preview-priority-hint"><span>Fila inteligente</span> Quem aguarda resposta fica no topo.</div>
     <section className="preview-conversation-list">
       {conversations.map((item,index)=><article key={item.name} className={item.waiting ? 'is-waiting' : ''}>
@@ -122,7 +124,7 @@ function AgendaPreview() {
 function MorePreview() {
   return <div className="customer-preview__screen">
     <PreviewHeader title="Mais" />
-    <section className="preview-company-card"><div className="preview-company-logo">PE</div><div><small>Empresa</small><h1>PEMA TESTE</h1><p>Operação de climatização e refrigeração</p></div></section>
+    <section className="preview-company-card"><div className="preview-company-logo">PE</div><div><small>Empresa</small><h1>PEMA Ar Condicionado</h1><p>Operação de climatização e refrigeração</p></div></section>
     <h2 className="preview-section-title">Sua operação</h2>
     <div className="preview-more-list">
       <button><Wrench/><span><strong>Serviços e preços</strong><small>Instalação, manutenção, limpeza e outros</small></span><ChevronRight/></button>
