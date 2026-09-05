@@ -13,12 +13,14 @@ import { ListRow } from '../../components/ListRow'
 import { Section } from '../../components/Section'
 import { StatusBadge } from '../../components/StatusBadge'
 import { mockDashboard } from '../../lib/mocks'
+import { isFreeAccess } from '../auth/types'
 import { useAuth } from '../auth/useAuth'
 import { useConnection } from '../whatsapp/useConnection'
 import { ConnectionStatusBadge } from '../whatsapp/ConnectionStatusBadge'
 
 export function DashboardPage() {
   const {membership} = useAuth()
+  const free = isFreeAccess(membership)
   const connection = useConnection()
   return (
     <div className="page-stack dashboard-page">
@@ -40,8 +42,8 @@ export function DashboardPage() {
           <ListRow
             icon={Bot}
             title="Automação de atendimento"
-            subtitle={mockDashboard.automationLabel}
-            trailing={<StatusBadge tone="warning">Configurar</StatusBadge>}
+            subtitle={free ? 'Conheça como a Alovia conduz o primeiro atendimento' : mockDashboard.automationLabel}
+            trailing={free ? <StatusBadge>Demonstração</StatusBadge> : <StatusBadge tone="warning">Configurar</StatusBadge>}
           />
           <ListRow
             icon={CalendarCheck2}
@@ -60,8 +62,12 @@ export function DashboardPage() {
           <ListRow
             icon={MessageCircleMore}
             title="Canal WhatsApp"
-            subtitle="Entrada dos pedidos de atendimento"
-            trailing={connection.data && !connection.isError ? <ConnectionStatusBadge status={connection.data.status} /> : <StatusBadge>{connection.isError?'Indisponível':'Carregando'}</StatusBadge>}
+            subtitle={free ? 'Você está navegando pela demonstração da operação' : 'Entrada dos pedidos de atendimento'}
+            trailing={free
+              ? <StatusBadge>Demonstração ativa</StatusBadge>
+              : connection.data && !connection.isError
+                ? <ConnectionStatusBadge status={connection.data.status} />
+                : <StatusBadge>{connection.isError?'Indisponível':'Carregando'}</StatusBadge>}
             to="/app/whatsapp"
           />
         </div>
@@ -96,8 +102,10 @@ export function DashboardPage() {
         <span className="next-step-card__icon"><Sparkles size={21} /></span>
         <div>
           <span className="eyebrow">Próximo passo</span>
-          <strong>Prepare sua operação técnica</strong>
-          <p>Cadastre serviços e horários para a Alovia transformar pedidos do WhatsApp em uma agenda organizada.</p>
+          <strong>{free ? 'Conheça a operação antes de ativar' : 'Prepare sua operação técnica'}</strong>
+          <p>{free
+            ? 'Navegue pela Alovia para entender como atendimento, agenda e rotina técnica se conectam.'
+            : 'Cadastre serviços e horários para a Alovia transformar pedidos do WhatsApp em uma agenda organizada.'}</p>
         </div>
       </section>
     </div>

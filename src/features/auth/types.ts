@@ -1,5 +1,11 @@
 export type MembershipRole = 'owner' | 'admin' | 'attendant' | 'viewer'
-export type Membership = { business_id: string; business_name: string; role: MembershipRole }
+export type AccessMode = 'free' | 'paid'
+export type Membership = {
+  business_id: string
+  business_name: string
+  role: MembershipRole
+  access_mode: AccessMode
+}
 export type SessionUser = {
   id: string
   email: string
@@ -10,6 +16,10 @@ export type SessionUser = {
 
 export function canConfigureWhatsApp(role?: MembershipRole) {
   return role === 'owner' || role === 'admin'
+}
+
+export function isFreeAccess(membership?: Membership) {
+  return membership?.access_mode === 'free'
 }
 
 export function homeFor(user: SessionUser) {

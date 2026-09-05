@@ -97,22 +97,37 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
     return value
   }
 
+  async function startAuthentication(path: string, payload: object, headers?: HeadersInit) {
+    if (loggingOut || loggingIn) throw new ApiError(401)
+    const previousRefresh = refreshing
+    clear()
+    blocked = false
+    const expected = generation
+    loggingIn = (async () => {
+      if (previousRefresh) await previousRefresh.catch(() => {})
+      if (generation !== expected) throw new ApiError(401)
+      await acceptToken(await raw(path, {
+        method:'POST',
+        headers,
+        body:JSON.stringify(payload),
+      }), expected)
+    })()
+    try { await loggingIn }
+    finally { loggingIn = null }
+  }
+
   return {
     request, refresh, clear,
     onExpired(listener: () => void) { onExpired = listener },
     async login(email: string, password: string) {
-      if (loggingOut || loggingIn) throw new ApiError(401)
-      const previousRefresh = refreshing
-      clear()
-      blocked = false
-      const expected = generation
-      loggingIn = (async () => {
-        if (previousRefresh) await previousRefresh.catch(() => {})
-        if (generation !== expected) throw new ApiError(401)
-        await acceptToken(await raw('/auth/login', {method:'POST',body:JSON.stringify({email,password})}), expected)
-      })()
-      try { await loggingIn }
-      finally { loggingIn = null }
+      await startAuthentication('/auth/login', {email,password})
+    },
+    async signup(businessName: string, email: string, password: string, idempotencyKey: string) {
+      await startAuthentication('/auth/signup', {
+        business_name: businessName,
+        email,
+        password,
+      }, {'Idempotency-Key': idempotencyKey})
     },
     async logout() {
       if (loggingOut) return loggingOut
