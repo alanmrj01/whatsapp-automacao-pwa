@@ -39,6 +39,7 @@ export function SignupPage() {
     }
     const key = idempotencyKey.current || crypto.randomUUID()
     idempotencyKey.current = key
+    let preserveAttempt = false
     setBusy(true)
     setError('')
     try {
@@ -46,6 +47,7 @@ export function SignupPage() {
       idempotencyKey.current = ''
     } catch (failure) {
       const transient = failure instanceof ApiError && (failure.status === 0 || failure.status >= 500)
+      preserveAttempt = transient
       if (!transient) idempotencyKey.current = ''
       setError(
         failure instanceof ApiError && failure.status === 409
@@ -59,8 +61,12 @@ export function SignupPage() {
                 : 'Não foi possível criar sua conta. Revise os dados e tente novamente.',
       )
     } finally {
-      setPassword('')
-      setConfirmation('')
+      // If the response may have been lost after the server committed, keep the
+      // exact payload in memory so the next click can safely reuse the same UUID.
+      if (!preserveAttempt) {
+        setPassword('')
+        setConfirmation('')
+      }
       setBusy(false)
     }
   }
