@@ -85,6 +85,24 @@ export function AuthProvider({children}: {children:ReactNode}) {
     setState('authenticated')
   }
 
+  async function signup(businessName:string,email:string,password:string,idempotencyKey:string) {
+    if (hasPendingLogout()) throw new ApiError(401)
+    const expected = ++operation.current
+    logoutBlocked.current = false
+    dropPrivateState()
+    try {
+      await api.signup(businessName,email,password,idempotencyKey)
+      if (operation.current !== expected) return
+      const me = await api.request<SessionUser>('/me')
+      if (operation.current !== expected) return
+      setUser(me)
+      setState('authenticated')
+    } catch(error) {
+      if (operation.current === expected) setState('anonymous')
+      throw error
+    }
+  }
+
   async function logout() {
     operation.current++
     logoutBlocked.current = true
@@ -126,5 +144,5 @@ export function AuthProvider({children}: {children:ReactNode}) {
 
   return <AuthContext.Provider value={{state,user,
     membership:user?.memberships.find(m=>m.business_id===user.active_business_id),
-    login,logout,selectBusiness,bootstrap}}>{children}</AuthContext.Provider>
+    login,signup,logout,selectBusiness,bootstrap,reconnect:bootstrap}}>{children}</AuthContext.Provider>
 }
