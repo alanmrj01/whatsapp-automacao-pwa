@@ -62,6 +62,7 @@ export function WhatsAppPage() {
         <h1>WhatsApp</h1>
         <ConnectionStatusBadge status={status} />
         {mode && <p>{connectionModeLabels[mode]}</p>}
+        {connection.data.display_phone_number && <p>Número conectado: {connection.data.display_phone_number}</p>}
         <p>
           {status === 'connected' ? 'Seu número está conectado à Alovia.' :
             status === 'pending' ? 'Sua conexão está em preparação. Aguarde a configuração oficial.' :
