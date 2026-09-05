@@ -1,6 +1,6 @@
 import { Eye, EyeOff, LockKeyhole } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { BrandMark } from '../../components/BrandMark'
 import { PrimaryButton } from '../../components/PrimaryButton'
 import { LoadingState } from '../../components/LoadingState'
@@ -8,6 +8,7 @@ import { ApiError } from '../../lib/httpClient'
 import { useAuth } from './useAuth'
 import { homeFor } from './types'
 import { LogoutRecovery } from './LogoutRecovery'
+import { SessionRecovery } from './SessionRecovery'
 
 export function LoginPage() {
   const auth = useAuth()
@@ -17,6 +18,7 @@ export function LoginPage() {
   const [busy,setBusy] = useState(false)
   const [error,setError] = useState('')
   if (auth.state === 'logout_failed') return <LogoutRecovery />
+  if (auth.state === 'unavailable') return <SessionRecovery />
   if (auth.state === 'loading' || auth.state === 'logging_out') return <div className="auth-boundary"><LoadingState /></div>
   if (auth.user) return <Navigate to={homeFor(auth.user)} replace />
 
@@ -46,6 +48,12 @@ export function LoginPage() {
         <PrimaryButton type="submit" fullWidth disabled={busy} aria-busy={busy}>{busy?'Entrando…':'Entrar'}</PrimaryButton>
       </form>
       <div className="login-security"><LockKeyhole size={17}/><span>Acesso seguro à sua empresa</span></div>
+      <div className="auth-choice auth-choice--stacked">
+        <strong>Primeira vez por aqui?</strong>
+        <p>Crie sua conta grátis e veja como a Alovia organiza sua operação.</p>
+        <Link to="/criar-conta" className="auth-secondary-link auth-secondary-link--primary">Criar conta grátis</Link>
+        <small>Sem compromisso agora. Você conhece primeiro, decide depois.</small>
+      </div>
     </section>
   </main>
 }
