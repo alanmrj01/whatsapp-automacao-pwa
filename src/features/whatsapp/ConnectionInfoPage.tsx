@@ -1,5 +1,6 @@
 import { Check, Info, MessageCircleMore, ShieldCheck, Smartphone } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { PrimaryButton } from '../../components/PrimaryButton'
 import { StatusBadge } from '../../components/StatusBadge'
 import type { WhatsAppConnectionMode } from './types'
@@ -12,6 +13,8 @@ type ConnectionInfoPageProps = {
   title: string
   description: string
   benefits: string[]
+  action?: ReactNode
+  callout?: string
 }
 
 export function ConnectionInfoPage({
@@ -20,6 +23,8 @@ export function ConnectionInfoPage({
   title,
   description,
   benefits,
+  action,
+  callout,
 }: ConnectionInfoPageProps) {
   return (
     <div className="page-stack connection-info-page">
@@ -44,12 +49,12 @@ export function ConnectionInfoPage({
 
       <section className="informative-callout">
         <Info size={19} />
-        <p>Esta tela apenas prepara o fluxo. Nenhuma conexão será realizada agora.</p>
+        <p>{callout ?? 'Esta tela apenas prepara o fluxo. Nenhuma conexão será realizada agora.'}</p>
       </section>
 
-      <PrimaryButton fullWidth disabled icon={<ShieldCheck size={18} />}>
+      {action ?? <PrimaryButton fullWidth disabled icon={<ShieldCheck size={18} />}>
         Conexão pela Meta será habilitada após configuração
-      </PrimaryButton>
+      </PrimaryButton>}
       <OnboardingPlanStatus mode={mode} />
       <div className="connection-mode-symbols" aria-hidden="true">
         <MessageCircleMore size={19} />

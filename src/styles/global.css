@@ -69,6 +69,10 @@
 .logout-button { min-height:48px; display:flex; align-items:center; gap:10px; padding:12px 16px; border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--color-surface); color:var(--color-text); cursor:pointer; }
 .logout-button:disabled { opacity:.65; }
 .plan-note { font-size:.85rem; }
+.embedded-signup-action { display:grid; gap:10px; }
+.embedded-signup-action p { margin:0; font-size:.86rem; text-align:center; }
+.embedded-signup-action__success { color:#087443; }
+.embedded-signup-action__error { color:#a32d2d; }
 
 * {
   box-sizing: border-box;
