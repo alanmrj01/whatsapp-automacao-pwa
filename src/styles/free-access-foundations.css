@@ -1,0 +1,86 @@
+.signup-page,
+.session-recovery-page {
+  min-height: 100dvh;
+}
+
+.signup-card,
+.session-recovery-card {
+  width: min(100%, 520px);
+}
+
+.auth-choice {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #e5edf6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.auth-choice--stacked {
+  align-items: stretch;
+  flex-direction: column;
+  text-align: center;
+}
+
+.auth-choice p,
+.auth-choice small,
+.auth-footnote {
+  margin: 0;
+  color: #66758a;
+  line-height: 1.5;
+}
+
+.auth-choice strong {
+  color: #182235;
+}
+
+.auth-secondary-link,
+.auth-secondary-button {
+  min-height: 46px;
+  padding: 11px 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #cfe0f6;
+  border-radius: 13px;
+  color: #0b67f0;
+  background: #f6faff;
+  font: inherit;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.auth-secondary-link--primary {
+  min-height: 50px;
+}
+
+.auth-secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: .6;
+}
+
+.auth-footnote {
+  margin-top: 14px;
+  text-align: center;
+  font-size: .88rem;
+}
+
+.session-recovery-actions {
+  margin-top: 22px;
+  display: grid;
+  gap: 10px;
+}
+
+.session-recovery-card h1,
+.signup-card h1 {
+  margin-bottom: 8px;
+}
+
+@media (min-width: 700px) {
+  .auth-choice--stacked {
+    text-align: left;
+  }
+}
