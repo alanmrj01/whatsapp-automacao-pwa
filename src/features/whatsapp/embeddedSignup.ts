@@ -77,11 +77,27 @@ function openEmbeddedSignup(
     let authorizationCode: string | null = null
     let assets: {waba_id:string; phone_number_id?:string} | null = null
     let settled = false
+    let popupWindow: Window | null = null
+    let popupPoll: number | null = null
+    let popupCloseGrace: number | null = null
+    let loginReturnedWithoutCode = false
+
     const timeout = runtime.setTimeout(() => finish(new EmbeddedSignupError()), 120_000)
 
+    const stopPopupWatch = () => {
+      if (popupPoll !== null) {
+        runtime.clearInterval(popupPoll)
+        popupPoll = null
+      }
+      if (popupCloseGrace !== null) {
+        runtime.clearTimeout(popupCloseGrace)
+        popupCloseGrace = null
+      }
+    }
     const cleanup = () => {
       runtime.clearTimeout(timeout)
       runtime.removeEventListener('message', sessionListener)
+      stopPopupWatch()
     }
     const finish = (error?: Error) => {
       if (settled) return
@@ -93,6 +109,20 @@ function openEmbeddedSignup(
     }
     const maybeFinish = () => {
       if (authorizationCode && assets) finish()
+    }
+    const schedulePopupClosedResolution = () => {
+      if (settled || popupCloseGrace !== null) return
+      popupCloseGrace = runtime.setTimeout(() => {
+        popupCloseGrace = null
+        if (settled) return
+        if (authorizationCode && assets) {
+          finish()
+          return
+        }
+        finish(loginReturnedWithoutCode
+          ? new EmbeddedSignupCancelledError()
+          : new EmbeddedSignupError())
+      }, 1_500)
     }
     function sessionListener(event: MessageEvent) {
       if (!META_MESSAGE_ORIGINS.has(event.origin)) return
@@ -118,11 +148,28 @@ function openEmbeddedSignup(
     }
 
     runtime.addEventListener('message', sessionListener)
+
+    const originalWindowOpen = typeof runtime.open === 'function'
+      ? runtime.open.bind(runtime)
+      : null
+    if (originalWindowOpen) {
+      runtime.open = ((url?: string | URL, target?: string, features?: string) => {
+        const popup = originalWindowOpen(url, target, features)
+        if (popup) popupWindow = popup
+        return popup
+      }) as typeof runtime.open
+    }
+
     try {
       sdk.login((response) => {
         const code = response.authResponse?.code?.trim()
         if (!code) {
-          finish(new EmbeddedSignupCancelledError())
+          // Mobile browsers and installed PWAs can return an empty login
+          // callback while the Meta flow is still open in another tab/window.
+          // Only an explicit Meta CANCEL, the popup closing, or the timeout
+          // should classify the flow as cancelled/failed.
+          loginReturnedWithoutCode = true
+          if (popupWindow?.closed) schedulePopupClosedResolution()
           return
         }
         authorizationCode = code
@@ -139,7 +186,15 @@ function openEmbeddedSignup(
       })
     } catch {
       finish(new EmbeddedSignupError())
+    } finally {
+      if (originalWindowOpen) runtime.open = originalWindowOpen as typeof runtime.open
     }
+
+    if (settled || !popupWindow) return
+    popupPoll = runtime.setInterval(() => {
+      if (settled) return
+      if (popupWindow?.closed) schedulePopupClosedResolution()
+    }, 500)
   })
 }
 

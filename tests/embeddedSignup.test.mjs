@@ -16,13 +16,16 @@ const configuration = {
   mode: 'coexistence',
 }
 
-function runtimeFor(login) {
+function runtimeFor(login, {popup = null} = {}) {
   const listeners = new Set()
   const runtime = {
     FB: undefined,
     fbAsyncInit: undefined,
     setTimeout,
     clearTimeout,
+    setInterval,
+    clearInterval,
+    open() { return popup },
     addEventListener(type, listener) { if (type === 'message') listeners.add(listener) },
     removeEventListener(type, listener) { if (type === 'message') listeners.delete(listener) },
     document: {
@@ -88,19 +91,51 @@ test('coexistence usa os parâmetros oficiais e combina code com sessão Meta', 
   })
 })
 
-test('cancelamento e erro da Meta são tratados sem payload sensível', async () => {
-  const cancelled = runtimeFor(({callback}) => callback({}))
+test('callback vazio no mobile/PWA não cancela enquanto o fluxo Meta continua', async () => {
+  const popup = {closed:false}
+  const runtime = runtimeFor(({runtime, listeners, callback}) => {
+    runtime.open('https://www.facebook.com/dialog')
+    callback({})
+    setTimeout(() => {
+      callback({authResponse:{code:'mobile-code'}})
+      send(listeners, {
+        type:'WA_EMBEDDED_SIGNUP',
+        event:'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING',
+        data:{waba_id:'333333333333333'},
+      })
+      popup.closed = true
+    }, 10)
+  }, {popup})
+
+  const result = await launchMetaEmbeddedSignup(configuration, runtime)
+  assert.deepEqual(result, {
+    authorization_code:'mobile-code',
+    waba_id:'333333333333333',
+  })
+})
+
+test('CANCEL explícito da Meta continua sendo cancelamento seguro', async () => {
+  const runtime = runtimeFor(({listeners, callback}) => {
+    callback({})
+    send(listeners, {
+      type:'WA_EMBEDDED_SIGNUP',
+      event:'CANCEL',
+      data:{current_step:'PHONE_NUMBER_SETUP'},
+    })
+  })
   await assert.rejects(
-    launchMetaEmbeddedSignup(configuration, cancelled),
+    launchMetaEmbeddedSignup(configuration, runtime),
     EmbeddedSignupCancelledError,
   )
+})
 
-  const failed = runtimeFor(({listeners, callback}) => {
+test('erro explícito da Meta continua sem expor payload sensível', async () => {
+  const runtime = runtimeFor(({listeners, callback}) => {
     callback({authResponse:{code:'short-lived-code'}})
     send(listeners, {type:'WA_EMBEDDED_SIGNUP', event:'ERROR', data:{error_message:'private'}})
   })
   await assert.rejects(
-    launchMetaEmbeddedSignup(configuration, failed),
+    launchMetaEmbeddedSignup(configuration, runtime),
     EmbeddedSignupError,
   )
 })
