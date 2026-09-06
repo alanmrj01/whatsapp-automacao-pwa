@@ -12,7 +12,7 @@ import {
 const configuration = {
   app_id: '111111111111111',
   configuration_id: '222222222222222',
-  graph_version: 'v23.0',
+  graph_version: 'v25.0',
   embedded_signup_version: 'v4',
   mode: 'coexistence',
 }
@@ -98,7 +98,7 @@ test('coexistence usa os parâmetros oficiais e combina code com sessão Meta', 
     phone_number_id:'444444444444444',
   })
   assert.deepEqual(runtime.initialized, {
-    appId:configuration.app_id, cookie:false, xfbml:false, version:'v23.0',
+    appId:configuration.app_id, cookie:false, xfbml:false, version:'v25.0',
   })
   assert.deepEqual(runtime.loginOptions, {
     config_id:configuration.configuration_id,
