@@ -31,6 +31,7 @@ type FacebookSdk = {
 type EmbeddedSignupWindow = Window & {
   FB?: FacebookSdk
   fbAsyncInit?: () => void
+  console?: Pick<Console, 'info'>
 }
 
 export class EmbeddedSignupCancelledError extends Error {
@@ -60,7 +61,7 @@ export function launchMetaEmbeddedSignup(
 ): Promise<EmbeddedSignupResult> {
   validateConfiguration(configuration)
   if (runtime.FB) {
-    initializeSdk(runtime.FB, configuration)
+    initializeSdk(runtime.FB, configuration, runtime)
     return openEmbeddedSignup(runtime.FB, configuration, runtime)
   }
   return prepareMetaEmbeddedSignup(configuration, runtime).then(
@@ -79,19 +80,16 @@ function openEmbeddedSignup(
     let settled = false
     let popupWindow: Window | null = null
     let popupPoll: number | null = null
-    let popupCloseGrace: number | null = null
-    let loginReturnedWithoutCode = false
 
-    const timeout = runtime.setTimeout(() => finish(new EmbeddedSignupError()), 120_000)
+    const timeout = runtime.setTimeout(() => {
+      traceMetaSignup(runtime, 'timeout')
+      finish(new EmbeddedSignupError())
+    }, 120_000)
 
     const stopPopupWatch = () => {
       if (popupPoll !== null) {
         runtime.clearInterval(popupPoll)
         popupPoll = null
-      }
-      if (popupCloseGrace !== null) {
-        runtime.clearTimeout(popupCloseGrace)
-        popupCloseGrace = null
       }
     }
     const cleanup = () => {
@@ -110,24 +108,19 @@ function openEmbeddedSignup(
     const maybeFinish = () => {
       if (authorizationCode && assets) finish()
     }
-    const schedulePopupClosedResolution = () => {
-      if (settled || popupCloseGrace !== null) return
-      popupCloseGrace = runtime.setTimeout(() => {
-        popupCloseGrace = null
-        if (settled) return
-        if (authorizationCode && assets) {
-          finish()
-          return
-        }
-        finish(loginReturnedWithoutCode
-          ? new EmbeddedSignupCancelledError()
-          : new EmbeddedSignupError())
-      }, 1_500)
-    }
     function sessionListener(event: MessageEvent) {
-      if (!META_MESSAGE_ORIGINS.has(event.origin)) return
+      const originHostname = trustedMetaOriginHostname(event.origin)
+      if (!originHostname) return
       const payload = parseSessionMessage(event.data)
       if (!payload) return
+      const wabaId = numericMetaId(payload.data?.waba_id)
+      const phoneNumberId = optionalNumericMetaId(payload.data?.phone_number_id)
+      traceMetaSignup(runtime, 'wa_session_event_received', {
+        event_name: safeEventName(payload.event),
+        origin_hostname: originHostname,
+        waba_id_received: wabaId !== null,
+        phone_number_id_received: phoneNumberId !== undefined,
+      })
       if (payload.event === 'CANCEL') {
         finish(new EmbeddedSignupCancelledError())
         return
@@ -136,13 +129,10 @@ function openEmbeddedSignup(
         finish(new EmbeddedSignupError())
         return
       }
-      if (!payload.event || !META_SUCCESS_EVENTS.has(payload.event)) return
-      const wabaId = numericMetaId(payload.data?.waba_id)
-      const phoneNumberId = optionalNumericMetaId(payload.data?.phone_number_id)
-      if (!wabaId) {
-        finish(new EmbeddedSignupError())
-        return
-      }
+      // The current Meta sample treats WA_EMBEDDED_SIGNUP SessionInfo as
+      // complete based on its assets, not on a closed list of event names.
+      // Messages that only describe an intermediate current_step remain open.
+      if (!wabaId) return
       assets = {waba_id:wabaId, ...(phoneNumberId ? {phone_number_id:phoneNumberId} : {})}
       maybeFinish()
     }
@@ -161,15 +151,18 @@ function openEmbeddedSignup(
     }
 
     try {
+      traceMetaSignup(runtime, 'login_opened')
       sdk.login((response) => {
         const code = response.authResponse?.code?.trim()
+        traceMetaSignup(runtime, 'login_callback_received', {
+          authorization_code_received: Boolean(code),
+        })
         if (!code) {
           // Mobile browsers and installed PWAs can return an empty login
           // callback while the Meta flow is still open in another tab/window.
-          // Only an explicit Meta CANCEL, the popup closing, or the timeout
-          // should classify the flow as cancelled/failed.
-          loginReturnedWithoutCode = true
-          if (popupWindow?.closed) schedulePopupClosedResolution()
+          // Only an explicit Meta CANCEL or the overall timeout should
+          // classify the flow as cancelled/failed. A mobile tab can close
+          // before the authorization code or SessionInfo reaches the opener.
           return
         }
         authorizationCode = code
@@ -179,6 +172,7 @@ function openEmbeddedSignup(
         response_type: 'code',
         override_default_response_type: true,
         extras: {
+          setup: {},
           sessionInfoVersion: '3',
           version: configuration.embedded_signup_version,
           featureType: 'whatsapp_business_app_onboarding',
@@ -193,7 +187,10 @@ function openEmbeddedSignup(
     if (settled || !popupWindow) return
     popupPoll = runtime.setInterval(() => {
       if (settled) return
-      if (popupWindow?.closed) schedulePopupClosedResolution()
+      if (popupWindow?.closed) {
+        traceMetaSignup(runtime, 'popup_closed')
+        stopPopupWatch()
+      }
     }, 500)
   })
 }
@@ -204,13 +201,14 @@ export async function prepareMetaEmbeddedSignup(
 ): Promise<FacebookSdk> {
   validateConfiguration(configuration)
   const sdk = await loadFacebookSdk(runtime)
-  initializeSdk(sdk, configuration)
+  initializeSdk(sdk, configuration, runtime)
   return sdk
 }
 
 function initializeSdk(
   sdk: FacebookSdk,
   configuration: EmbeddedSignupConfiguration,
+  runtime: EmbeddedSignupWindow,
 ) {
   sdk.init({
     appId: configuration.app_id,
@@ -218,6 +216,7 @@ function initializeSdk(
     xfbml: false,
     version: configuration.graph_version,
   })
+  traceMetaSignup(runtime, 'sdk_ready')
 }
 
 function validateConfiguration(configuration: EmbeddedSignupConfiguration) {
@@ -263,28 +262,52 @@ export function createEmbeddedSignupRunner(dependencies: {
   }
 }
 
-const META_MESSAGE_ORIGINS = new Set([
-  'https://www.facebook.com',
-  'https://web.facebook.com',
-])
-const META_SUCCESS_EVENTS = new Set([
-  'FINISH',
-  'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING',
-])
-
 function parseSessionMessage(value: unknown): {type?:string; event?:string; data?:Record<string,unknown>} | null {
   try {
     const payload = typeof value === 'string' ? JSON.parse(value) : value
     if (!payload || typeof payload !== 'object') return null
     const typed = payload as {type?:unknown; event?:unknown; data?:unknown}
-    if (typed.type !== 'WA_EMBEDDED_SIGNUP' || typeof typed.event !== 'string') return null
+    if (typed.type !== 'WA_EMBEDDED_SIGNUP') return null
     return {
       type: typed.type,
-      event: typed.event,
+      event: typeof typed.event === 'string' ? typed.event : undefined,
       data: typed.data && typeof typed.data === 'object' ? typed.data as Record<string,unknown> : undefined,
     }
   } catch {
     return null
+  }
+}
+
+export function trustedMetaOriginHostname(origin: string): string | null {
+  try {
+    const url = new URL(origin)
+    const hostname = url.hostname.toLowerCase().replace(/\.$/, '')
+    if (url.protocol !== 'https:'
+        || (url.port && url.port !== '443')
+        || url.username || url.password
+        || url.pathname !== '/' || url.search || url.hash) return null
+    if (hostname === 'facebook.com' || hostname.endsWith('.facebook.com')) {
+      return hostname
+    }
+  } catch {
+    return null
+  }
+  return null
+}
+
+function safeEventName(value: string | undefined): string {
+  return value && /^[A-Z0-9_]{1,80}$/.test(value) ? value : 'unspecified'
+}
+
+function traceMetaSignup(
+  runtime: EmbeddedSignupWindow,
+  stage: string,
+  fields: Record<string, string | boolean> = {},
+) {
+  try {
+    runtime.console?.info('meta_embedded_signup', {stage, ...fields})
+  } catch {
+    // Diagnostics must never interfere with onboarding.
   }
 }
 
