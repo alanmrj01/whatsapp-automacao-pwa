@@ -105,7 +105,6 @@ test('coexistence usa os parâmetros oficiais e combina code com sessão Meta', 
     response_type:'code',
     override_default_response_type:true,
     extras:{
-      setup:{},
       sessionInfoVersion:'3',
       version:'v4',
       featureType:'whatsapp_business_app_onboarding',
@@ -141,6 +140,33 @@ test('SessionInfo válido não depende de whitelist rígida de event', async () 
     authorization_code:'short-lived-code',
     waba_id:'333333333333333',
   })
+})
+
+test('evento com current_step não conclui antes do SessionInfo terminal', async () => {
+  let terminalSent = false
+  const runtime = runtimeFor(({listeners, callback}) => {
+    callback({authResponse:{code:'short-lived-code'}})
+    send(listeners, {
+      type:'WA_EMBEDDED_SIGNUP',
+      event:'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING',
+      data:{current_step:'PHONE_NUMBER_SETUP', waba_id:'333333333333333'},
+    })
+    setTimeout(() => {
+      terminalSent = true
+      send(listeners, {
+        type:'WA_EMBEDDED_SIGNUP',
+        event:'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING',
+        data:{waba_id:'333333333333333'},
+      })
+    }, 10)
+  })
+
+  assert.deepEqual(await launchMetaEmbeddedSignup(configuration, runtime), {
+    authorization_code:'short-lived-code',
+    waba_id:'333333333333333',
+  })
+  assert.equal(terminalSent, true)
+  assert.match(JSON.stringify(runtime.logs), /wa_session_intermediate_step/)
 })
 
 test('subdomínio HTTPS legítimo da Meta entrega SessionInfo no mobile', async () => {

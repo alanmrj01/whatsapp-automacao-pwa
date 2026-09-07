@@ -115,11 +115,13 @@ function openEmbeddedSignup(
       if (!payload) return
       const wabaId = numericMetaId(payload.data?.waba_id)
       const phoneNumberId = optionalNumericMetaId(payload.data?.phone_number_id)
+      const hasCurrentStep = payload.data?.current_step !== undefined
       traceMetaSignup(runtime, 'wa_session_event_received', {
         event_name: safeEventName(payload.event),
         origin_hostname: originHostname,
         waba_id_received: wabaId !== null,
         phone_number_id_received: phoneNumberId !== undefined,
+        intermediate_step_received: hasCurrentStep,
       })
       if (payload.event === 'CANCEL') {
         finish(new EmbeddedSignupCancelledError())
@@ -127,6 +129,12 @@ function openEmbeddedSignup(
       }
       if (payload.event === 'ERROR') {
         finish(new EmbeddedSignupError())
+        return
+      }
+      if (hasCurrentStep) {
+        traceMetaSignup(runtime, 'wa_session_intermediate_step', {
+          event_name: safeEventName(payload.event),
+        })
         return
       }
       // The current Meta sample treats WA_EMBEDDED_SIGNUP SessionInfo as
@@ -172,7 +180,6 @@ function openEmbeddedSignup(
         response_type: 'code',
         override_default_response_type: true,
         extras: {
-          setup: {},
           sessionInfoVersion: '3',
           version: configuration.embedded_signup_version,
           featureType: 'whatsapp_business_app_onboarding',
