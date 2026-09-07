@@ -4,7 +4,7 @@ import test from 'node:test'
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 
-test('Alovia uses the approved blue refrigeration visual identity', () => {
+test('Alovia uses the approved blue visual identity and broader public positioning', () => {
   const main = read('src/main.tsx')
   const approved = read('src/styles/approved-mockups.css')
   const manifest = read('vite.config.ts')
@@ -15,7 +15,7 @@ test('Alovia uses the approved blue refrigeration visual identity', () => {
   assert.match(approved, /--alovia-blue:\s*#0b67f0/)
   assert.match(approved, /\.brand-mark::after\s*\{\s*content:\s*none/i)
   assert.match(manifest, /theme_color:\s*'#0b67f0'/)
-  assert.match(manifest, /climatização e refrigeração/i)
+  assert.match(manifest, /WhatsApp, agenda e rotina organizados para pequenas operações/i)
   assert.match(icon, /Ícone Alovia/)
   assert.match(icon, /stroke="#fff"/)
   assert.match(brand, /brand-mark__snow/)

@@ -30,7 +30,7 @@ export default defineConfig({
       manifest: {
         name: 'Alovia — Atendimento e agenda técnica',
         short_name: 'Alovia',
-        description: 'Atendimento, agenda técnica e automação para climatização e refrigeração.',
+        description: 'Atendimento pelo WhatsApp, agenda e rotina organizados para pequenas operações.',
         theme_color: '#0b67f0',
         background_color: '#f6faff',
         display: 'standalone',
@@ -74,8 +74,8 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,woff2}'],
         navigateFallback: '/index.html',
-        // Login/admin cache only the static React shell, never API responses.
-        navigateFallbackAllowlist: [/^\/$/, /^\/app(?:\/|$)/, /^\/login$/, /^\/admin(?:\/|$)/],
+        // Public/auth/app routes cache only the static React shell, never API responses.
+        navigateFallbackAllowlist: [/^\/$/, /^\/app(?:\/|$)/, /^\/login$/, /^\/criar-conta$/, /^\/admin(?:\/|$)/],
         navigateFallbackDenylist: [/^\/api(?:\/|$)/, /^\/auth(?:\/|$)/, /^\/internal(?:\/|$)/],
         runtimeCaching: [],
         cleanupOutdatedCaches: true,
