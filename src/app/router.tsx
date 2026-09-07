@@ -12,11 +12,12 @@ import { SignupPage } from '../features/auth/SignupPage'
 import { AdminPage } from '../features/auth/AdminPage'
 import { ProtectedRoute, RoleGuard } from '../features/auth/ProtectedRoute'
 import { PlatformPreviewPage } from '../features/preview/PlatformPreviewPage'
+import { PublicLandingPage } from '../features/public/PublicLandingPage'
 
 export function AppRouter() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/app" replace />} />
+      <Route path="/" element={<PublicLandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/criar-conta" element={<SignupPage />} />
       <Route element={<ProtectedRoute platform />}>
