@@ -74,5 +74,5 @@ test('free WhatsApp navigation does not expose the real connection action', () =
   const dashboard = read('src/features/dashboard/DashboardPage.tsx')
   assert.match(whatsapp, /if \(free\)/)
   assert.match(whatsapp, /conexão real do WhatsApp fica disponível nos pacotes pagos/i)
-  assert.match(dashboard, /Demonstração ativa/)
+  assert.match(dashboard, /Dados de demonstração/)
 })
