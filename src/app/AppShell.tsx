@@ -10,18 +10,25 @@ const titles: Record<string, string> = {
   '/app/conversas': 'Conversas',
   '/app/whatsapp': 'WhatsApp',
   '/app/mais': 'Mais',
+  '/app/mais/empresa': 'Dados da empresa',
+  '/app/mais/horarios': 'Horários',
+  '/app/mais/automacao': 'Automação',
+  '/app/mais/equipe': 'Equipe',
+  '/app/mais/agenda': 'Configurar agenda',
 }
 
 export function AppShell() {
   const { pathname } = useLocation()
-  const isDetail = pathname.startsWith('/app/whatsapp/')
+  const isWhatsAppDetail = pathname.startsWith('/app/whatsapp/')
+  const isSettingsDetail = pathname.startsWith('/app/mais/')
+  const isDetail = isWhatsAppDetail||isSettingsDetail
   const title = titles[pathname] ?? 'Conectar WhatsApp'
 
   return (
     <div className="app-layout">
       <DesktopSidebar />
       <div className="app-column">
-        <AppHeader title={title} showBack={isDetail} />
+        <AppHeader title={title} showBack={isDetail} backTo={isSettingsDetail?'/app/mais':'/app/whatsapp'} />
         <main className="app-content" id="main-content">
           <div className="page-stack"><BusinessSelector /></div>
           <Outlet />

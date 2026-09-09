@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { cancelDemoAppointment, demoAppointments, demoToday, demoTomorrow, saveDemoAppointment, shiftDemoDate } from '../src/demo/operationalDemo.ts'
 import { deriveProductState } from '../src/features/product/deriveProductState.ts'
+import { zonedDateTimeToIso } from '../src/features/operations/timezone.ts'
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 
@@ -10,8 +11,44 @@ test('operational product states distinguish demo, setup, active and failures', 
   assert.equal(deriveProductState({access_mode:'free'}),'FREE_DEMO')
   assert.equal(deriveProductState({access_mode:'paid'},{status:'disconnected'}),'SETUP_PENDING')
   assert.equal(deriveProductState({access_mode:'paid'},{status:'connected'}),'ACTIVE')
+  assert.equal(deriveProductState({access_mode:'paid'},{status:'connected'},{},{completed:4,total:5}),'SETUP_PENDING')
+  assert.equal(deriveProductState({access_mode:'paid'},{status:'connected'},{},{completed:5,total:5}),'ACTIVE')
   assert.equal(deriveProductState({access_mode:'paid'},{status:'pending'}),'CONNECTION_PENDING')
   assert.equal(deriveProductState({access_mode:'paid'},undefined,{isError:true}),'ERROR')
+})
+
+test('paid operation uses authenticated public APIs while free mode disables every operational query', () => {
+  const operations = read('src/features/operations/api.ts')
+  const dashboard = read('src/features/dashboard/DashboardPage.tsx')
+  const agenda = read('src/features/appointments/AgendaPage.tsx')
+  const conversations = read('src/features/conversations/ConversationsPage.tsx')
+  assert.match(operations,/membership\?\.access_mode==='paid'/)
+  assert.match(operations,/enabled:context\.enabled/)
+  assert.doesNotMatch(operations,/\/internal\//)
+  assert.match(dashboard,/useDashboardToday/)
+  assert.match(agenda,/useAppointments/)
+  assert.match(agenda,/useSaveAppointment/)
+  assert.match(conversations,/useConversations/)
+  assert.match(conversations,/useConversation/)
+})
+
+test('setup and More routes are backed by real data and configuration mutations', () => {
+  const operations = read('src/features/operations/api.ts')
+  const router = read('src/app/router.tsx')
+  const more = read('src/features/more/MorePage.tsx')
+  const settings = read('src/features/more/OperationalSettingsPages.tsx')
+  for (const route of ['empresa','horarios','automacao','equipe','agenda']) assert.match(router,new RegExp(`mais/${route}`))
+  assert.match(operations,/\/setup\/status/)
+  assert.match(more,/setup\.data\?\.completed/)
+  for (const hook of ['useUpdateBusiness','useCreateWorkingHours','useUpdateAutomation','useCreateEmployee','useCreateService']) assert.match(settings,new RegExp(hook))
+})
+
+test('mutations invalidate only tenant operational resources that changed', () => {
+  const operations = read('src/features/operations/api.ts')
+  assert.match(operations,/invalidate\(context\.businessId,'appointments','dashboard','setup'\)/)
+  assert.match(operations,/invalidate\(context\.businessId,'working-hours','setup'\)/)
+  assert.match(operations,/invalidate\(context\.businessId,'automation','setup'\)/)
+  assert.match(operations,/invalidate\(context\.businessId,'employees','setup'\)/)
 })
 
 test('main navigation stays focused and WhatsApp setup remains available from More', () => {
@@ -53,6 +90,10 @@ test('demo agenda supports deterministic create, edit and cancel operations', ()
   const edited = {...created,time:'17:00'}
   assert.equal(saveDemoAppointment(withCreated,edited).find(item=>item.id===created.id).time,'17:00')
   assert.equal(cancelDemoAppointment(withCreated,created.id).find(item=>item.id===created.id).status,'cancelled')
+})
+
+test('real agenda converts company-local schedules to an absolute instant', () => {
+  assert.equal(zonedDateTimeToIso('2026-09-09','09:00','America/Sao_Paulo'),'2026-09-09T12:00:00.000Z')
 })
 
 test('information help is reusable and accessible on pointer and touch layouts', () => {

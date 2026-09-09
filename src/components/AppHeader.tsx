@@ -5,9 +5,10 @@ import { BrandMark } from './BrandMark'
 type AppHeaderProps = {
   title: string
   showBack?: boolean
+  backTo?: string
 }
 
-export function AppHeader({ title, showBack = false }: AppHeaderProps) {
+export function AppHeader({ title, showBack = false, backTo = '/app/whatsapp' }: AppHeaderProps) {
   const navigate = useNavigate()
 
   return (
@@ -18,7 +19,7 @@ export function AppHeader({ title, showBack = false }: AppHeaderProps) {
             className="icon-button"
             type="button"
             aria-label="Voltar"
-            onClick={() => navigate('/app/whatsapp')}
+            onClick={() => navigate(backTo)}
           >
             <ArrowLeft size={22} />
           </button>

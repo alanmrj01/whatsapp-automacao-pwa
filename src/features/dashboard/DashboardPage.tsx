@@ -3,7 +3,10 @@ import { Link } from 'react-router-dom'
 import { ActionCard } from '../../components/ActionCard'
 import { InfoHelp } from '../../components/InfoHelp'
 import { StatusBadge } from '../../components/StatusBadge'
+import { ErrorState } from '../../components/ErrorState'
+import { LoadingState } from '../../components/LoadingState'
 import { demoAppointments, demoOverview, demoToday } from '../../demo/operationalDemo'
+import { useBusiness, useDashboardToday } from '../operations/api'
 import { useProductState } from '../product/productState'
 
 const stateLabels = {
@@ -16,11 +19,19 @@ const stateLabels = {
 
 export function DashboardPage() {
   const {state,membership} = useProductState()
+  const dashboard = useDashboardToday()
+  const business = useBusiness()
   const demo = state === 'FREE_DEMO'
   const active = state === 'ACTIVE'
-  const metrics = demo ? demoOverview : {waiting:'—',inProgress:'—',appointmentsToday:'—',completed:'—'}
-  const appointments = demo ? demoAppointments.filter(item=>item.date===demoToday).slice(0,3) : []
-  const date = new Intl.DateTimeFormat('pt-BR',{weekday:'long',day:'numeric',month:'long'}).format(new Date())
+  const metrics = demo ? demoOverview : dashboard.data ? {
+    waiting:dashboard.data.metrics.waiting_count,
+    inProgress:dashboard.data.metrics.in_progress_count,
+    appointmentsToday:dashboard.data.metrics.appointments_today_count,
+    completed:dashboard.data.metrics.completed_today_count,
+  } : {waiting:'—',inProgress:'—',appointmentsToday:'—',completed:'—'}
+  const appointments = demo ? demoAppointments.filter(item=>item.date===demoToday).slice(0,3) : dashboard.data?.upcoming_appointments??[]
+  const timezone=demo?undefined:business.data?.timezone
+  const date = new Intl.DateTimeFormat('pt-BR',{weekday:'long',day:'numeric',month:'long',timeZone:timezone}).format(new Date())
 
   return <div className="page-stack operational-page dashboard-page">
     <section className="operational-heading">
@@ -38,7 +49,10 @@ export function DashboardPage() {
       <Link className="compact-button" to="/app/mais#configuracao">Continuar</Link>
     </section>}
 
-    <section aria-labelledby="today-overview">
+    {!demo&&(dashboard.isPending||business.isPending)&&<LoadingState/>}
+    {!demo&&(dashboard.isError||business.isError)&&<ErrorState onRetry={()=>{void dashboard.refetch();void business.refetch()}}/>}
+
+    {(demo||(dashboard.data&&business.data))&&<section aria-labelledby="today-overview">
       <div className="section-title-row"><h2 id="today-overview">Agora</h2><InfoHelp title="Indicadores do dia">Mostram somente itens que pedem ação: fila, atendimentos em curso, agenda e concluídos.</InfoHelp></div>
       <div className="operational-metrics">
         <article><MessagesSquare/><span>Aguardando</span><strong>{metrics.waiting}</strong></article>
@@ -46,16 +60,16 @@ export function DashboardPage() {
         <article><CalendarCheck2/><span>Agenda hoje</span><strong>{metrics.appointmentsToday}</strong></article>
         <article><CheckCircle2/><span>Concluídos</span><strong>{metrics.completed}</strong></article>
       </div>
-    </section>
+    </section>}
 
-    <section aria-labelledby="next-appointments">
+    {(demo||(dashboard.data&&business.data))&&<section aria-labelledby="next-appointments">
       <div className="section-title-row"><h2 id="next-appointments">Próximos atendimentos</h2><Link to="/app/agenda">Ver agenda</Link></div>
       {appointments.length ? <div className="appointment-surface">
         {appointments.map(item=><article className="appointment-compact" key={item.id}>
-          <time>{item.time}</time><div><strong>{item.customer}</strong><span>{item.service} · {item.technician}</span></div><StatusBadge tone={item.status==='confirmed'?'success':'warning'}>{item.status==='confirmed'?'Confirmado':'Pendente'}</StatusBadge>
+          <time>{'time' in item?item.time:new Intl.DateTimeFormat('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:timezone}).format(new Date(item.starts_at))}</time><div><strong>{'customer' in item?item.customer:item.customer_name}</strong><span>{'service' in item?item.service:item.service_name} · {'technician' in item?item.technician:item.employee_name}</span></div><StatusBadge tone={item.status==='confirmed'?'success':item.status==='completed'?'info':item.status==='cancelled'?'danger':'warning'}>{item.status==='confirmed'?'Confirmado':item.status==='completed'?'Concluído':item.status==='cancelled'?'Cancelado':'Pendente'}</StatusBadge>
         </article>)}
-      </div> : <div className="inline-empty"><CalendarCheck2/><span>{active?'A agenda real depende do endpoint operacional ainda não publicado.':'Nenhum compromisso disponível neste estado.'}</span></div>}
-    </section>
+      </div> : <div className="inline-empty"><CalendarCheck2/><span>Nenhum atendimento futuro para hoje.</span></div>}
+    </section>}
 
     <section aria-labelledby="quick-actions-title">
       <div className="section-title-row"><h2 id="quick-actions-title">Ações rápidas</h2></div>

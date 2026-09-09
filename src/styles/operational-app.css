@@ -180,6 +180,7 @@
 .conversation-row.is-priority { background:#fffcf7; }
 .conversation-avatar { width:44px; height:44px; display:grid; place-items:center; border-radius:50%; color:#fff; background:#6f9ee0; font-size:.75rem; font-weight:800; }
 .conversation-copy { min-width:0; }
+.conversation-copy--button { width:100%; padding:0; color:inherit; background:transparent; text-align:left; cursor:pointer; }
 .conversation-copy>div,.conversation-copy footer { display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .conversation-copy strong { font-size:.84rem; }
 .conversation-copy time,.conversation-copy footer>span { color:var(--color-text-muted); font-size:.66rem; }
@@ -206,6 +207,33 @@
 .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 .form-actions { display:flex; flex-direction:column-reverse; gap:9px; padding-top:4px; }
 
+.message-history { display:flex; flex-direction:column; gap:10px; }
+.message-history__item { max-width:88%; padding:11px 13px; border-radius:14px; background:#f0f3f7; }
+.message-history__item--outbound { align-self:flex-end; background:var(--color-primary-100); }
+.message-history__item span,.message-history__item time { color:var(--color-text-muted); font-size:.65rem; }
+.message-history__item p { margin:3px 0; color:var(--color-text); font-size:.82rem; white-space:pre-wrap; }
+
+.settings-page { max-width:680px; }
+.settings-form,.settings-editor { padding:17px; display:flex; flex-direction:column; gap:14px; border:1px solid #e2e9f1; border-radius:17px; background:#fff; }
+.settings-form label,.settings-editor>label,.settings-editor fieldset { display:flex; flex-direction:column; gap:6px; color:var(--color-text); font-size:.76rem; font-weight:700; }
+.settings-form input,.settings-form select,.settings-editor input,.settings-editor select { width:100%; min-height:48px; padding:10px 12px; border:1px solid var(--color-border-strong); border-radius:12px; color:var(--color-text); background:#fff; font:inherit; font-size:16px; }
+.settings-form--inline { margin-bottom:12px; }
+.settings-note { font-size:.78rem; }
+.settings-list { overflow:hidden; display:grid; gap:10px; }
+.settings-row { min-height:72px; padding:12px 14px; display:grid; grid-template-columns:32px minmax(0,1fr) auto; align-items:center; gap:10px; border:1px solid #e2e9f1; border-radius:15px; background:#fff; }
+.settings-row>svg { color:var(--color-primary-600); }
+.settings-row div { display:flex; flex-direction:column; gap:2px; }
+.settings-row strong { font-size:.8rem; }.settings-row span { color:var(--color-text-soft); font-size:.72rem; }
+.settings-empty { padding:24px; border-radius:15px; background:var(--color-surface-subtle); font-size:.82rem; text-align:center; }
+.settings-editor__heading { display:grid; grid-template-columns:28px minmax(0,1fr) auto; align-items:center; gap:9px; }
+.settings-editor__heading>svg { color:var(--color-primary-600); }
+.settings-editor__heading input { min-height:44px; }
+.settings-editor fieldset { padding:10px 0 0; border:0; border-top:1px solid var(--color-border); }
+.check-row { min-height:40px; display:flex; flex-direction:row!important; align-items:center; gap:9px; font-weight:500!important; }
+.check-row input { width:20px; min-height:20px; padding:0; }
+.settings-editor__actions { display:flex; justify-content:flex-end; gap:9px; }
+.form-success { color:var(--color-success); font-size:.78rem; }
+
 .setup-progress { padding:17px; border:1px solid #dce8f5; border-radius:17px; background:#f9fcff; }
 .progress-track { height:6px; margin:14px 0; overflow:hidden; border-radius:999px; background:#dfe8f2; }
 .progress-track span { height:100%; display:block; border-radius:inherit; background:var(--color-primary-600); }
@@ -214,6 +242,7 @@
 .setup-steps li>span,.setup-steps li>svg { width:24px; height:24px; padding:5px; display:grid; place-items:center; border-radius:50%; color:var(--color-text-muted); background:#e9eef4; font-size:.65rem; font-weight:800; }
 .setup-steps li.is-complete { color:var(--color-text); font-weight:700; }
 .setup-steps li.is-complete>svg { color:#fff; background:var(--color-success); }
+.setup-next { margin-top:12px; }
 
 @media (min-width:700px) {
   .operational-metrics { grid-template-columns:repeat(4,minmax(0,1fr)); }
