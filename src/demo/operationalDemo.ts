@@ -23,7 +23,21 @@ export type DemoAppointment = {
   notes: string
 }
 
-export const demoToday = '2026-09-08'
+function localDateKey(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+export function shiftDemoDate(value: string, days: number) {
+  const date = new Date(`${value}T12:00:00`)
+  date.setDate(date.getDate() + days)
+  return localDateKey(date)
+}
+
+export const demoToday = localDateKey(new Date())
+export const demoTomorrow = shiftDemoDate(demoToday, 1)
 export const demoBusinessName = 'PEMA Ar Condicionado'
 
 export const demoOverview = {
@@ -51,7 +65,7 @@ export const demoAppointments: DemoAppointment[] = [
   {id:'appointment-1',date:demoToday,time:'09:00',customer:'Carlos Mendes',phone:'(12) 99999-0101',service:'Instalação de split',technician:'João',status:'confirmed',notes:'Confirmar acesso à área externa.'},
   {id:'appointment-2',date:demoToday,time:'11:30',customer:'Loja Centro',phone:'(12) 99999-0202',service:'Manutenção preventiva',technician:'Marina',status:'confirmed',notes:'Verificar três equipamentos.'},
   {id:'appointment-3',date:demoToday,time:'14:30',customer:'Ana Paula',phone:'(12) 99999-0303',service:'Limpeza completa',technician:'João',status:'pending',notes:'Cliente prefere o período da tarde.'},
-  {id:'appointment-4',date:'2026-09-09',time:'10:00',customer:'Empresa Alfa',phone:'(12) 99999-0404',service:'Visita técnica',technician:'Marina',status:'confirmed',notes:'Avaliar equipamento sem refrigeração.'},
+  {id:'appointment-4',date:demoTomorrow,time:'10:00',customer:'Empresa Alfa',phone:'(12) 99999-0404',service:'Visita técnica',technician:'Marina',status:'confirmed',notes:'Avaliar equipamento sem refrigeração.'},
 ]
 
 export function saveDemoAppointment(list: DemoAppointment[], appointment: DemoAppointment) {
