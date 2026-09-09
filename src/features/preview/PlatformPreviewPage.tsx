@@ -21,7 +21,7 @@ import {
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BrandMark } from '../../components/BrandMark'
-import { demoAppointments, demoBusinessName, demoConversations, demoOverview, demoServiceMix, demoToday } from '../../demo/operationalDemo'
+import { demoAppointments, demoBusinessName, demoConversations, demoOverview, demoServiceMix, demoToday, demoTomorrow } from '../../demo/operationalDemo'
 
 type PreviewTab = 'home' | 'conversations' | 'agenda' | 'more'
 
@@ -31,6 +31,19 @@ const tabs: Array<{id:PreviewTab; label:string; icon: typeof Home}> = [
   {id:'agenda',label:'Agenda',icon:CalendarDays},
   {id:'more',label:'Mais',icon:Menu},
 ]
+
+const demoDate = new Date(`${demoToday}T12:00:00`)
+const demoTomorrowDate = new Date(`${demoTomorrow}T12:00:00`)
+const rawMonthLabel = new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric'}).format(demoDate).replace(' de ',' ')
+const demoMonthLabel = `${rawMonthLabel.charAt(0).toUpperCase()}${rawMonthLabel.slice(1)}`
+const demoDayLabel = new Intl.DateTimeFormat('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(demoDate)
+const selectedDay = demoDate.getDate()
+const daysInMonth = new Date(demoDate.getFullYear(),demoDate.getMonth()+1,0).getDate()
+const leadingDays = Array.from({length:new Date(demoDate.getFullYear(),demoDate.getMonth(),1).getDay()})
+const calendarDays = Array.from({length:daysInMonth},(_,i)=>i+1)
+const eventDay = demoTomorrowDate.getFullYear()===demoDate.getFullYear() && demoTomorrowDate.getMonth()===demoDate.getMonth()
+  ? demoTomorrowDate.getDate()
+  : null
 
 function PreviewHeader({title}: {title:string}) {
   return <header className="customer-preview__header">
@@ -96,17 +109,16 @@ function ConversationsPreview() {
   </div>
 }
 
-const calendarDays = Array.from({length:31},(_,i)=>i+1)
 function AgendaPreview() {
   return <div className="customer-preview__screen">
     <PreviewHeader title="Agenda" />
     <section className="preview-calendar">
-      <div className="preview-calendar__month"><ChevronLeft/><strong>Setembro 2026</strong><ChevronRight/></div>
+      <div className="preview-calendar__month"><ChevronLeft/><strong>{demoMonthLabel}</strong><ChevronRight/></div>
       <div className="preview-calendar__week"><span>DOM</span><span>SEG</span><span>TER</span><span>QUA</span><span>QUI</span><span>SEX</span><span>SÁB</span></div>
-      <div className="preview-calendar__days"><span/><span/>{calendarDays.map(day=><button key={day} className={day===8?'is-selected':day===9?'has-event':''}>{day}</button>)}</div>
+      <div className="preview-calendar__days">{leadingDays.map((_,index)=><span key={`leading-${index}`} aria-hidden="true"/>)}{calendarDays.map(day=><button key={day} className={day===selectedDay?'is-selected':day===eventDay?'has-event':''}>{day}</button>)}</div>
     </section>
     <section className="preview-day-list">
-      <div className="preview-card__title"><div><h2>Atendimentos do dia</h2><p>Terça-feira, 8 de setembro de 2026</p></div><button>Ver todos</button></div>
+      <div className="preview-card__title"><div><h2>Atendimentos do dia</h2><p>{demoDayLabel}</p></div><button>Ver todos</button></div>
       {demoAppointments.filter(item=>item.date===demoToday).slice(0,3).map(item=><article key={item.id}><time>{item.time}</time><span/><p><strong>{item.service}</strong><small>Cliente: {item.customer}<br/>Técnico: {item.technician}</small></p><em>{item.status==='confirmed'?'Confirmado':'Pendente'}</em></article>)}
     </section>
   </div>
