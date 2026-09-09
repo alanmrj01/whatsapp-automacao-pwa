@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { cancelDemoAppointment, demoAppointments, saveDemoAppointment } from '../src/demo/operationalDemo.ts'
+import { cancelDemoAppointment, demoAppointments, demoToday, demoTomorrow, saveDemoAppointment, shiftDemoDate } from '../src/demo/operationalDemo.ts'
 import { deriveProductState } from '../src/features/product/deriveProductState.ts'
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
@@ -32,6 +32,18 @@ test('free dashboard is populated from isolated demo data and points to setup', 
   assert.match(dashboard, /\/app\/agenda\?action=new/)
   assert.doesNotMatch(`${dashboard}${conversations}${agenda}`, /api\.request/)
   assert.match(connection, /enabled:!!membership && paid/)
+})
+
+test('demo dates roll with the current day instead of expiring on a fixed calendar date', () => {
+  const source = read('src/demo/operationalDemo.ts')
+  const preview = read('src/features/preview/PlatformPreviewPage.tsx')
+  assert.match(demoToday,/^\d{4}-\d{2}-\d{2}$/)
+  assert.equal(demoTomorrow,shiftDemoDate(demoToday,1))
+  assert.equal(demoAppointments.at(-1).date,demoTomorrow)
+  assert.doesNotMatch(source,/demoToday\s*=\s*['"]\d{4}-\d{2}-\d{2}['"]/)
+  assert.doesNotMatch(preview,/Setembro 2026|8 de setembro de 2026/)
+  assert.match(preview,/demoMonthLabel/)
+  assert.match(preview,/demoDayLabel/)
 })
 
 test('demo agenda supports deterministic create, edit and cancel operations', () => {
