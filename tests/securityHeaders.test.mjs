@@ -14,8 +14,8 @@ test('production headers enforce a strict same-origin browser boundary', () => {
   assert.match(netlify, /base-uri 'self'/)
   assert.match(netlify, /form-action 'self'/)
   assert.match(netlify, /worker-src 'self'/)
-  assert.doesNotMatch(netlify, /script-src[^"\n]*'unsafe-inline'/)
-  assert.doesNotMatch(netlify, /script-src[^"\n]*'unsafe-eval'/)
+  assert.doesNotMatch(netlify, /(?:^|;\s*)script-src\s+[^;"\n]*'unsafe-inline'/m)
+  assert.doesNotMatch(netlify, /(?:^|;\s*)script-src\s+[^;"\n]*'unsafe-eval'/m)
 })
 
 test('transport and browser capabilities are hardened without changing app routes', () => {

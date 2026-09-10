@@ -1,49 +1,54 @@
-import { Bell, Building2, CircleHelp, Clock3, MapPinned, Settings2, ShieldCheck, Snowflake, UsersRound, Wrench } from 'lucide-react'
+import { Bot, Building2, CalendarCog, Check, CircleUserRound, Clock3, CreditCard, LockKeyhole, MessageCircleMore, ShieldCheck, UsersRound } from 'lucide-react'
+import { InfoHelp } from '../../components/InfoHelp'
+import { Link } from 'react-router-dom'
 import { ListRow } from '../../components/ListRow'
 import { Section } from '../../components/Section'
-import { useAuth } from '../auth/useAuth'
+import { StatusBadge } from '../../components/StatusBadge'
 import { SessionActions } from '../auth/SessionActions'
+import { useProductState } from '../product/productState'
 
 export function MorePage() {
-  const {membership} = useAuth()
-  const name = membership?.business_name ?? 'Sua empresa'
-  return (
-    <div className="page-stack compact-page">
-      <section className="business-profile business-profile--hvac">
-        <div className="business-avatar business-avatar--large" aria-hidden="true">
-          <Snowflake size={24}/>
-        </div>
-        <div>
-          <span className="eyebrow">Sua operação</span>
-          <h1>{name}</h1>
-          <p>Personalize a Alovia para a rotina da sua equipe técnica.</p>
-        </div>
-      </section>
+  const {state,membership,connection,setup} = useProductState()
+  const whatsappReady = setup.data?.whatsapp??state==='ACTIVE'
+  const paid = membership?.access_mode==='paid'
+  const completed = state==='FREE_DEMO'?1:setup.data?.completed??0
+  const connectionLabel = state==='FREE_DEMO'?'Plano pago':state==='CONNECTION_PENDING'?'Preparando':whatsappReady?'Conectado':connection.isError?'Erro':'Não conectado'
 
-      <Section title="Estrutura da operação">
-        <div className="list-surface">
-          <ListRow icon={Wrench} title="Serviços e equipamentos" subtitle="Tipos atendidos e catálogo técnico" />
-          <ListRow icon={UsersRound} title="Equipe técnica" subtitle="Técnicos, funções e permissões" iconTone="violet" />
-          <ListRow icon={MapPinned} title="Área de atendimento" subtitle="Regiões, deslocamentos e cobertura" iconTone="slate" />
-          <ListRow icon={Clock3} title="Horários e agenda" subtitle="Disponibilidade da operação" iconTone="amber" />
-        </div>
-      </Section>
+  return <div className="page-stack operational-page compact-page">
+    <section className="operational-heading"><div><span className="eyebrow">{membership?.business_name??'Sua empresa'}</span><h1>Mais</h1></div></section>
 
-      <Section title="Preferências">
-        <div className="list-surface">
-          <ListRow icon={Building2} title="Dados da empresa" subtitle="Informações e identificação" />
-          <ListRow icon={Bell} title="Notificações" subtitle="Alertas importantes" iconTone="violet" />
-          <ListRow icon={Settings2} title="Configurações" subtitle="Preferências do aplicativo" iconTone="slate" />
-        </div>
-      </Section>
+    <section className="setup-progress" id="configuracao" aria-labelledby="setup-title">
+      <div className="section-title-row"><div><span className="eyebrow">Primeiros passos</span><h2 id="setup-title">Configuração {completed} de 5</h2></div><InfoHelp title="Progresso da configuração">Em contas pagas, cada etapa é confirmada pelos dados reais da empresa ativa.</InfoHelp></div>
+      <div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={5} aria-valuenow={completed}><span style={{width:`${completed/5*100}%`}}/></div>
+      <ol className="setup-steps">
+        <SetupStep ready={state==='FREE_DEMO'||!!setup.data?.company} number={1}>Dados da empresa</SetupStep>
+        <SetupStep ready={!!setup.data?.business_hours} number={2}>Horários de funcionamento</SetupStep>
+        <SetupStep ready={!!setup.data?.automation} number={3}>Automação de atendimento</SetupStep>
+        <SetupStep ready={!!setup.data?.agenda} number={4}>Configuração da agenda</SetupStep>
+        <li className={whatsappReady?'is-complete':''}>{whatsappReady?<Check/>:<span>5</span>}Conectar WhatsApp</li>
+      </ol>
+      {paid&&setup.data?.next_step&&setup.data.next_step!=='complete'&&<Link className="compact-button setup-next" to={setupRoute[setup.data.next_step]}>Continuar configuração</Link>}
+    </section>
 
-      <Section title="Ajuda e segurança">
-        <div className="list-surface">
-          <ListRow icon={CircleHelp} title="Central de ajuda" iconTone="amber" />
-          <ListRow icon={ShieldCheck} title="Privacidade e segurança" iconTone="slate" />
-        </div>
-      </Section>
-      <SessionActions />
-    </div>
-  )
+    <Section title="Empresa">
+      <div className="list-surface"><ListRow icon={Building2} title="Dados da empresa" to={paid?'/app/mais/empresa':undefined} trailing={<StatusBadge tone={setup.data?.company||state==='FREE_DEMO'?'success':'warning'}>{setup.data?.company||state==='FREE_DEMO'?'Concluído':'Pendente'}</StatusBadge>}/><ListRow icon={Clock3} title="Horários de funcionamento" to={paid?'/app/mais/horarios':undefined}/></div>
+    </Section>
+    <Section title="Atendimento">
+      <div className="list-surface"><ListRow icon={Bot} title="Automação de atendimento" to={paid?'/app/mais/automacao':undefined}/><ListRow icon={UsersRound} title="Equipe e responsáveis" to={paid?'/app/mais/equipe':undefined}/></div>
+    </Section>
+    <Section title="WhatsApp">
+      <div className="list-surface"><ListRow icon={MessageCircleMore} title="Conexão do WhatsApp" subtitle={connectionLabel} to="/app/whatsapp" trailing={<StatusBadge tone={whatsappReady?'success':state==='ERROR'?'danger':'info'}>{connectionLabel}</StatusBadge>}/></div>
+    </Section>
+    <Section title="Agenda">
+      <div className="list-surface"><ListRow icon={CalendarCog} title="Agenda e disponibilidade" to={paid?'/app/mais/agenda':undefined}/><ListRow icon={UsersRound} title="Técnicos e responsáveis" to={paid?'/app/mais/equipe':undefined}/></div>
+    </Section>
+    <Section title="Conta">
+      <div className="list-surface"><ListRow icon={CreditCard} title="Plano" subtitle={membership?.access_mode==='free'?'Gratuito':'Pago'}/><ListRow icon={CircleUserRound} title="Usuário"/><ListRow icon={LockKeyhole} title="Segurança"/><ListRow icon={ShieldCheck} title="Privacidade"/></div>
+    </Section>
+    <SessionActions />
+  </div>
 }
+
+function SetupStep({ready,number,children}:{ready:boolean;number:number;children:React.ReactNode}) {return <li className={ready?'is-complete':''}>{ready?<Check/>:<span>{number}</span>}{children}</li>}
+
+const setupRoute={company:'/app/mais/empresa',business_hours:'/app/mais/horarios',automation:'/app/mais/automacao',agenda:'/app/mais/agenda',whatsapp:'/app/whatsapp'} as const

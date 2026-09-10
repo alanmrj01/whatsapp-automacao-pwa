@@ -11,8 +11,8 @@ export function DesktopSidebar() {
       <div className="desktop-sidebar__brand">
         <BrandMark />
         <div>
-          <strong>Atende</strong>
-          <span>Automação e agenda</span>
+          <strong>Alovia</strong>
+          <span>Operação organizada</span>
         </div>
       </div>
       <nav aria-label="Navegação principal">

@@ -1,4 +1,4 @@
-# Atende PWA
+# Alovia PWA
 
 Aplicativo mobile-first de atendimento e agenda. A etapa 16.5B integra autenticação,
 sessão e consulta/planejamento de WhatsApp à API pública. O visual 16.5A é preservado;
@@ -49,16 +49,24 @@ há runtime caching. Respostas privadas/tokens nunca são persistidos.
 - `src/features`: telas organizadas por domínio
 - `src/features/auth`: sessão, login, proteção de rotas e seleção de empresa
 - `src/lib/httpClient.ts`: fetch com timeout, memória privada e refresh único
-- `src/lib/mocks.ts`: dados demonstrativos ainda sem API (sem mock de WhatsApp)
+- `src/demo`: dados demonstrativos determinísticos, isolados das requests reais
 - `src/styles`: tokens e estilos mobile-first
 
 ## Escopo atual
 
-- Início e estados vazios de Agenda, Conversas e Mais
+- Início operacional com estados `FREE_DEMO`, `SETUP_PENDING`, `ACTIVE`, `CONNECTION_PENDING` e `ERROR`
+- Agenda demonstrativa local com criação, edição, status e cancelamento
+- Conversas demonstrativas com busca, prioridade, responsável e não lidas
+- Mais concentra empresa, atendimento, WhatsApp, agenda e conta
 - WhatsApp com estado real da API pública e planejamento sem conectar à Meta
 - Modos apresentados como “WhatsApp Business + Automação” e “Atendimento pela plataforma”
 - Navegação inferior no mobile e sidebar no desktop
 - aviso offline sem simular envio ou sincronização
+
+As telas de conta ativa não misturam mocks com dados reais. Leitura de conversas,
+CRUD de agenda e configurações operacionais reais continuam dependentes de endpoints
+públicos do backend ainda não disponíveis; por isso esses estados falham de forma
+honesta e orientam a configuração, sem inventar requests ou persistência.
 
 ## Sessão e permissões
 

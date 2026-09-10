@@ -1,113 +1,84 @@
-import {
-  Bot,
-  CalendarCheck2,
-  CalendarDays,
-  MessageCircleMore,
-  MessagesSquare,
-  Snowflake,
-  Sparkles,
-  Wrench,
-} from 'lucide-react'
+import { CalendarCheck2, CalendarPlus2, CheckCircle2, Clock3, MessagesSquare, Settings2 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { ActionCard } from '../../components/ActionCard'
-import { ListRow } from '../../components/ListRow'
-import { Section } from '../../components/Section'
+import { InfoHelp } from '../../components/InfoHelp'
 import { StatusBadge } from '../../components/StatusBadge'
-import { mockDashboard } from '../../lib/mocks'
-import { isFreeAccess } from '../auth/types'
-import { useAuth } from '../auth/useAuth'
-import { useConnection } from '../whatsapp/useConnection'
-import { ConnectionStatusBadge } from '../whatsapp/ConnectionStatusBadge'
+import { ErrorState } from '../../components/ErrorState'
+import { LoadingState } from '../../components/LoadingState'
+import { demoAppointments, demoOverview, demoToday } from '../../demo/operationalDemo'
+import { useBusiness, useDashboardToday } from '../operations/api'
+import { useProductState } from '../product/productState'
+
+const stateLabels = {
+  FREE_DEMO: 'Dados de demonstração',
+  SETUP_PENDING: 'Configuração pendente',
+  ACTIVE: 'Operação ativa',
+  CONNECTION_PENDING: 'Conexão em andamento',
+  ERROR: 'Atenção necessária',
+} as const
 
 export function DashboardPage() {
-  const {membership} = useAuth()
-  const free = isFreeAccess(membership)
-  const connection = useConnection()
-  return (
-    <div className="page-stack dashboard-page">
-      <section className="welcome-block alovia-welcome">
-        <span className="vertical-chip"><Snowflake size={14}/> Climatização & refrigeração</span>
-        <h1>Olá, {membership?.business_name}</h1>
-        <p>Centralize atendimento, agenda técnica e automação em uma operação pensada para o seu serviço.</p>
-      </section>
+  const {state,membership} = useProductState()
+  const dashboard = useDashboardToday()
+  const business = useBusiness()
+  const demo = state === 'FREE_DEMO'
+  const active = state === 'ACTIVE'
+  const metrics = demo ? demoOverview : dashboard.data ? {
+    waiting:dashboard.data.metrics.waiting_count,
+    inProgress:dashboard.data.metrics.in_progress_count,
+    appointmentsToday:dashboard.data.metrics.appointments_today_count,
+    completed:dashboard.data.metrics.completed_today_count,
+  } : {waiting:'—',inProgress:'—',appointmentsToday:'—',completed:'—'}
+  const appointments = demo ? demoAppointments.filter(item=>item.date===demoToday).slice(0,3) : dashboard.data?.upcoming_appointments??[]
+  const timezone=demo?undefined:business.data?.timezone
+  const date = new Intl.DateTimeFormat('pt-BR',{weekday:'long',day:'numeric',month:'long',timeZone:timezone}).format(new Date())
 
-      <section className="operation-card operation-card--hvac" aria-labelledby="operation-title">
-        <div className="operation-card__heading">
-          <div>
-            <span className="eyebrow">Operação técnica</span>
-            <h2 id="operation-title">O que precisa de atenção hoje</h2>
-          </div>
-          <span className="today-chip">Visão do dia</span>
-        </div>
-        <div className="list-surface list-surface--flush">
-          <ListRow
-            icon={Bot}
-            title="Automação de atendimento"
-            subtitle={free ? 'Conheça como a Alovia conduz o primeiro atendimento' : mockDashboard.automationLabel}
-            trailing={free ? <StatusBadge>Demonstração</StatusBadge> : <StatusBadge tone="warning">Configurar</StatusBadge>}
-          />
-          <ListRow
-            icon={CalendarCheck2}
-            title="Visitas técnicas hoje"
-            subtitle="Instalações, manutenções e avaliações"
-            trailing={<strong className="metric-value">{mockDashboard.appointmentsToday}</strong>}
-            iconTone="violet"
-          />
-          <ListRow
-            icon={MessagesSquare}
-            title="Clientes aguardando retorno"
-            subtitle="A fila prioritária aparece antes das demais conversas"
-            trailing={<strong className="metric-value">{mockDashboard.conversationsToday}</strong>}
-            iconTone="slate"
-          />
-          <ListRow
-            icon={MessageCircleMore}
-            title="Canal WhatsApp"
-            subtitle={free ? 'Você está navegando pela demonstração da operação' : 'Entrada dos pedidos de atendimento'}
-            trailing={free
-              ? <StatusBadge>Demonstração ativa</StatusBadge>
-              : connection.data && !connection.isError
-                ? <ConnectionStatusBadge status={connection.data.status} />
-                : <StatusBadge>{connection.isError?'Indisponível':'Carregando'}</StatusBadge>}
-            to="/app/whatsapp"
-          />
-        </div>
-      </section>
+  return <div className="page-stack operational-page dashboard-page">
+    <section className="operational-heading">
+      <div><span className="eyebrow">{date}</span><h1>Visão do dia</h1></div>
+      <StatusBadge tone={active?'success':state==='ERROR'?'danger':'info'}>{stateLabels[state]}</StatusBadge>
+    </section>
 
-      <Section title="Ações rápidas">
-        <div className="quick-actions">
-          <ActionCard
-            icon={CalendarDays}
-            title="Agenda técnica"
-            description="Organize visitas e serviços"
-            to="/app/agenda"
-          />
-          <ActionCard
-            icon={MessagesSquare}
-            title="Fila de atendimento"
-            description="Veja quem precisa de resposta"
-            to="/app/conversas"
-          />
-        </div>
-      </Section>
+    {demo && <aside className="demo-banner">
+      <span>Dados fictícios para você explorar o produto.</span>
+      <InfoHelp title="Dados de demonstração">Nada desta tela pertence a clientes reais. A demonstração não envia dados nem faz chamadas para APIs operacionais.</InfoHelp>
+    </aside>}
 
-      <section className="hvac-context-card" aria-label="Personalização para refrigeração">
-        <span className="hvac-context-card__icon"><Wrench size={20}/></span>
-        <div>
-          <strong>Mais do que uma caixa de mensagens</strong>
-          <p>A Alovia foi desenhada para organizar clientes por serviço, equipamento, visita técnica e próximos passos da operação.</p>
-        </div>
-      </section>
+    {!demo && !active && <section className="setup-callout">
+      <div><strong>{state==='CONNECTION_PENDING'?'Estamos preparando sua conexão':state==='ERROR'?'Revise a configuração':'Complete a configuração da operação'}</strong><span>Próxima etapa disponível em Mais.</span></div>
+      <Link className="compact-button" to="/app/mais#configuracao">Continuar</Link>
+    </section>}
 
-      <section className="next-step-card">
-        <span className="next-step-card__icon"><Sparkles size={21} /></span>
-        <div>
-          <span className="eyebrow">Próximo passo</span>
-          <strong>{free ? 'Conheça a operação antes de ativar' : 'Prepare sua operação técnica'}</strong>
-          <p>{free
-            ? 'Navegue pela Alovia para entender como atendimento, agenda e rotina técnica se conectam.'
-            : 'Cadastre serviços e horários para a Alovia transformar pedidos do WhatsApp em uma agenda organizada.'}</p>
-        </div>
-      </section>
-    </div>
-  )
+    {!demo&&(dashboard.isPending||business.isPending)&&<LoadingState/>}
+    {!demo&&(dashboard.isError||business.isError)&&<ErrorState onRetry={()=>{void dashboard.refetch();void business.refetch()}}/>}
+
+    {(demo||(dashboard.data&&business.data))&&<section aria-labelledby="today-overview">
+      <div className="section-title-row"><h2 id="today-overview">Agora</h2><InfoHelp title="Indicadores do dia">Mostram somente itens que pedem ação: fila, atendimentos em curso, agenda e concluídos.</InfoHelp></div>
+      <div className="operational-metrics">
+        <article><MessagesSquare/><span>Aguardando</span><strong>{metrics.waiting}</strong></article>
+        <article><Clock3/><span>Em atendimento</span><strong>{metrics.inProgress}</strong></article>
+        <article><CalendarCheck2/><span>Agenda hoje</span><strong>{metrics.appointmentsToday}</strong></article>
+        <article><CheckCircle2/><span>Concluídos</span><strong>{metrics.completed}</strong></article>
+      </div>
+    </section>}
+
+    {(demo||(dashboard.data&&business.data))&&<section aria-labelledby="next-appointments">
+      <div className="section-title-row"><h2 id="next-appointments">Próximos atendimentos</h2><Link to="/app/agenda">Ver agenda</Link></div>
+      {appointments.length ? <div className="appointment-surface">
+        {appointments.map(item=><article className="appointment-compact" key={item.id}>
+          <time>{'time' in item?item.time:new Intl.DateTimeFormat('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:timezone}).format(new Date(item.starts_at))}</time><div><strong>{'customer' in item?item.customer:item.customer_name}</strong><span>{'service' in item?item.service:item.service_name} · {'technician' in item?item.technician:item.employee_name}</span></div><StatusBadge tone={item.status==='confirmed'?'success':item.status==='completed'?'info':item.status==='cancelled'?'danger':'warning'}>{item.status==='confirmed'?'Confirmado':item.status==='completed'?'Concluído':item.status==='cancelled'?'Cancelado':'Pendente'}</StatusBadge>
+        </article>)}
+      </div> : <div className="inline-empty"><CalendarCheck2/><span>Nenhum atendimento futuro para hoje.</span></div>}
+    </section>}
+
+    <section aria-labelledby="quick-actions-title">
+      <div className="section-title-row"><h2 id="quick-actions-title">Ações rápidas</h2></div>
+      <div className="quick-actions quick-actions--operational">
+        <ActionCard icon={MessagesSquare} title="Abrir fila" description="Conversas prioritárias" to="/app/conversas" />
+        <ActionCard icon={CalendarPlus2} title="Novo agendamento" description="Criar na agenda" to="/app/agenda?action=new" />
+        <ActionCard icon={CalendarCheck2} title="Ver agenda" description="Dia e próximos horários" to="/app/agenda" />
+        <ActionCard icon={Settings2} title="Configurar empresa" description={membership?.business_name??'Sua operação'} to="/app/mais#configuracao" />
+      </div>
+    </section>
+  </div>
 }

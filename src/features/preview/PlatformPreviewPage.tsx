@@ -21,6 +21,7 @@ import {
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BrandMark } from '../../components/BrandMark'
+import { demoAppointments, demoBusinessName, demoConversations, demoOverview, demoServiceMix, demoToday, demoTomorrow } from '../../demo/operationalDemo'
 
 type PreviewTab = 'home' | 'conversations' | 'agenda' | 'more'
 
@@ -31,12 +32,18 @@ const tabs: Array<{id:PreviewTab; label:string; icon: typeof Home}> = [
   {id:'more',label:'Mais',icon:Menu},
 ]
 
-const conversations = [
-  {name:'Loja Centro', context:'Manutenção preventiva', detail:'Solicitação de PMOC para 3 aparelhos de ar-condicionado.', time:'09:15', waiting:true, avatar:'LC'},
-  {name:'Empresa Alfa', context:'Suporte técnico', detail:'Equipamento não está gelando adequadamente.', time:'08:42', waiting:true, avatar:'EA'},
-  {name:'Carlos Mendes', context:'Orçamento • Split 18.000 BTUs', detail:'Cliente busca instalação completa com suporte técnico incluso.', time:'09:32', waiting:false, avatar:'CM'},
-  {name:'Ana Paula', context:'Limpeza completa', detail:'Quero agendar limpeza de 2 splits na próxima semana.', time:'Ontem', waiting:false, avatar:'AP'},
-]
+const demoDate = new Date(`${demoToday}T12:00:00`)
+const demoTomorrowDate = new Date(`${demoTomorrow}T12:00:00`)
+const rawMonthLabel = new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric'}).format(demoDate).replace(' de ',' ')
+const demoMonthLabel = `${rawMonthLabel.charAt(0).toUpperCase()}${rawMonthLabel.slice(1)}`
+const demoDayLabel = new Intl.DateTimeFormat('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(demoDate)
+const selectedDay = demoDate.getDate()
+const daysInMonth = new Date(demoDate.getFullYear(),demoDate.getMonth()+1,0).getDate()
+const leadingDays = Array.from({length:new Date(demoDate.getFullYear(),demoDate.getMonth(),1).getDay()})
+const calendarDays = Array.from({length:daysInMonth},(_,i)=>i+1)
+const eventDay = demoTomorrowDate.getFullYear()===demoDate.getFullYear() && demoTomorrowDate.getMonth()===demoDate.getMonth()
+  ? demoTomorrowDate.getDate()
+  : null
 
 function PreviewHeader({title}: {title:string}) {
   return <header className="customer-preview__header">
@@ -50,7 +57,7 @@ function HomePreview() {
     <PreviewHeader title="Início" />
     <section className="preview-home-hero">
       <div>
-        <h1>Olá, PEMA Ar Condicionado!</h1>
+        <h1>Olá, {demoBusinessName}!</h1>
         <p>Tudo pronto para otimizar seus atendimentos em refrigeração.</p>
         <button type="button"><MessageCircle size={18}/> Conectar WhatsApp</button>
       </div>
@@ -59,27 +66,26 @@ function HomePreview() {
 
     <h2 className="preview-section-title">Visão geral</h2>
     <div className="preview-metric-grid">
-      <article><span><ClipboardList/></span><div><small>Orçamentos em aberto</small><strong>12</strong><em>R$ 18.450,00</em></div></article>
-      <article><span><CalendarDays/></span><div><small>Agenda técnica</small><strong>7</strong><em>Serviços hoje</em></div></article>
-      <article><span><Bell/></span><div><small>Lembretes de manutenção</small><strong>5</strong><em>Equipamentos</em></div></article>
-      <article><span><Headphones/></span><div><small>Atendimentos do dia</small><strong>9</strong><em>3 em andamento</em></div></article>
+      <article><span><ClipboardList/></span><div><small>Aguardando atendimento</small><strong>{demoOverview.waiting}</strong><em>Fila prioritária</em></div></article>
+      <article><span><CalendarDays/></span><div><small>Agenda técnica</small><strong>{demoOverview.appointmentsToday}</strong><em>Serviços hoje</em></div></article>
+      <article><span><Bell/></span><div><small>Em atendimento</small><strong>{demoOverview.inProgress}</strong><em>Agora</em></div></article>
+      <article><span><Headphones/></span><div><small>Concluídos</small><strong>{demoOverview.completed}</strong><em>No dia</em></div></article>
     </div>
 
     <section className="preview-card">
       <div className="preview-card__title"><h2>Serviços mais solicitados</h2><button type="button">Ver todos</button></div>
       <div className="preview-service-grid">
-        <div><Snowflake/><span>Instalação</span><strong>23%</strong></div>
-        <div><Wrench/><span>Manutenção</span><strong>45%</strong></div>
-        <div><Sparkles aria-hidden="true"/><span>Limpeza</span><strong>15%</strong></div>
-        <div><Gauge aria-hidden="true"/><span>Carga de gás</span><strong>17%</strong></div>
+        <div><Snowflake/><span>Instalação</span><strong>{demoServiceMix.installation}%</strong></div>
+        <div><Wrench/><span>Manutenção</span><strong>{demoServiceMix.maintenance}%</strong></div>
+        <div><Sparkles aria-hidden="true"/><span>Limpeza</span><strong>{demoServiceMix.cleaning}%</strong></div>
+        <div><Gauge aria-hidden="true"/><span>Carga de gás</span><strong>{demoServiceMix.gasCharge}%</strong></div>
       </div>
     </section>
 
     <section className="preview-card">
       <div className="preview-card__title"><h2>Próximos atendimentos</h2><button type="button">Ver agenda</button></div>
       <div className="preview-appointments">
-        <div><time>10:00</time><span/><p><strong>Manutenção preventiva</strong><small>AC Split 24.000 BTUs<br/>Cliente: Carlos Mendes</small></p><em>Confirmado</em></div>
-        <div><time>14:30</time><span/><p><strong>Instalação</strong><small>AC Split Inverter 18.000 BTUs<br/>Cliente: Ana Paula Silva</small></p><em>Pendente</em></div>
+        {demoAppointments.filter(item=>item.date===demoToday).slice(0,2).map(item=><div key={item.id}><time>{item.time}</time><span/><p><strong>{item.service}</strong><small>Cliente: {item.customer}<br/>Técnico: {item.technician}</small></p><em>{item.status==='confirmed'?'Confirmado':'Pendente'}</em></div>)}
       </div>
     </section>
 
@@ -91,32 +97,29 @@ function ConversationsPreview() {
   return <div className="customer-preview__screen">
     <div className="preview-page-title"><h1>Conversas</h1><button type="button">+</button></div>
     <label className="preview-search"><Search size={19}/><input placeholder="Buscar conversas" /></label>
-    <div className="preview-filters"><button className="is-active">Aguardando atendimento <span>12</span></button><button>Orçamentos <span>8</span></button><button>Suporte <span>5</span></button><button>Pós-venda</button></div>
+    <div className="preview-filters"><button className="is-active">Aguardando atendimento <span>{demoOverview.waiting}</span></button><button>Orçamentos</button><button>Suporte</button><button>Pós-venda</button></div>
     <div className="preview-priority-hint"><span>Fila inteligente</span> Quem aguarda resposta fica no topo.</div>
     <section className="preview-conversation-list">
-      {conversations.map((item,index)=><article key={item.name} className={item.waiting ? 'is-waiting' : ''}>
-        <div className={`preview-avatar preview-avatar--${index+1}`}>{item.avatar}</div>
-        <div className="preview-conversation-copy"><div><strong>{item.name}</strong><time>{item.time}</time></div><b>{item.context}</b><p>{item.detail}</p><span className={item.waiting?'waiting':'answered'}>{item.waiting?'Aguardando resposta':'Respondido'}</span></div>
+      {demoConversations.map((item,index)=><article key={item.id} className={item.status==='waiting' ? 'is-waiting' : ''}>
+        <div className={`preview-avatar preview-avatar--${index+1}`}>{item.customer.split(' ').map(value=>value[0]).join('').slice(0,2)}</div>
+        <div className="preview-conversation-copy"><div><strong>{item.customer}</strong><time>{item.time}</time></div><b>Responsável: {item.assignee}</b><p>{item.lastMessage}</p><span className={item.status==='waiting'?'waiting':'answered'}>{item.status==='waiting'?'Aguardando resposta':'Em andamento'}</span></div>
       </article>)}
     </section>
     <aside className="preview-context-note"><Snowflake/><p><strong>Alovia organiza por contexto de serviço</strong><span>Atendimentos são separados por etapa para sua equipe ganhar tempo e vender mais.</span></p></aside>
   </div>
 }
 
-const calendarDays = Array.from({length:31},(_,i)=>i+1)
 function AgendaPreview() {
   return <div className="customer-preview__screen">
     <PreviewHeader title="Agenda" />
     <section className="preview-calendar">
-      <div className="preview-calendar__month"><ChevronLeft/><strong>Maio 2025</strong><ChevronRight/></div>
+      <div className="preview-calendar__month"><ChevronLeft/><strong>{demoMonthLabel}</strong><ChevronRight/></div>
       <div className="preview-calendar__week"><span>DOM</span><span>SEG</span><span>TER</span><span>QUA</span><span>QUI</span><span>SEX</span><span>SÁB</span></div>
-      <div className="preview-calendar__days"><span/><span/><span/><span/>{calendarDays.map(day=><button key={day} className={day===15?'is-selected':day===20?'has-event':''}>{day}</button>)}</div>
+      <div className="preview-calendar__days">{leadingDays.map((_,index)=><span key={`leading-${index}`} aria-hidden="true"/>)}{calendarDays.map(day=><button key={day} className={day===selectedDay?'is-selected':day===eventDay?'has-event':''}>{day}</button>)}</div>
     </section>
     <section className="preview-day-list">
-      <div className="preview-card__title"><div><h2>Atendimentos do dia</h2><p>Quinta-feira, 15 de maio de 2025</p></div><button>Ver todos</button></div>
-      <article><time>09:00</time><span/><p><strong>Instalação</strong><small>AC Split Inverter 18.000 BTUs<br/>Cliente: Carlos Mendes</small></p><em>Confirmado</em></article>
-      <article><time>13:30</time><span/><p><strong>Manutenção</strong><small>Câmara fria 2 portas<br/>Cliente: Padaria Pão Quente</small></p><em>Pendente</em></article>
-      <article><time>16:00</time><span/><p><strong>Visita técnica / orçamento</strong><small>Avaliação de instalação<br/>Cliente: Supermercado Minas</small></p><em>Pendente</em></article>
+      <div className="preview-card__title"><div><h2>Atendimentos do dia</h2><p>{demoDayLabel}</p></div><button>Ver todos</button></div>
+      {demoAppointments.filter(item=>item.date===demoToday).slice(0,3).map(item=><article key={item.id}><time>{item.time}</time><span/><p><strong>{item.service}</strong><small>Cliente: {item.customer}<br/>Técnico: {item.technician}</small></p><em>{item.status==='confirmed'?'Confirmado':'Pendente'}</em></article>)}
     </section>
   </div>
 }
@@ -124,7 +127,7 @@ function AgendaPreview() {
 function MorePreview() {
   return <div className="customer-preview__screen">
     <PreviewHeader title="Mais" />
-    <section className="preview-company-card"><div className="preview-company-logo">PE</div><div><small>Empresa</small><h1>PEMA Ar Condicionado</h1><p>Operação de climatização e refrigeração</p></div></section>
+    <section className="preview-company-card"><div className="preview-company-logo">PE</div><div><small>Empresa</small><h1>{demoBusinessName}</h1><p>Operação de climatização e refrigeração</p></div></section>
     <h2 className="preview-section-title">Sua operação</h2>
     <div className="preview-more-list">
       <button><Wrench/><span><strong>Serviços e preços</strong><small>Instalação, manutenção, limpeza e outros</small></span><ChevronRight/></button>
