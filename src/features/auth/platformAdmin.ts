@@ -5,6 +5,7 @@ export type PlatformBusiness = {
   name: string
   timezone: string
   active: boolean
+  access_mode: 'free' | 'paid'
   owners: string[]
   whatsapp_status: 'disconnected' | 'pending' | 'connected' | 'error'
 }

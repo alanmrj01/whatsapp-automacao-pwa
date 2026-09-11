@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { randomBytes } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { ApiError, createApiClient } from '../src/lib/httpClient.ts'
 
@@ -22,6 +23,19 @@ test('login sends credentials without storage and subsequent calls use memory on
     assert.equal(call.options.credentials, 'include')
     assert.equal(call.url.includes(password), false)
   }
+})
+
+test('session bundled with refresh hydrates auth in one request without a follow-up me call', async () => {
+  const session = {id:'member',active_business_id:'business',memberships:[]}
+  const calls = []
+  const api = createApiClient('', async url => {
+    calls.push(url)
+    return response(200, {access_token:secret(),session})
+  })
+  assert.deepEqual(await api.refresh(),session)
+  assert.deepEqual(calls,['/api/v1/auth/refresh'])
+  const provider = readFileSync(new URL('../src/features/auth/AuthProvider.tsx', import.meta.url),'utf8')
+  assert.match(provider,/hydrated \?\? await api\.request<SessionUser>\('\/me'\)/)
 })
 
 test('simultaneous 401s share one refresh then retry each request once', async () => {

@@ -22,6 +22,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BrandMark } from '../../components/BrandMark'
 import { demoAppointments, demoBusinessName, demoConversations, demoOverview, demoServiceMix, demoToday, demoTomorrow } from '../../demo/operationalDemo'
+import './PlatformPreviewPage.css'
 
 type PreviewTab = 'home' | 'conversations' | 'agenda' | 'more'
 

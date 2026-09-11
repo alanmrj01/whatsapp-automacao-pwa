@@ -6,6 +6,9 @@ import { StatusBadge } from '../../components/StatusBadge'
 import { ErrorState } from '../../components/ErrorState'
 import { LoadingState } from '../../components/LoadingState'
 import { demoAppointments, demoOverview, demoToday } from '../../demo/operationalDemo'
+import { DemoDataNotice } from '../access/DemoDataNotice'
+import { useEntitlements } from '../access/useEntitlements'
+import { useUpgradePrompt } from '../access/upgradePromptContext'
 import { useBusiness, useDashboardToday } from '../operations/api'
 import { useProductState } from '../product/productState'
 
@@ -19,9 +22,11 @@ const stateLabels = {
 
 export function DashboardPage() {
   const {state,membership} = useProductState()
+  const entitlement = useEntitlements()
+  const {openUpgrade} = useUpgradePrompt()
   const dashboard = useDashboardToday()
   const business = useBusiness()
-  const demo = state === 'FREE_DEMO'
+  const demo = entitlement.usesDemoData
   const active = state === 'ACTIVE'
   const metrics = demo ? demoOverview : dashboard.data ? {
     waiting:dashboard.data.metrics.waiting_count,
@@ -39,10 +44,7 @@ export function DashboardPage() {
       <StatusBadge tone={active?'success':state==='ERROR'?'danger':'info'}>{stateLabels[state]}</StatusBadge>
     </section>
 
-    {demo && <aside className="demo-banner">
-      <span>Dados fictícios para você explorar o produto.</span>
-      <InfoHelp title="Dados de demonstração">Nada desta tela pertence a clientes reais. A demonstração não envia dados nem faz chamadas para APIs operacionais.</InfoHelp>
-    </aside>}
+    {demo && <DemoDataNotice />}
 
     {!demo && !active && <section className="setup-callout">
       <div><strong>{state==='CONNECTION_PENDING'?'Estamos preparando sua conexão':state==='ERROR'?'Revise a configuração':'Complete a configuração da operação'}</strong><span>Próxima etapa disponível em Mais.</span></div>
@@ -75,9 +77,9 @@ export function DashboardPage() {
       <div className="section-title-row"><h2 id="quick-actions-title">Ações rápidas</h2></div>
       <div className="quick-actions quick-actions--operational">
         <ActionCard icon={MessagesSquare} title="Abrir fila" description="Conversas prioritárias" to="/app/conversas" />
-        <ActionCard icon={CalendarPlus2} title="Novo agendamento" description="Criar na agenda" to="/app/agenda?action=new" />
+        <ActionCard icon={CalendarPlus2} title="Novo agendamento" description={demo?'Disponível no plano pago':'Criar na agenda'} to={demo?undefined:'/app/agenda?action=new'} onClick={demo?()=>openUpgrade('Criar um novo agendamento'):undefined} />
         <ActionCard icon={CalendarCheck2} title="Ver agenda" description="Dia e próximos horários" to="/app/agenda" />
-        <ActionCard icon={Settings2} title="Configurar empresa" description={membership?.business_name??'Sua operação'} to="/app/mais#configuracao" />
+        <ActionCard icon={Settings2} title="Configurar empresa" description={demo?'Disponível no plano pago':membership?.business_name??'Sua operação'} to={demo?undefined:'/app/mais#configuracao'} onClick={demo?()=>openUpgrade('Configurar a operação'):undefined} />
       </div>
     </section>
   </div>

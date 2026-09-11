@@ -1,3 +1,5 @@
+import { entitlementsFor } from '../access/entitlements.ts'
+
 export type ProductState = 'FREE_DEMO' | 'SETUP_PENDING' | 'ACTIVE' | 'CONNECTION_PENDING' | 'ERROR'
 
 type AccessSnapshot = {access_mode:'free'|'paid'}
@@ -10,7 +12,7 @@ export function deriveProductState(
   query?: {isPending?: boolean; isError?: boolean},
   setup?: SetupSnapshot,
 ): ProductState {
-  if (membership?.access_mode === 'free') return 'FREE_DEMO'
+  if (entitlementsFor(membership).usesDemoData) return 'FREE_DEMO'
   if (query?.isError) return 'ERROR'
   if (connection?.status === 'pending') return 'CONNECTION_PENDING'
   if (query?.isPending) return 'SETUP_PENDING'

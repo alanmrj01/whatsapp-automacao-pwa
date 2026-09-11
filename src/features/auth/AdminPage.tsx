@@ -193,6 +193,10 @@ export function AdminPage() {
               <span>{whatsappLabel[business.whatsapp_status]}</span>
               <span>{business.timezone}</span>
             </div>
+            <div className="platform-admin__access">
+              <strong className={business.access_mode==='paid'?'is-paid':'is-free'}>{business.access_mode==='paid'?'Pago':'Gratuito'}</strong>
+              <span>{business.access_mode==='paid'?'Categoria e origem do acesso não registradas no modelo atual.':'Acesso demonstrativo, sem operação paga.'}</span>
+            </div>
             <button className="platform-admin__toggle" type="button" disabled={busyId === business.id}
               onClick={()=>void toggleBusiness(business)}>
               <CirclePower size={18}/>{busyId === business.id ? 'Salvando…' : business.active ? 'Desativar empresa' : 'Reativar empresa'}

@@ -3,6 +3,7 @@ import { AppHeader } from '../components/AppHeader'
 import { BottomNavigation } from '../components/BottomNavigation'
 import { DesktopSidebar } from '../components/DesktopSidebar'
 import { BusinessSelector } from '../features/auth/BusinessSelector'
+import { UpgradePromptProvider } from '../features/access/UpgradePrompt'
 
 const titles: Record<string, string> = {
   '/app': 'Início',
@@ -25,6 +26,7 @@ export function AppShell() {
   const title = titles[pathname] ?? 'Conectar WhatsApp'
 
   return (
+    <UpgradePromptProvider>
     <div className="app-layout">
       <DesktopSidebar />
       <div className="app-column">
@@ -36,5 +38,6 @@ export function AppShell() {
         <BottomNavigation />
       </div>
     </div>
+    </UpgradePromptProvider>
   )
 }

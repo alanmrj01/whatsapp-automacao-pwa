@@ -76,3 +76,12 @@ test('free WhatsApp navigation does not expose the real connection action', () =
   assert.match(whatsapp, /conexão real do WhatsApp fica disponível nos pacotes pagos/i)
   assert.match(dashboard, /Dados de demonstração/)
 })
+
+test('platform admin shows only the real free/paid access flag and exposes no billing override action', () => {
+  const admin = read('src/features/auth/AdminPage.tsx')
+  const api = read('src/features/auth/platformAdmin.ts')
+  assert.match(api,/access_mode: 'free' \| 'paid'/)
+  assert.match(admin,/business\.access_mode==='paid'\?'Pago':'Gratuito'/)
+  assert.match(admin,/Categoria e origem do acesso não registradas no modelo atual/)
+  assert.doesNotMatch(`${admin}${api}`,/setEntitlement|permanent|checkout|billing/i)
+})

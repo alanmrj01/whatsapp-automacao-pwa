@@ -7,18 +7,19 @@ import { InfoHelp } from '../../components/InfoHelp'
 import { LoadingState } from '../../components/LoadingState'
 import { StatusBadge } from '../../components/StatusBadge'
 import { demoConversations } from '../../demo/operationalDemo'
+import { DemoDataNotice } from '../access/DemoDataNotice'
+import { useEntitlements } from '../access/useEntitlements'
 import { useBusiness, useConversation, useConversations } from '../operations/api'
 import type { Conversation, ConversationStatus } from '../operations/types'
-import { useProductState } from '../product/productState'
 
 const labels = {waiting:'Aguardando',in_progress:'Em atendimento',answered:'Respondida'} as const
 
 export function ConversationsPage() {
-  const {state} = useProductState()
+  const entitlement = useEntitlements()
   const [search,setSearch] = useState('')
   const [filter,setFilter] = useState<'all'|ConversationStatus>('all')
   const [selected,setSelected] = useState<string|null>(null)
-  const demo = state==='FREE_DEMO'
+  const demo = entitlement.usesDemoData
   const realConversations=useConversations(search,filter==='all'?'':filter)
   const detail=useConversation(selected)
   const business=useBusiness()
@@ -27,11 +28,13 @@ export function ConversationsPage() {
     const value = `${item.customer} ${item.lastMessage} ${item.assignee}`.toLocaleLowerCase('pt-BR')
     return matchesFilter && value.includes(search.toLocaleLowerCase('pt-BR'))
   }),[filter,search])
+  const demoDetail = demoConversations.find(item=>item.id===selected)
 
   return <div className="page-stack operational-page compact-page">
     <section className="operational-heading"><div><span className="eyebrow">Fila de atendimento</span><h1>Conversas</h1></div>{demo&&<StatusBadge tone="info">Demo</StatusBadge>}</section>
 
     {demo ? <>
+      <DemoDataNotice />
       <div className="toolbar-row">
         <label className="search-field"><Search size={19}/><span className="sr-only">Buscar conversa</span><input value={search} onChange={event=>setSearch(event.target.value)} type="search" placeholder="Buscar conversa" /></label>
         <InfoHelp title="Ordem da fila">Conversas prioritárias e não lidas aparecem primeiro. Os dados desta fila são demonstrativos.</InfoHelp>
@@ -40,11 +43,14 @@ export function ConversationsPage() {
       <section className="conversation-list" aria-live="polite">
         {conversations.map(item=><article className={item.priority?'conversation-row is-priority':'conversation-row'} key={item.id}>
           <div className="conversation-avatar" aria-hidden="true">{item.customer.split(' ').map(value=>value[0]).join('').slice(0,2)}</div>
-          <div className="conversation-copy"><div><strong>{item.customer}</strong><time>{item.time}</time></div><p>{item.lastMessage}</p><footer><span>{item.assignee}</span><StatusBadge tone={item.status==='waiting'?'warning':item.status==='answered'?'success':'info'}>{labels[item.status]}</StatusBadge></footer></div>
+          <button type="button" className="conversation-copy conversation-copy--button" onClick={()=>setSelected(item.id)} aria-label={`Abrir conversa fictícia com ${item.customer}`}><div><strong>{item.customer}</strong><time>{item.time}</time></div><p>{item.lastMessage}</p><footer><span>{item.assignee}</span><StatusBadge tone={item.status==='waiting'?'warning':item.status==='answered'?'success':'info'}>{labels[item.status]}</StatusBadge></footer></button>
           {item.unread>0&&<span className="unread-count" aria-label={`${item.unread} mensagens não lidas`}>{item.unread}</span>}
         </article>)}
         {!conversations.length&&<div className="inline-empty">Nenhuma conversa encontrada.</div>}
       </section>
+      <BottomSheet open={!!demoDetail} title={demoDetail?.customer??'Conversa fictícia'} description="Atendimento demonstrativo somente para leitura." onClose={()=>setSelected(null)}>
+        {demoDetail&&<div className="message-history">{demoDetail.messages.map(message=><article className={`message-history__item message-history__item--${message.direction==='customer'?'inbound':'outbound'}`} key={message.id}><span>{message.direction==='customer'?'Cliente':'Assistente Alovia'}</span><p>{message.body}</p><time>{message.time}</time></article>)}</div>}
+      </BottomSheet>
     </> : <>
       <div className="toolbar-row"><label className="search-field"><Search size={19}/><span className="sr-only">Buscar conversa</span><input value={search} onChange={event=>setSearch(event.target.value)} type="search" placeholder="Buscar conversa" /></label><InfoHelp title="Fila real">A fila usa somente conversas da empresa ativa e ordena itens não lidos primeiro.</InfoHelp></div>
       <ConversationFilters filter={filter} setFilter={setFilter}/>

@@ -1,5 +1,5 @@
 import { CalendarPlus2, ChevronLeft, ChevronRight, Clock3, UserRound } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { BottomSheet } from '../../components/BottomSheet'
 import { EmptyState } from '../../components/EmptyState'
@@ -7,7 +7,10 @@ import { ErrorState } from '../../components/ErrorState'
 import { InfoHelp } from '../../components/InfoHelp'
 import { LoadingState } from '../../components/LoadingState'
 import { StatusBadge } from '../../components/StatusBadge'
-import { cancelDemoAppointment, demoAppointments, demoToday, saveDemoAppointment, type DemoAppointment, type DemoAppointmentStatus } from '../../demo/operationalDemo'
+import { demoAppointments, demoToday, type DemoAppointment, type DemoAppointmentStatus } from '../../demo/operationalDemo'
+import { DemoDataNotice } from '../access/DemoDataNotice'
+import { useEntitlements } from '../access/useEntitlements'
+import { useUpgradePrompt } from '../access/upgradePromptContext'
 import { useAppointments, useBusiness, useCancelAppointment, useCreateCustomer, useCustomers, useEmployees, useSaveAppointment, useServices } from '../operations/api'
 import type { Appointment, AppointmentStatus } from '../operations/types'
 import { zonedDateTimeToIso } from '../operations/timezone'
@@ -26,41 +29,30 @@ function readableDate(value:string) {
   return new Intl.DateTimeFormat('pt-BR',{weekday:'long',day:'numeric',month:'long'}).format(new Date(`${value}T12:00:00`))
 }
 
-function blankAppointment(id:string,date:string):DemoAppointment {
-  return {id,date,time:'09:00',customer:'',phone:'',service:'Visita técnica',technician:'',status:'pending',notes:''}
-}
-
 export function AgendaPage() {
-  const {state} = useProductState()
-  const demo = state==='FREE_DEMO'
+  const entitlement = useEntitlements()
+  const {openUpgrade} = useUpgradePrompt()
+  const demo = entitlement.usesDemoData
   const [searchParams,setSearchParams] = useSearchParams()
   const [selectedDate,setSelectedDate] = useState(demo?demoToday:new Date().toISOString().slice(0,10))
-  const [appointments,setAppointments] = useState(()=>demoAppointments)
-  const [draft,setDraft] = useState<DemoAppointment|null>(null)
-  const nextId = useRef(1)
-  const dayAppointments = useMemo(()=>appointments.filter(item=>item.date===selectedDate).sort((a,b)=>a.time.localeCompare(b.time)),[appointments,selectedDate])
+  const [selectedDemo,setSelectedDemo] = useState<DemoAppointment|null>(null)
+  const dayAppointments = useMemo(()=>demoAppointments.filter(item=>item.date===selectedDate).sort((a,b)=>a.time.localeCompare(b.time)),[selectedDate])
 
   useEffect(()=>{
     if (demo&&searchParams.get('action')==='new') {
-      setDraft(blankAppointment(`demo-new-${nextId.current++}`,selectedDate))
+      openUpgrade('Criar um novo agendamento')
       setSearchParams({}, {replace:true})
     }
-  },[demo,searchParams,selectedDate,setSearchParams])
+  },[demo,openUpgrade,searchParams,setSearchParams])
 
-  const openNew = () => setDraft(blankAppointment(`demo-new-${nextId.current++}`,selectedDate))
-  const submit = (event:FormEvent) => {
-    event.preventDefault()
-    if (!draft) return
-    setAppointments(current=>saveDemoAppointment(current,draft))
-    setSelectedDate(draft.date)
-    setDraft(null)
-  }
-  const update = <K extends keyof DemoAppointment>(key:K,value:DemoAppointment[K]) => setDraft(current=>current?{...current,[key]:value}:current)
+  const openNew = () => openUpgrade('Criar um novo agendamento')
 
   if (!demo) return <RealAgenda selectedDate={selectedDate} setSelectedDate={setSelectedDate} />
 
   return <div className="page-stack operational-page compact-page">
-    <section className="operational-heading"><div><span className="eyebrow">Dados de demonstração</span><h1>Agenda</h1></div><button className="compact-button" type="button" onClick={openNew}><CalendarPlus2 size={18}/>Novo</button></section>
+    <section className="operational-heading"><div><span className="eyebrow">Agenda demonstrativa</span><h1>Agenda</h1></div><button className="compact-button" type="button" onClick={openNew}><CalendarPlus2 size={18}/>Novo</button></section>
+
+    <DemoDataNotice />
 
     <section className="agenda-date-picker" aria-label="Selecionar data">
       <button type="button" aria-label="Dia anterior" onClick={()=>setSelectedDate(value=>moveDate(value,-1))}><ChevronLeft/></button>
@@ -68,31 +60,25 @@ export function AgendaPage() {
       <button type="button" aria-label="Próximo dia" onClick={()=>setSelectedDate(value=>moveDate(value,1))}><ChevronRight/></button>
     </section>
 
-    <div className="section-title-row"><h2>{dayAppointments.length} {dayAppointments.length===1?'atendimento':'atendimentos'}</h2><InfoHelp title="Agenda de demonstração">Você pode criar, editar, alterar o status e cancelar compromissos localmente. Nada é enviado ao backend.</InfoHelp></div>
+    <div className="section-title-row"><h2>{dayAppointments.length} {dayAppointments.length===1?'atendimento':'atendimentos'}</h2><InfoHelp title="Agenda de demonstração">Os exemplos são somente leitura e nunca são enviados ao backend.</InfoHelp></div>
     {dayAppointments.length ? <section className="agenda-list">
       {dayAppointments.map(item=><article className={item.status==='cancelled'?'agenda-row is-cancelled':'agenda-row'} key={item.id}>
-        <button type="button" onClick={()=>setDraft({...item})} aria-label={`Editar agendamento de ${item.customer}`}>
+        <button type="button" onClick={()=>setSelectedDemo(item)} aria-label={`Ver agendamento fictício de ${item.customer}`}>
           <time>{item.time}</time>
           <div><strong>{item.customer}</strong><span>{item.service}</span><small><UserRound size={14}/>{item.technician||'Sem responsável'}</small></div>
           <StatusBadge tone={statusTones[item.status]}>{statusLabels[item.status]}</StatusBadge>
         </button>
       </article>)}
-    </section> : <EmptyState icon={Clock3} title="Dia livre" description="Crie um agendamento demonstrativo para esta data." action={<button className="primary-button" type="button" onClick={openNew}>Novo agendamento</button>} />}
+    </section> : <EmptyState icon={Clock3} title="Dia livre" description="Nenhum exemplo fictício nesta data." action={<button className="primary-button" type="button" onClick={openNew}>Conhecer plano pago</button>} />}
 
-    <BottomSheet open={!!draft} title={draft&&appointments.some(item=>item.id===draft.id)?'Editar agendamento':'Novo agendamento'} description="Dados de demonstração; sem envio ao backend." onClose={()=>setDraft(null)}>
-      {draft&&<form className="appointment-form" onSubmit={submit}>
-        <label>Cliente<input required value={draft.customer} onChange={event=>update('customer',event.target.value)}/></label>
-        <label>Telefone<input required inputMode="tel" value={draft.phone} onChange={event=>update('phone',event.target.value)}/></label>
-        <div className="form-grid"><label>Data<input required type="date" value={draft.date} onChange={event=>update('date',event.target.value)}/></label><label>Horário<input required type="time" value={draft.time} onChange={event=>update('time',event.target.value)}/></label></div>
-        <label>Serviço<input required value={draft.service} onChange={event=>update('service',event.target.value)}/></label>
-        <label>Responsável/técnico<input required value={draft.technician} onChange={event=>update('technician',event.target.value)}/></label>
-        <label>Status<select value={draft.status} onChange={event=>update('status',event.target.value as DemoAppointmentStatus)}>{Object.entries(statusLabels).map(([value,label])=><option value={value} key={value}>{label}</option>)}</select></label>
-        <label>Observações<textarea rows={3} value={draft.notes} onChange={event=>update('notes',event.target.value)}/></label>
-        <div className="form-actions">
-          {appointments.some(item=>item.id===draft.id)&&draft.status!=='cancelled'&&<button className="danger-button" type="button" onClick={()=>{setAppointments(current=>cancelDemoAppointment(current,draft.id));setDraft(null)}}>Cancelar agendamento</button>}
-          <button className="primary-button" type="submit">Salvar</button>
-        </div>
-      </form>}
+    <BottomSheet open={!!selectedDemo} title={selectedDemo?.service??'Agendamento fictício'} description="Exemplo somente para visualização." onClose={()=>setSelectedDemo(null)}>
+      {selectedDemo&&<dl className="demo-detail-list">
+        <div><dt>Cliente</dt><dd>{selectedDemo.customer}</dd></div>
+        <div><dt>Data e horário</dt><dd>{readableDate(selectedDemo.date)} às {selectedDemo.time}</dd></div>
+        <div><dt>Responsável</dt><dd>{selectedDemo.technician}</dd></div>
+        <div><dt>Status</dt><dd>{statusLabels[selectedDemo.status]}</dd></div>
+        <div><dt>Observações</dt><dd>{selectedDemo.notes}</dd></div>
+      </dl>}
     </BottomSheet>
   </div>
 }

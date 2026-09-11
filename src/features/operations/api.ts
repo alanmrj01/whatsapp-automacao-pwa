@@ -2,6 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { queryClient } from '../../app/queryClient'
 import { api } from '../../lib/api'
 import { useAuth } from '../auth/useAuth'
+import { entitlementsFor, requirePaidAccess } from '../access/entitlements'
 import type { Appointment, AppointmentInput, AutomationSettings, Business, ConversationDetail, ConversationList, Customer, DashboardToday, Employee, Service, SetupStatus, WorkingHours } from './types'
 
 const root = (businessId?:string) => ['operations',businessId] as const
@@ -9,7 +10,12 @@ const json = (value:object) => JSON.stringify(value)
 
 function usePaidContext() {
   const {membership} = useAuth()
-  return {businessId:membership?.business_id,enabled:membership?.access_mode==='paid'}
+  return {businessId:membership?.business_id,enabled:entitlementsFor(membership).canReadOperationalData,membership}
+}
+
+function paidMutation<T>(context:ReturnType<typeof usePaidContext>, action:()=>Promise<T>) {
+  requirePaidAccess(context.membership)
+  return action()
 }
 
 async function invalidate(businessId:string|undefined,...resources:string[]) {
@@ -30,11 +36,11 @@ export function useAppointments(date:string) {
 }
 export function useSaveAppointment() {
   const context=usePaidContext()
-  return useMutation({mutationFn:({id,values}:{id?:string;values:AppointmentInput})=>api.request<Appointment>(id?`/appointments/${id}`:'/appointments',{method:id?'PATCH':'POST',body:json(values)}),onSuccess:()=>invalidate(context.businessId,'appointments','dashboard','setup')})
+  return useMutation({mutationFn:({id,values}:{id?:string;values:AppointmentInput})=>paidMutation(context,()=>api.request<Appointment>(id?`/appointments/${id}`:'/appointments',{method:id?'PATCH':'POST',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'appointments','dashboard','setup')})
 }
 export function useCancelAppointment() {
   const context=usePaidContext()
-  return useMutation({mutationFn:(id:string)=>api.request<Appointment>(`/appointments/${id}/cancel`,{method:'POST',body:'{}'}),onSuccess:()=>invalidate(context.businessId,'appointments','dashboard')})
+  return useMutation({mutationFn:(id:string)=>paidMutation(context,()=>api.request<Appointment>(`/appointments/${id}/cancel`,{method:'POST',body:'{}'})),onSuccess:()=>invalidate(context.businessId,'appointments','dashboard')})
 }
 export function useConversations(search:string,status:string) {
   const context=usePaidContext()
@@ -53,7 +59,7 @@ export function useBusiness() {
 }
 export function useUpdateBusiness() {
   const context=usePaidContext()
-  return useMutation({mutationFn:(values:Partial<Pick<Business,'name'|'timezone'|'slot_interval_minutes'>>)=>api.request<Business>('/business',{method:'PATCH',body:json(values)}),onSuccess:()=>invalidate(context.businessId,'business','setup')})
+  return useMutation({mutationFn:(values:Partial<Pick<Business,'name'|'timezone'|'slot_interval_minutes'>>)=>paidMutation(context,()=>api.request<Business>('/business',{method:'PATCH',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'business','setup')})
 }
 export function useEmployees() {
   const context=usePaidContext()
@@ -61,15 +67,15 @@ export function useEmployees() {
 }
 export function useCreateEmployee() {
   const context=usePaidContext()
-  return useMutation({mutationFn:(name:string)=>api.request<Employee>('/employees',{method:'POST',body:json({name})}),onSuccess:()=>invalidate(context.businessId,'employees','setup')})
+  return useMutation({mutationFn:(name:string)=>paidMutation(context,()=>api.request<Employee>('/employees',{method:'POST',body:json({name})})),onSuccess:()=>invalidate(context.businessId,'employees','setup')})
 }
 export function useUpdateEmployee() {
   const context=usePaidContext()
-  return useMutation({mutationFn:({id,values}:{id:string;values:Partial<Pick<Employee,'name'|'active'>>})=>api.request<Employee>(`/employees/${id}`,{method:'PATCH',body:json(values)}),onSuccess:()=>invalidate(context.businessId,'employees','setup')})
+  return useMutation({mutationFn:({id,values}:{id:string;values:Partial<Pick<Employee,'name'|'active'>>})=>paidMutation(context,()=>api.request<Employee>(`/employees/${id}`,{method:'PATCH',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'employees','setup')})
 }
 export function useUpdateEmployeeServices() {
   const context=usePaidContext()
-  return useMutation({mutationFn:({id,service_ids}:{id:string;service_ids:string[]})=>api.request<Employee>(`/employees/${id}/services`,{method:'PUT',body:json({service_ids})}),onSuccess:()=>invalidate(context.businessId,'employees','setup')})
+  return useMutation({mutationFn:({id,service_ids}:{id:string;service_ids:string[]})=>paidMutation(context,()=>api.request<Employee>(`/employees/${id}/services`,{method:'PUT',body:json({service_ids})})),onSuccess:()=>invalidate(context.businessId,'employees','setup')})
 }
 export function useWorkingHours() {
   const context=usePaidContext()
@@ -77,11 +83,11 @@ export function useWorkingHours() {
 }
 export function useCreateWorkingHours() {
   const context=usePaidContext()
-  return useMutation({mutationFn:(values:Omit<WorkingHours,'id'|'employee_name'>)=>api.request<WorkingHours>('/working-hours',{method:'POST',body:json(values)}),onSuccess:()=>invalidate(context.businessId,'working-hours','setup')})
+  return useMutation({mutationFn:(values:Omit<WorkingHours,'id'|'employee_name'>)=>paidMutation(context,()=>api.request<WorkingHours>('/working-hours',{method:'POST',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'working-hours','setup')})
 }
 export function useDeleteWorkingHours() {
   const context=usePaidContext()
-  return useMutation({mutationFn:(id:string)=>api.request<void>(`/working-hours/${id}`,{method:'DELETE'}),onSuccess:()=>invalidate(context.businessId,'working-hours','setup')})
+  return useMutation({mutationFn:(id:string)=>paidMutation(context,()=>api.request<void>(`/working-hours/${id}`,{method:'DELETE'})),onSuccess:()=>invalidate(context.businessId,'working-hours','setup')})
 }
 export function useAutomationSettings() {
   const context=usePaidContext()
@@ -89,7 +95,7 @@ export function useAutomationSettings() {
 }
 export function useUpdateAutomation() {
   const context=usePaidContext()
-  return useMutation({mutationFn:(minutes:number)=>api.request<AutomationSettings>('/automation',{method:'PATCH',body:json({human_control_window_minutes:minutes})}),onSuccess:()=>invalidate(context.businessId,'automation','setup')})
+  return useMutation({mutationFn:(minutes:number)=>paidMutation(context,()=>api.request<AutomationSettings>('/automation',{method:'PATCH',body:json({human_control_window_minutes:minutes})})),onSuccess:()=>invalidate(context.businessId,'automation','setup')})
 }
 export function useCustomers() {
   const context=usePaidContext()
@@ -97,7 +103,7 @@ export function useCustomers() {
 }
 export function useCreateCustomer() {
   const context=usePaidContext()
-  return useMutation({mutationFn:({name,phone}:{name:string;phone:string})=>api.request<Customer>('/customers',{method:'POST',body:json({name,phone})}),onSuccess:()=>invalidate(context.businessId,'customers')})
+  return useMutation({mutationFn:({name,phone}:{name:string;phone:string})=>paidMutation(context,()=>api.request<Customer>('/customers',{method:'POST',body:json({name,phone})})),onSuccess:()=>invalidate(context.businessId,'customers')})
 }
 export function useServices() {
   const context=usePaidContext()
@@ -105,9 +111,9 @@ export function useServices() {
 }
 export function useCreateService() {
   const context=usePaidContext()
-  return useMutation({mutationFn:(values:Pick<Service,'name'|'duration_minutes'>)=>api.request<Service>('/services',{method:'POST',body:json(values)}),onSuccess:()=>invalidate(context.businessId,'services','setup')})
+  return useMutation({mutationFn:(values:Pick<Service,'name'|'duration_minutes'>)=>paidMutation(context,()=>api.request<Service>('/services',{method:'POST',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'services','setup')})
 }
 export function useUpdateService() {
   const context=usePaidContext()
-  return useMutation({mutationFn:({id,values}:{id:string;values:Partial<Pick<Service,'name'|'duration_minutes'|'active'>>})=>api.request<Service>(`/services/${id}`,{method:'PATCH',body:json(values)}),onSuccess:()=>invalidate(context.businessId,'services','employees','setup')})
+  return useMutation({mutationFn:({id,values}:{id:string;values:Partial<Pick<Service,'name'|'duration_minutes'|'active'>>})=>paidMutation(context,()=>api.request<Service>(`/services/${id}`,{method:'PATCH',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'services','employees','setup')})
 }

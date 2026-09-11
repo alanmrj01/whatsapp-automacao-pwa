@@ -12,7 +12,6 @@ import './styles/alovia-theme.css'
 import './styles/approved-mockups.css'
 import './styles/free-access-foundations.css'
 import './styles/operational-app.css'
-import './features/preview/PlatformPreviewPage.css'
 
 registerSW({ immediate: true })
 

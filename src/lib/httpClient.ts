@@ -13,8 +13,8 @@ export class ApiError extends Error {
 export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) {
   let token: string | null = null
   let generation = 0
-  let refreshing: Promise<void> | null = null
-  let loggingIn: Promise<void> | null = null
+  let refreshing: Promise<unknown> | null = null
+  let loggingIn: Promise<unknown> | null = null
   let loggingOut: Promise<void> | null = null
   let blocked = false
   let onExpired = () => {}
@@ -50,26 +50,28 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
     try { return await response.json() as T } catch { throw new ApiError(502) }
   }
 
-  async function acceptToken(response: Response, expectedGeneration: number) {
-    const value = await body<{access_token:string}>(response)
+  async function acceptToken<T = unknown>(response: Response, expectedGeneration: number): Promise<T | undefined> {
+    const value = await body<{access_token:string;session?:T}>(response)
     if (!value || typeof value.access_token !== 'string' || !value.access_token) throw new ApiError(502)
     if (expectedGeneration !== generation) throw new ApiError(401)
     token = value.access_token
+    return value.session
   }
 
-  async function refresh(): Promise<void> {
+  async function refresh<T = unknown>(): Promise<T | undefined> {
     if (blocked) throw new ApiError(401)
     if (!refreshing) {
       const expected = generation
       refreshing = (async () => {
         const rotate = async () => {
           if (generation !== expected) throw new ApiError(401)
-          await acceptToken(await raw('/auth/refresh', {method:'POST',body:'{}'}), expected)
+          return acceptToken<T>(await raw('/auth/refresh', {method:'POST',body:'{}'}), expected)
         }
         // Serialize refresh across tabs when supported; never share a token.
         if (typeof navigator !== 'undefined' && navigator.locks) {
-          await navigator.locks.request('alovia-refresh', rotate)
-        } else { await rotate() }
+          return navigator.locks.request('alovia-refresh', rotate)
+        }
+        return rotate()
       })().catch(error => {
         // A slow/offline connection or a 5xx response does not prove that the
         // refresh cookie is invalid. Only an explicit 401 may expire a session.
@@ -77,7 +79,7 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
         throw error
       }).finally(() => { refreshing = null })
     }
-    return refreshing
+    return refreshing as Promise<T | undefined>
   }
 
   async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -97,7 +99,7 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
     return value
   }
 
-  async function startAuthentication(path: string, payload: object, headers?: HeadersInit) {
+  async function startAuthentication<T = unknown>(path: string, payload: object, headers?: HeadersInit): Promise<T | undefined> {
     if (loggingOut || loggingIn) throw new ApiError(401)
     const previousRefresh = refreshing
     clear()
@@ -106,24 +108,24 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
     loggingIn = (async () => {
       if (previousRefresh) await previousRefresh.catch(() => {})
       if (generation !== expected) throw new ApiError(401)
-      await acceptToken(await raw(path, {
+      return acceptToken<T>(await raw(path, {
         method:'POST',
         headers,
         body:JSON.stringify(payload),
       }), expected)
     })()
-    try { await loggingIn }
+    try { return await loggingIn as T | undefined }
     finally { loggingIn = null }
   }
 
   return {
     request, refresh, clear,
     onExpired(listener: () => void) { onExpired = listener },
-    async login(email: string, password: string) {
-      await startAuthentication('/auth/login', {email,password})
+    async login<T = unknown>(email: string, password: string) {
+      return startAuthentication<T>('/auth/login', {email,password})
     },
-    async signup(businessName: string, email: string, password: string, idempotencyKey: string) {
-      await startAuthentication('/auth/signup', {
+    async signup<T = unknown>(businessName: string, email: string, password: string, idempotencyKey: string) {
+      return startAuthentication<T>('/auth/signup', {
         business_name: businessName,
         email,
         password,

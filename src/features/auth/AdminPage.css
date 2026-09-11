@@ -231,6 +231,24 @@
   font-size: .75rem;
 }
 
+.platform-admin__access {
+  margin: -4px 0 15px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.platform-admin__access strong {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: .75rem;
+}
+
+.platform-admin__access strong.is-free { color:var(--color-text-soft); background:var(--color-surface-subtle); }
+.platform-admin__access strong.is-paid { color:var(--color-success); background:var(--color-success-bg); }
+.platform-admin__access span { color:var(--color-text-muted); font-size:.72rem; line-height:1.35; }
+
 .platform-admin__toggle {
   display: inline-flex;
   align-items: center;
