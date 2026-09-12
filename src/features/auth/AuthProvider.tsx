@@ -29,9 +29,9 @@ export function AuthProvider({children}: {children:ReactNode}) {
     bootstrapping.current = (async () => {
       for (let attempt = 0; attempt <= BOOTSTRAP_RETRY_DELAYS_MS.length; attempt++) {
         try {
-          await api.refresh()
+          const hydrated = await api.refresh<SessionUser>()
           if (operation.current !== expected) return
-          const me = await api.request<SessionUser>('/me')
+          const me = hydrated ?? await api.request<SessionUser>('/me')
           if (operation.current !== expected) return
           setUser(me)
           setState('authenticated')
@@ -77,9 +77,9 @@ export function AuthProvider({children}: {children:ReactNode}) {
     const expected = ++operation.current
     logoutBlocked.current = false
     dropPrivateState()
-    await api.login(email,password)
+    const hydrated = await api.login<SessionUser>(email,password)
     if (operation.current !== expected) return
-    const me = await api.request<SessionUser>('/me')
+    const me = hydrated ?? await api.request<SessionUser>('/me')
     if (operation.current !== expected) return
     setUser(me)
     setState('authenticated')
@@ -91,9 +91,9 @@ export function AuthProvider({children}: {children:ReactNode}) {
     logoutBlocked.current = false
     dropPrivateState()
     try {
-      await api.signup(businessName,email,password,idempotencyKey)
+      const hydrated = await api.signup<SessionUser>(businessName,email,password,idempotencyKey)
       if (operation.current !== expected) return
-      const me = await api.request<SessionUser>('/me')
+      const me = hydrated ?? await api.request<SessionUser>('/me')
       if (operation.current !== expected) return
       setUser(me)
       setState('authenticated')

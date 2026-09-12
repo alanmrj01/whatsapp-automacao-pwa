@@ -9,6 +9,7 @@ type ListRowProps = {
   subtitle?: string
   trailing?: ReactNode
   to?: string
+  onClick?: () => void
   iconTone?: 'blue' | 'slate' | 'amber' | 'violet'
 }
 
@@ -18,6 +19,7 @@ export function ListRow({
   subtitle,
   trailing,
   to,
+  onClick,
   iconTone = 'blue',
 }: ListRowProps) {
   const content = (
@@ -39,6 +41,10 @@ export function ListRow({
     <Link className="list-row" to={to}>
       {content}
     </Link>
+  ) : onClick ? (
+    <button className="list-row" type="button" onClick={onClick}>
+      {content}
+    </button>
   ) : (
     <div className="list-row">{content}</div>
   )

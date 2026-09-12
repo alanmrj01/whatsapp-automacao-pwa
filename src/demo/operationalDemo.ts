@@ -7,6 +7,14 @@ export type DemoConversation = {
   assignee: string
   unread: number
   priority: boolean
+  messages: DemoMessage[]
+}
+
+export type DemoMessage = {
+  id: string
+  direction: 'customer' | 'assistant'
+  body: string
+  time: string
 }
 
 export type DemoAppointmentStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled'
@@ -41,10 +49,10 @@ export const demoTomorrow = shiftDemoDate(demoToday, 1)
 export const demoBusinessName = 'PEMA Ar Condicionado'
 
 export const demoOverview = {
-  appointmentsToday: 4,
-  waiting: 3,
-  inProgress: 2,
-  completed: 5,
+  appointmentsToday: 3,
+  waiting: 2,
+  inProgress: 1,
+  completed: 1,
 } as const
 
 export const demoServiceMix = {
@@ -55,10 +63,35 @@ export const demoServiceMix = {
 } as const
 
 export const demoConversations: DemoConversation[] = [
-  {id:'conversation-1',customer:'Loja Centro',lastMessage:'Preciso confirmar a visita de manutenção.',time:'09:15',status:'waiting',assignee:'Marina',unread:2,priority:true},
-  {id:'conversation-2',customer:'Carlos Mendes',lastMessage:'O técnico consegue vir no período da tarde?',time:'09:04',status:'waiting',assignee:'João',unread:1,priority:true},
-  {id:'conversation-3',customer:'Padaria Pão Quente',lastMessage:'Enviei as informações do equipamento.',time:'08:42',status:'in_progress',assignee:'Marina',unread:0,priority:false},
-  {id:'conversation-4',customer:'Ana Paula',lastMessage:'Obrigada, ficou agendado.',time:'Ontem',status:'answered',assignee:'João',unread:0,priority:false},
+  {id:'conversation-1',customer:'Loja Centro',lastMessage:'Pode confirmar a visita de manutenção?',time:'09:15',status:'waiting',assignee:'Marina',unread:2,priority:true,messages:[
+    {id:'1-1',direction:'customer',body:'Bom dia, preciso revisar três aparelhos da loja.',time:'08:58'},
+    {id:'1-2',direction:'assistant',body:'Claro. É uma manutenção preventiva nos três equipamentos?',time:'09:00'},
+    {id:'1-3',direction:'customer',body:'Sim, todos são splits e a loja fica no Centro.',time:'09:05'},
+    {id:'1-4',direction:'assistant',body:'Encontrei disponibilidade com a Marina hoje às 11h30.',time:'09:08'},
+    {id:'1-5',direction:'customer',body:'Pode confirmar a visita de manutenção?',time:'09:15'},
+  ]},
+  {id:'conversation-2',customer:'Carlos Mendes',lastMessage:'Vou verificar uma opção no período da tarde.',time:'09:04',status:'in_progress',assignee:'João',unread:0,priority:false,messages:[
+    {id:'2-1',direction:'customer',body:'Quero instalar um split de 18.000 BTUs.',time:'08:50'},
+    {id:'2-2',direction:'assistant',body:'Perfeito. O ponto elétrico e a infraestrutura já estão preparados?',time:'08:52'},
+    {id:'2-3',direction:'customer',body:'O ponto está pronto. Preciso da instalação completa.',time:'08:57'},
+    {id:'2-4',direction:'assistant',body:'O técnico consegue vir no período da manhã ou da tarde?',time:'09:00'},
+    {id:'2-5',direction:'customer',body:'Prefiro à tarde.',time:'09:02'},
+    {id:'2-6',direction:'assistant',body:'Vou verificar uma opção no período da tarde.',time:'09:04'},
+  ]},
+  {id:'conversation-3',customer:'Padaria Pão Quente',lastMessage:'Enviei as informações do equipamento.',time:'08:42',status:'waiting',assignee:'Marina',unread:1,priority:true,messages:[
+    {id:'3-1',direction:'customer',body:'A câmara fria não está mantendo a temperatura.',time:'08:30'},
+    {id:'3-2',direction:'assistant',body:'Entendi. O equipamento liga normalmente e apresenta algum alerta?',time:'08:33'},
+    {id:'3-3',direction:'customer',body:'Liga, mas a temperatura continua subindo.',time:'08:36'},
+    {id:'3-4',direction:'assistant',body:'Pode informar o modelo e enviar a descrição do alerta, se houver?',time:'08:39'},
+    {id:'3-5',direction:'customer',body:'Enviei as informações do equipamento.',time:'08:42'},
+  ]},
+  {id:'conversation-4',customer:'Ana Paula',lastMessage:'Obrigada, ficou agendado.',time:'Ontem',status:'answered',assignee:'João',unread:0,priority:false,messages:[
+    {id:'4-1',direction:'customer',body:'Gostaria de agendar uma limpeza completa do split.',time:'Ontem 14:10'},
+    {id:'4-2',direction:'assistant',body:'Tenho disponibilidade amanhã às 14h30 com o João.',time:'Ontem 14:12'},
+    {id:'4-3',direction:'customer',body:'Esse horário funciona para mim.',time:'Ontem 14:14'},
+    {id:'4-4',direction:'assistant',body:'Agendamento criado para amanhã às 14h30. Você receberá os detalhes por aqui.',time:'Ontem 14:15'},
+    {id:'4-5',direction:'customer',body:'Obrigada, ficou agendado.',time:'Ontem 14:16'},
+  ]},
 ]
 
 export const demoAppointments: DemoAppointment[] = [
@@ -67,12 +100,3 @@ export const demoAppointments: DemoAppointment[] = [
   {id:'appointment-3',date:demoToday,time:'14:30',customer:'Ana Paula',phone:'(12) 99999-0303',service:'Limpeza completa',technician:'João',status:'pending',notes:'Cliente prefere o período da tarde.'},
   {id:'appointment-4',date:demoTomorrow,time:'10:00',customer:'Empresa Alfa',phone:'(12) 99999-0404',service:'Visita técnica',technician:'Marina',status:'confirmed',notes:'Avaliar equipamento sem refrigeração.'},
 ]
-
-export function saveDemoAppointment(list: DemoAppointment[], appointment: DemoAppointment) {
-  const exists = list.some(item => item.id === appointment.id)
-  return exists ? list.map(item => item.id === appointment.id ? appointment : item) : [...list, appointment]
-}
-
-export function cancelDemoAppointment(list: DemoAppointment[], id: string) {
-  return list.map(item => item.id === id ? {...item,status:'cancelled' as const} : item)
-}
