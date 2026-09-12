@@ -69,12 +69,15 @@ test('auth foundation exposes free/paid access, signup and explicit reconnect UX
   assert.match(connection, /membership\?\.access_mode === 'paid'/)
 })
 
-test('free WhatsApp navigation does not expose the real connection action', () => {
+test('free WhatsApp CTA routes to upgrade without starting the Meta connection', () => {
   const whatsapp = read('src/features/whatsapp/WhatsAppPage.tsx')
   const dashboard = read('src/features/dashboard/DashboardPage.tsx')
   assert.match(whatsapp, /if \(free\)/)
-  assert.match(whatsapp, /conexão real do WhatsApp fica disponível nos pacotes pagos/i)
-  assert.match(dashboard, /Dados de demonstração/)
+  assert.match(whatsapp, /conexão oficial com o WhatsApp Business está disponível no plano pago/i)
+  assert.match(whatsapp, /openUpgrade\('Conectar o WhatsApp'\)/)
+  assert.match(whatsapp, /Conectar WhatsApp/)
+  assert.match(dashboard, /Modo demonstração/)
+  assert.match(dashboard, /whatsapp-summary/)
 })
 
 test('platform admin shows only the real free/paid access flag and exposes no billing override action', () => {

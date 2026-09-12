@@ -1,11 +1,13 @@
-import { ArrowRight, CalendarClock, Cable, LockKeyhole, MessageCircleMore, Snowflake, Wrench } from 'lucide-react'
+import { ArrowRight, CalendarClock, LockKeyhole, MessageCircleMore, Snowflake, Wrench } from 'lucide-react'
 import { useState } from 'react'
 import { PrimaryButton } from '../../components/PrimaryButton'
 import { LoadingState } from '../../components/LoadingState'
 import { ErrorState } from '../../components/ErrorState'
 import { StatusBadge } from '../../components/StatusBadge'
+import { useEntitlements } from '../access/useEntitlements'
+import { useUpgradePrompt } from '../access/upgradePromptContext'
 import { useAuth } from '../auth/useAuth'
-import { canConfigureWhatsApp, isFreeAccess } from '../auth/types'
+import { canConfigureWhatsApp } from '../auth/types'
 import { useConnection } from './useConnection'
 import { connectionModeLabels } from './connectionPresentation'
 import { ConnectWhatsAppSheet } from './ConnectWhatsAppSheet'
@@ -14,7 +16,9 @@ import { ConnectionStatusBadge } from './ConnectionStatusBadge'
 export function WhatsAppPage() {
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const {membership} = useAuth()
-  const free = isFreeAccess(membership)
+  const entitlement = useEntitlements()
+  const {openUpgrade} = useUpgradePrompt()
+  const free = entitlement.isFree
   const connection = useConnection()
 
   if (free) {
@@ -25,10 +29,13 @@ export function WhatsAppPage() {
             <MessageCircleMore size={34} />
             <span className="connection-card__indicator" />
           </div>
-          <span className="eyebrow">Canal de entrada</span>
+          <span className="eyebrow">Canal principal de atendimento</span>
           <h1>WhatsApp</h1>
-          <StatusBadge>Demonstração</StatusBadge>
-          <p>Você pode conhecer o fluxo da Alovia sem conectar um número agora. A conexão real do WhatsApp fica disponível nos pacotes pagos.</p>
+          <StatusBadge tone="info">Modo demonstração</StatusBadge>
+          <p>Veja como o ALOVIA organiza pedidos, conversas e agendamentos. A conexão oficial com o WhatsApp Business está disponível no plano pago.</p>
+          <PrimaryButton fullWidth icon={<ArrowRight size={19}/>} onClick={()=>openUpgrade('Conectar o WhatsApp')}>
+            Conectar WhatsApp
+          </PrimaryButton>
         </section>
 
         <section className="alovia-flow" aria-labelledby="alovia-flow-title">
@@ -46,8 +53,8 @@ export function WhatsAppPage() {
     )
   }
 
-  if (connection.isPending) return <LoadingState />
-  if (connection.isError) return <ErrorState onRetry={()=>void connection.refetch()} />
+  if (connection.isPending) return <div className="page-stack whatsapp-page"><section className="operational-heading"><div><span className="eyebrow">Canal principal</span><h1>WhatsApp</h1></div></section><LoadingState /></div>
+  if (connection.isError) return <div className="page-stack whatsapp-page"><section className="operational-heading"><div><span className="eyebrow">Canal principal</span><h1>WhatsApp</h1></div></section><ErrorState onRetry={()=>void connection.refetch()} /></div>
   const {status,mode} = connection.data
   const canConnect = canConfigureWhatsApp(membership?.role) && (status === 'disconnected' || status === 'error')
 
@@ -58,22 +65,26 @@ export function WhatsAppPage() {
           <MessageCircleMore size={34} />
           <span className="connection-card__indicator" />
         </div>
-        <span className="eyebrow">Canal de entrada</span>
+        <span className="eyebrow">Canal principal de atendimento</span>
         <h1>WhatsApp</h1>
         <ConnectionStatusBadge status={status} />
-        {mode && <p>{connectionModeLabels[mode]}</p>}
-        {connection.data.display_phone_number && <p>Número conectado: {connection.data.display_phone_number}</p>}
         <p>
-          {status === 'connected' ? 'Seu número está conectado à Alovia.' :
-            status === 'pending' ? 'Sua conexão está em preparação. Aguarde a configuração oficial.' :
-            'Conecte seu número para transformar pedidos de atendimento em uma operação organizada dentro da Alovia.'}
+          {status === 'connected' ? 'O WhatsApp da empresa está conectado e pronto para organizar os atendimentos no ALOVIA.' :
+            status === 'pending' ? 'Estamos concluindo a autorização. Você pode sair desta tela e acompanhar o status depois.' :
+            status === 'error' ? 'Não foi possível manter a conexão. Revise a autorização e tente novamente quando estiver pronto.' :
+            'Conecte o WhatsApp Business oficial para receber pedidos, organizar conversas e gerar agendamentos.'}
         </p>
+        {status==='connected'&&<dl className="connection-facts">
+          {connection.data.display_phone_number&&<div><dt>Número conectado</dt><dd>{connection.data.display_phone_number}</dd></div>}
+          {mode&&<div><dt>Forma de operação</dt><dd>{connectionModeLabels[mode]}</dd></div>}
+          <div><dt>Situação</dt><dd>Conexão ativa</dd></div>
+        </dl>}
         {canConnect && <PrimaryButton
           fullWidth
           icon={<ArrowRight size={19} />}
           onClick={() => setIsSheetOpen(true)}
         >
-          Conectar WhatsApp
+          {status==='error'?'Tentar conectar novamente':'Conectar WhatsApp'}
         </PrimaryButton>}
         {!canConfigureWhatsApp(membership?.role) && <p>Acesso de leitura. A configuração é gerenciada pelo administrador.</p>}
       </section>
@@ -93,14 +104,9 @@ export function WhatsAppPage() {
       <section className="security-note">
         <span><LockKeyhole size={19} /></span>
         <div>
-          <strong>Conexão segura</strong>
-          <p>A conexão oficial será disponibilizada após a configuração do serviço.</p>
+          <strong>Conexão oficial e segura</strong>
+          <p>A autorização acontece com a Meta. Sua senha do WhatsApp não é solicitada pelo ALOVIA.</p>
         </div>
-      </section>
-
-      <section className="feature-note">
-        <Cable size={20} />
-        <p>Esta etapa não realiza conexões nem envia dados à Meta.</p>
       </section>
 
       {canConnect && <ConnectWhatsAppSheet open={isSheetOpen} onClose={() => setIsSheetOpen(false)} />}
