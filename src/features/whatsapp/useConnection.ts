@@ -9,7 +9,10 @@ export function useConnection() {
   return useQuery({
     queryKey:['whatsapp-connection',user?.id,membership?.business_id],
     queryFn:({signal})=>api.request<WhatsAppConnection>('/whatsapp/connection',{signal}),
-    enabled:!!membership && paid, retry:false, staleTime:0, gcTime:0,
-    refetchOnWindowFocus:true,
+    enabled:!!membership && paid,
+    retry:false,
+    staleTime:60_000,
+    gcTime:5*60_000,
+    refetchOnWindowFocus:false,
   })
 }

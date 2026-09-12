@@ -38,7 +38,7 @@ export function ConnectWhatsAppSheet({ open, onClose }: ConnectWhatsAppSheetProp
         </span>
         <ArrowRight size={20} aria-hidden="true" />
       </button>
-      <p className="sheet-footnote">Nenhuma conexão será feita nesta etapa.</p>
+      <p className="sheet-footnote">Você revisará a opção escolhida antes de concluir a autorização oficial.</p>
     </BottomSheet>
   )
 }

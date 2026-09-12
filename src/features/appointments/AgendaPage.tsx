@@ -1,6 +1,6 @@
 import { CalendarPlus2, ChevronLeft, ChevronRight, Clock3, UserRound } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { BottomSheet } from '../../components/BottomSheet'
 import { EmptyState } from '../../components/EmptyState'
 import { ErrorState } from '../../components/ErrorState'
@@ -11,10 +11,10 @@ import { demoAppointments, demoToday, type DemoAppointment, type DemoAppointment
 import { DemoDataNotice } from '../access/DemoDataNotice'
 import { useEntitlements } from '../access/useEntitlements'
 import { useUpgradePrompt } from '../access/upgradePromptContext'
+import { useAuth } from '../auth/useAuth'
 import { useAppointments, useBusiness, useCancelAppointment, useCreateCustomer, useCustomers, useEmployees, useSaveAppointment, useServices } from '../operations/api'
 import type { Appointment, AppointmentStatus } from '../operations/types'
 import { zonedDateTimeToIso } from '../operations/timezone'
-import { useProductState } from '../product/productState'
 
 const statusLabels:Record<DemoAppointmentStatus,string> = {pending:'Pendente',confirmed:'Confirmado',completed:'Concluído',cancelled:'Cancelado'}
 const statusTones:Record<DemoAppointmentStatus,'warning'|'success'|'info'|'danger'> = {pending:'warning',confirmed:'success',completed:'info',cancelled:'danger'}
@@ -79,6 +79,10 @@ export function AgendaPage() {
         <div><dt>Status</dt><dd>{statusLabels[selectedDemo.status]}</dd></div>
         <div><dt>Observações</dt><dd>{selectedDemo.notes}</dd></div>
       </dl>}
+      {selectedDemo&&<div className="demo-detail-actions">
+        <Link className="compact-button" to={`/app/conversas?conversation=${selectedDemo.conversationId}`}>Ver conversa relacionada</Link>
+        <button className="demo-locked-action" type="button" onClick={()=>{setSelectedDemo(null);openUpgrade('Alterar ou reagendar um atendimento')}}>Alterar agendamento</button>
+      </div>}
     </BottomSheet>
   </div>
 }
@@ -116,7 +120,7 @@ function realDraft(date:string,timeZone:string,item?:Appointment):RealDraft {
 
 function RealAgenda({selectedDate,setSelectedDate}:{selectedDate:string;setSelectedDate:(value:string)=>void}) {
   const [searchParams,setSearchParams]=useSearchParams()
-  const {membership}=useProductState()
+  const {membership}=useAuth()
   const canEdit=membership?.role!=='viewer'
   const appointments=useAppointments(selectedDate)
   const customers=useCustomers()
