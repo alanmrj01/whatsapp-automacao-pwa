@@ -80,11 +80,11 @@ test('free WhatsApp CTA routes to upgrade without starting the Meta connection',
   assert.match(dashboard, /whatsapp-summary/)
 })
 
-test('platform admin shows only the real free/paid access flag and exposes no billing override action', () => {
+test('platform admin presents entitlement as access without inventing a commercial plan', () => {
   const admin = read('src/features/auth/AdminPage.tsx')
   const api = read('src/features/auth/platformAdmin.ts')
   assert.match(api,/access_mode: 'free' \| 'paid'/)
-  assert.match(admin,/business\.access_mode==='paid'\?'Pago':'Gratuito'/)
-  assert.match(admin,/Categoria e origem do acesso não registradas no modelo atual/)
-  assert.doesNotMatch(`${admin}${api}`,/setEntitlement|permanent|checkout|billing/i)
+  assert.match(admin,/business\.access_mode==='paid'\?'Acesso liberado':'Gratuito'/)
+  assert.match(admin,/Plano comercial: não registrado/)
+  assert.doesNotMatch(`${admin}${api}`,/\b(?:Basic|Premium|Pro)\b|checkout|billing/i)
 })

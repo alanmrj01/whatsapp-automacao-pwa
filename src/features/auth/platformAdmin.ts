@@ -37,3 +37,10 @@ export async function setPlatformBusinessActive(id: string, active: boolean) {
     body: JSON.stringify({active}),
   })
 }
+
+export async function setPlatformBusinessAccess(id: string, access_mode: 'free' | 'paid') {
+  return api.request<{business_id:string;access_mode:'free'|'paid'}>(`/admin/businesses/${id}/access`, {
+    method: 'PATCH',
+    body: JSON.stringify({access_mode}),
+  })
+}
