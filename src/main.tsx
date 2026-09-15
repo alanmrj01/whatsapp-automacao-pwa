@@ -13,6 +13,7 @@ import './styles/approved-mockups.css'
 import './styles/free-access-foundations.css'
 import './styles/operational-app.css'
 import './styles/account-billing.css'
+import './styles/billing-payment.css'
 
 registerSW({ immediate: true })
 
