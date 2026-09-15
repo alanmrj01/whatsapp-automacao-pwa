@@ -11,9 +11,9 @@ test('former operational tenants use real data in read-only mode instead of demo
   const operations = read('src/features/operations/api.ts')
 
   assert.match(entitlements, /isReadOnlyRetained/)
-  assert.match(entitlements, /usesDemoData: isFree && !hasHistory/)
-  assert.match(entitlements, /canReadOperationalData: isPaid \|\| hasHistory/)
-  assert.match(productState, /READ_ONLY_RETAINED/)
+  assert.match(entitlements, /usesDemoData: isFree && !hasOperationalHistory/)
+  assert.match(entitlements, /canReadOperationalData: isPaid \|\| isReadOnlyRetained/)
+  assert.match(productState, /return 'READ_ONLY'/)
   assert.match(dashboard, /Somente leitura/)
   assert.match(operations, /canReadOperationalData/)
 })
