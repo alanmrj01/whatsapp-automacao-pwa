@@ -40,15 +40,32 @@ test('commercial catalog uses Basic and Plus with quarterly as default', () => {
   assert.equal(cyclePrice(plus,'annual').total,3029.4)
 })
 
-test('plan switching, compact upgrade prompt and account routes are explicit', () => {
+test('plan page is concise and sends the selected offer straight to checkout', () => {
   const plan = read('src/features/billing/PlanPage.tsx')
-  const prompt = read('src/features/access/UpgradePrompt.tsx')
+  const checkout = read('src/features/billing/CheckoutPage.tsx')
   const router = read('src/app/router.tsx')
-  const dashboard = read('src/features/dashboard/DashboardPage.tsx')
 
   assert.match(plan,/role="tablist"/)
   assert.match(plan,/aria-selected=\{cycle===item\.id\}/)
   assert.match(plan,/Mais popular/)
+  assert.match(plan,/navigate\(`\/app\/checkout\?plan=\$\{plan\}&cycle=\$\{cycle\}`\)/)
+  assert.match(plan,/Escolher Basic/)
+  assert.match(plan,/Escolher Plus/)
+  assert.doesNotMatch(plan,/Seus dados continuam preservados/)
+  assert.doesNotMatch(plan,/Acesso operacional liberado/)
+  assert.doesNotMatch(plan,/Sua escolha/)
+
+  assert.match(checkout,/Finalize sua assinatura/)
+  assert.match(checkout,/Pagamento seguro/)
+  assert.match(checkout,/cyclePrice\(plan,cycleParam\)/)
+  assert.match(router,/path="checkout" element=\{<CheckoutPage \/>\}/)
+})
+
+test('compact upgrade prompt and account routes remain explicit', () => {
+  const prompt = read('src/features/access/UpgradePrompt.tsx')
+  const router = read('src/app/router.tsx')
+  const dashboard = read('src/features/dashboard/DashboardPage.tsx')
+
   assert.match(prompt,/Disponível com assinatura/)
   assert.match(prompt,/Ver planos/)
   assert.doesNotMatch(prompt,/Sua conta gratuita continua sem cobrança/)
