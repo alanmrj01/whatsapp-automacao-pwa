@@ -1,5 +1,5 @@
 import { CheckCircle2, Clock3, RotateCcw, XCircle } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../../lib/api'
 import { useAuth } from '../auth/useAuth'
@@ -80,7 +80,7 @@ export function CheckoutReturnPage() {
   </CheckoutMessage>
 }
 
-function CheckoutMessage({icon,title,text,children}:{icon:React.ReactNode;title:string;text:string;children:React.ReactNode}) {
+function CheckoutMessage({icon,title,text,children}:{icon:ReactNode;title:string;text:string;children:ReactNode}) {
   return <div className="page-stack operational-page compact-page checkout-return-page">
     <section className="checkout-return-card">
       <div className="checkout-return-icon" aria-hidden="true">{icon}</div>
