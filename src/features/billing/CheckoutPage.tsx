@@ -1,7 +1,8 @@
-import { Check, ChevronLeft, LockKeyhole } from 'lucide-react'
-import { useRef, useState } from 'react'
-import { Link, Navigate, useSearchParams } from 'react-router-dom'
+import { Check, CheckCircle2, ChevronLeft, Copy, CreditCard, LockKeyhole, QrCode } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../../lib/api'
+import { useAuth } from '../auth/useAuth'
 import {
   billingCycles,
   cyclePrice,
@@ -10,6 +11,28 @@ import {
   type BillingCycle,
   type PlanId,
 } from './planCatalog'
+
+type PaymentMethod = 'credit_card' | 'pix_automatic'
+
+type CheckoutResponse = {
+  checkout_id:string
+  payment_method:PaymentMethod
+  checkout_url?:string | null
+  pix_authorization_id?:string | null
+  pix_payload?:string | null
+  pix_expires_at?:string | null
+  plan:PlanId
+  cycle:BillingCycle
+  amount_cents:number
+}
+
+type CheckoutStatus = {
+  checkout_id:string
+  status:'creating'|'active'|'paid'|'canceled'|'expired'|'failed'
+  payment_method:PaymentMethod
+  plan:PlanId
+  cycle:BillingCycle
+}
 
 function isBillingCycle(value: string | null): value is BillingCycle {
   return value === 'monthly' || value === 'quarterly' || value === 'annual'
@@ -34,21 +57,52 @@ function isAsaasCheckoutUrl(value:string) {
   }
 }
 
-type CheckoutResponse = {
-  checkout_id:string
-  checkout_url:string
-  plan:PlanId
-  cycle:BillingCycle
-  amount_cents:number
-}
-
 export function CheckoutPage() {
   const [params] = useSearchParams()
+  const navigate = useNavigate()
+  const {user,reconnect} = useAuth()
   const planId = params.get('plan')
   const cycleParam = params.get('cycle')
+  const membership = user?.memberships.find(item=>item.business_id===user.active_business_id)
   const requestKey = useRef<string>(crypto.randomUUID())
+  const [paymentMethod,setPaymentMethod] = useState<PaymentMethod>('credit_card')
+  const [payerName,setPayerName] = useState(membership?.business_name??'')
+  const [payerDocument,setPayerDocument] = useState('')
   const [sending,setSending] = useState(false)
   const [error,setError] = useState<string | null>(null)
+  const [pixCheckout,setPixCheckout] = useState<CheckoutResponse | null>(null)
+  const [pixStatus,setPixStatus] = useState<CheckoutStatus['status'] | null>(null)
+  const [copied,setCopied] = useState(false)
+
+  useEffect(()=>{
+    if (!payerName && membership?.business_name) setPayerName(membership.business_name)
+  },[membership?.business_name,payerName])
+
+  useEffect(()=>{
+    if (!pixCheckout || !['active','creating'].includes(pixStatus??'active')) return
+    let cancelled = false
+    const checkStatus = async () => {
+      try {
+        const status = await api.request<CheckoutStatus>(`/billing/checkouts/${pixCheckout.checkout_id}`)
+        if (cancelled) return
+        setPixStatus(status.status)
+        if (status.status === 'paid') {
+          await reconnect()
+          if (!cancelled) navigate('/app',{replace:true})
+        } else if (['canceled','expired','failed'].includes(status.status)) {
+          setError('A autorização não foi concluída. Você pode tentar novamente.')
+        }
+      } catch {
+        // A autorização continua válida no Asaas mesmo se uma consulta pontual falhar.
+      }
+    }
+    void checkStatus()
+    const timer = window.setInterval(()=>void checkStatus(),4000)
+    return ()=>{
+      cancelled = true
+      window.clearInterval(timer)
+    }
+  },[navigate,pixCheckout,pixStatus,reconnect])
 
   if (!isPlanId(planId) || !isBillingCycle(cycleParam)) {
     return <Navigate to="/app/mais/plano" replace />
@@ -60,8 +114,22 @@ export function CheckoutPage() {
   const price = cyclePrice(plan,cycleParam)
   const cycle = billingCycles.find(item=>item.id===cycleParam)
 
+  function choosePayment(method:PaymentMethod) {
+    if (sending || method===paymentMethod) return
+    requestKey.current = crypto.randomUUID()
+    setPaymentMethod(method)
+    setError(null)
+    setPixCheckout(null)
+    setPixStatus(null)
+    setCopied(false)
+  }
+
   async function continueToPayment() {
     if (sending) return
+    if (paymentMethod==='pix_automatic' && (!payerName.trim() || !payerDocument.trim())) {
+      setError('Informe nome e CPF ou CNPJ para autorizar o Pix Automático.')
+      return
+    }
     setSending(true)
     setError(null)
     try {
@@ -71,14 +139,36 @@ export function CheckoutPage() {
         body:JSON.stringify({
           plan:planId,
           cycle:cycleParam,
+          payment_method:paymentMethod,
           return_origin:window.location.origin,
+          ...(paymentMethod==='pix_automatic'?{
+            payer_name:payerName.trim(),
+            payer_cpf_cnpj:payerDocument.trim(),
+          }:{}),
         }),
       })
-      if (!isAsaasCheckoutUrl(checkout.checkout_url)) throw new Error('invalid checkout host')
-      window.location.assign(checkout.checkout_url)
-    } catch {
-      setError('Não foi possível abrir o pagamento agora. Tente novamente.')
+      if (checkout.payment_method==='credit_card') {
+        if (!checkout.checkout_url || !isAsaasCheckoutUrl(checkout.checkout_url)) throw new Error('invalid checkout host')
+        window.location.assign(checkout.checkout_url)
+        return
+      }
+      if (!checkout.pix_payload || !checkout.pix_authorization_id) throw new Error('invalid pix response')
+      setPixCheckout(checkout)
+      setPixStatus('active')
       setSending(false)
+    } catch {
+      setError('Não foi possível iniciar o pagamento agora. Tente novamente.')
+      setSending(false)
+    }
+  }
+
+  async function copyPix() {
+    if (!pixCheckout?.pix_payload) return
+    try {
+      await navigator.clipboard.writeText(pixCheckout.pix_payload)
+      setCopied(true)
+    } catch {
+      setError('Não foi possível copiar automaticamente. Selecione o código abaixo e copie.')
     }
   }
 
@@ -88,7 +178,7 @@ export function CheckoutPage() {
         <Link className="account-back" to={`/app/mais/plano?cycle=${cycleParam}`}><ChevronLeft size={18}/>Planos</Link>
         <span className="eyebrow">Checkout</span>
         <h1>Finalize sua assinatura</h1>
-        <p>Confira sua escolha e siga para o pagamento seguro.</p>
+        <p>Escolha como prefere pagar. A renovação fica automática nos dois meios.</p>
       </div>
     </section>
 
@@ -116,13 +206,37 @@ export function CheckoutPage() {
     <section className="checkout-payment-card" aria-labelledby="checkout-payment-title">
       <div className="checkout-payment-card__icon" aria-hidden="true"><LockKeyhole size={19}/></div>
       <div>
-        <h2 id="checkout-payment-title">Pagamento seguro</h2>
-        <p>Você será direcionado ao ambiente seguro do Asaas para concluir a assinatura com cartão de crédito.</p>
+        <h2 id="checkout-payment-title">Forma de pagamento</h2>
+        <p>Pagamento seguro processado pelo Asaas.</p>
       </div>
-      {error&&<p className="form-error checkout-payment-error" role="alert">{error}</p>}
-      <button className="primary-button checkout-payment-button" type="button" onClick={continueToPayment} disabled={sending}>
-        {sending?'Abrindo pagamento…':'Continuar para pagamento'}
-      </button>
+
+      <div className="payment-method-grid" role="radiogroup" aria-label="Forma de pagamento">
+        <button className={`payment-method${paymentMethod==='credit_card'?' is-selected':''}`} type="button" role="radio" aria-checked={paymentMethod==='credit_card'} onClick={()=>choosePayment('credit_card')}>
+          <CreditCard size={20}/><span><strong>Cartão de crédito</strong><small>Cobrança recorrente no cartão</small></span>
+        </button>
+        <button className={`payment-method${paymentMethod==='pix_automatic'?' is-selected':''}`} type="button" role="radio" aria-checked={paymentMethod==='pix_automatic'} onClick={()=>choosePayment('pix_automatic')}>
+          <QrCode size={20}/><span><strong>Pix Automático</strong><small>Autorize uma vez e renove automaticamente</small></span>
+        </button>
+      </div>
+
+      {paymentMethod==='pix_automatic'&&!pixCheckout&&<div className="pix-payer-fields">
+        <label><span>Nome ou razão social</span><input autoComplete="name" value={payerName} onChange={event=>setPayerName(event.target.value)} placeholder="Nome do pagador"/></label>
+        <label><span>CPF ou CNPJ</span><input inputMode="numeric" autoComplete="off" value={payerDocument} onChange={event=>setPayerDocument(event.target.value)} placeholder="CPF ou CNPJ do pagador"/></label>
+        <small>Esses dados são enviados ao Asaas para criar a autorização. O ALOVIA não armazena seu CPF ou CNPJ neste checkout.</small>
+      </div>}
+
+      {pixCheckout?<div className="pix-authorization">
+        <div className="pix-authorization__heading"><QrCode size={21}/><div><strong>Autorize no seu banco</strong><span>Copie o código Pix abaixo, pague o primeiro ciclo e aprove a autorização automática.</span></div></div>
+        <textarea readOnly aria-label="Código Pix Copia e Cola" value={pixCheckout.pix_payload??''}/>
+        <button className="secondary-button pix-copy-button" type="button" onClick={copyPix}>{copied?<><CheckCircle2 size={17}/>Copiado</>:<><Copy size={17}/>Copiar código Pix</>}</button>
+        <p className="pix-waiting"><span className="status-dot"/>Aguardando confirmação do Pix Automático…</p>
+      </div>:<>
+        {error&&<p className="form-error checkout-payment-error" role="alert">{error}</p>}
+        <button className="primary-button checkout-payment-button" type="button" onClick={continueToPayment} disabled={sending}>
+          {sending?'Preparando pagamento…':paymentMethod==='pix_automatic'?'Gerar Pix Automático':'Continuar com cartão'}
+        </button>
+      </>}
+      {pixCheckout&&error&&<p className="form-error checkout-payment-error" role="alert">{error}</p>}
     </section>
   </div>
 }
