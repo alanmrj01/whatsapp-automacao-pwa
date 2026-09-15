@@ -25,6 +25,15 @@ function chargeLabel(cycle: BillingCycle, total: number) {
   return `${formatBRL(total)} por ano`
 }
 
+function isAsaasCheckoutUrl(value:string) {
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' && (url.hostname === 'asaas.com' || url.hostname.endsWith('.asaas.com'))
+  } catch {
+    return false
+  }
+}
+
 type CheckoutResponse = {
   checkout_id:string
   checkout_url:string
@@ -65,11 +74,8 @@ export function CheckoutPage() {
           return_origin:window.location.origin,
         }),
       })
-      const destination = new URL(checkout.checkout_url)
-      if (destination.protocol !== 'https:' || !destination.hostname.endsWith('asaas.com')) {
-        throw new Error('invalid checkout host')
-      }
-      window.location.assign(destination.toString())
+      if (!isAsaasCheckoutUrl(checkout.checkout_url)) throw new Error('invalid checkout host')
+      window.location.assign(checkout.checkout_url)
     } catch {
       setError('Não foi possível abrir o pagamento agora. Tente novamente.')
       setSending(false)
