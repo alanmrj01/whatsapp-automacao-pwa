@@ -47,7 +47,7 @@ test('plan page is concise and sends the selected offer straight to checkout', (
 
   assert.match(plan,/role="tablist"/)
   assert.match(plan,/aria-selected=\{cycle===item\.id\}/)
-  assert.match(plan,/Mais popular/)
+  assert.match(plan,/item\.badge/)
   assert.match(plan,/navigate\(`\/app\/checkout\?plan=\$\{plan\}&cycle=\$\{cycle\}`\)/)
   assert.match(plan,/Escolher Basic/)
   assert.match(plan,/Escolher Plus/)
