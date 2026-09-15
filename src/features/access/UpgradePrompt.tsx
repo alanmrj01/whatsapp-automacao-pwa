@@ -17,8 +17,8 @@ export function UpgradePromptProvider({ children }: { children: ReactNode }) {
       >
         <div className="upgrade-prompt">
           <p>Sua conta gratuita continua sem cobrança. A demonstração permanece disponível somente para leitura.</p>
-          <p>A contratação seguirá o fluxo comercial oficial quando ele estiver disponível; nenhuma cobrança é criada por esta tela.</p>
-          <button className="primary-button" type="button" onClick={() => setFeature(null)}>Entendi</button>
+          <p>O plano pago libera a operação real deste recurso para a empresa ativa. Nenhuma cobrança é criada sem sua confirmação.</p>
+          <button className="primary-button" type="button" onClick={() => setFeature(null)}>Continuar no modo demonstração</button>
         </div>
       </BottomSheet>
     </UpgradePromptContext.Provider>

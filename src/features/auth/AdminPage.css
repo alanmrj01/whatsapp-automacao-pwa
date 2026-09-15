@@ -120,6 +120,29 @@
   margin: 14px 4px 0;
 }
 
+.platform-admin__success {
+  margin: 14px 4px 0;
+}
+
+.platform-admin__refresh-error {
+  margin: 14px 4px 0;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-radius: var(--radius-md);
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+  font-size: .82rem;
+}
+
+.platform-admin__refresh-error button {
+  min-height: 44px;
+  color: inherit;
+  font-weight: 800;
+}
+
 .platform-admin__list-header {
   display: flex;
   align-items: center;
@@ -260,6 +283,33 @@
   background: var(--color-surface);
   color: var(--color-text);
   cursor: pointer;
+}
+
+.platform-admin__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.platform-admin__load-error span {
+  max-width: 480px;
+}
+
+.platform-admin__access-confirmation {
+  display: grid;
+  gap: 12px;
+}
+
+.platform-admin__access-confirmation p {
+  margin: 0;
+  color: var(--color-text-soft);
+  line-height: 1.5;
+}
+
+.platform-admin__access-confirmation > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .platform-admin__empty {

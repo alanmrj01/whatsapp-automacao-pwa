@@ -1,13 +1,16 @@
-import { Building2, CirclePower, Eye, Plus, RefreshCw, ShieldCheck } from 'lucide-react'
+import { Building2, CirclePower, Eye, KeyRound, Plus, RefreshCw, ShieldCheck } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppHeader } from '../../components/AppHeader'
+import { BottomSheet } from '../../components/BottomSheet'
 import { PrimaryButton } from '../../components/PrimaryButton'
 import { ApiError } from '../../lib/httpClient'
+import { withBusinessAccess } from './adminAccessState'
 import { SessionActions } from './SessionActions'
 import {
   createPlatformBusiness,
   listPlatformBusinesses,
+  setPlatformBusinessAccess,
   setPlatformBusinessActive,
   type PlatformBusiness,
 } from './platformAdmin'
@@ -31,20 +34,25 @@ export function AdminPage() {
   const navigate = useNavigate()
   const [businesses, setBusinesses] = useState<PlatformBusiness[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [loadError, setLoadError] = useState('')
+  const [actionError, setActionError] = useState('')
+  const [success, setSuccess] = useState('')
   const [creating, setCreating] = useState(false)
   const [busyId, setBusyId] = useState('')
+  const [accessConfirmation, setAccessConfirmation] = useState<PlatformBusiness|null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const creationKey = useRef('')
 
   const load = useCallback(async () => {
-    setError('')
+    setLoadError('')
     setLoading(true)
     try {
       setBusinesses(await listPlatformBusinesses())
-    } catch {
-      setError('Não foi possível carregar as empresas da plataforma.')
+    } catch (requestError) {
+      setLoadError(requestError instanceof ApiError
+        ? requestError.message
+        : 'Não foi possível carregar as empresas da plataforma.')
     } finally {
       setLoading(false)
     }
@@ -71,7 +79,8 @@ export function AdminPage() {
     const idempotencyKey = creationKey.current || crypto.randomUUID()
     creationKey.current = idempotencyKey
     setCreating(true)
-    setError('')
+    setActionError('')
+    setSuccess('')
     try {
       const created = await createPlatformBusiness({
         ...form,
@@ -96,10 +105,10 @@ export function AdminPage() {
         } catch {
           // Keep the same idempotency key for a later retry.
         }
-        setError('A conexão oscilou durante a criação. Tente novamente; a Alovia reutilizará a mesma solicitação sem duplicar a empresa.')
+        setActionError('A conexão oscilou durante a criação. Tente novamente; a Alovia reutilizará a mesma solicitação sem duplicar a empresa.')
       } else {
         creationKey.current = ''
-        setError(requestError instanceof ApiError && requestError.status === 409
+        setActionError(requestError instanceof ApiError && requestError.status === 409
           ? 'Este e-mail já está cadastrado na Alovia.'
           : 'Não foi possível criar a empresa. Revise os dados e tente novamente.')
       }
@@ -110,13 +119,40 @@ export function AdminPage() {
 
   async function toggleBusiness(business: PlatformBusiness) {
     setBusyId(business.id)
-    setError('')
+    setActionError('')
+    setSuccess('')
     try {
       const result = await setPlatformBusinessActive(business.id, !business.active)
       setBusinesses(current => current.map(item => item.id === business.id
         ? {...item, active: result.active} : item))
     } catch {
-      setError('Não foi possível alterar o status da empresa.')
+      setActionError('Não foi possível alterar o status da empresa.')
+    } finally {
+      setBusyId('')
+    }
+  }
+
+  async function confirmAccessChange() {
+    const business = accessConfirmation
+    if (!business) return
+    const previous = business.access_mode
+    const next = previous === 'free' ? 'paid' : 'free'
+    setAccessConfirmation(null)
+    setBusyId(business.id)
+    setActionError('')
+    setSuccess('')
+    setBusinesses(current => withBusinessAccess(current, business.id, next))
+    try {
+      const result = await setPlatformBusinessAccess(business.id, next)
+      setBusinesses(current => withBusinessAccess(current, business.id, result.access_mode))
+      setSuccess(next === 'paid'
+        ? `Liberação administrativa concluída para ${business.name}. Nenhuma cobrança ou assinatura foi criada.`
+        : `Liberação revogada para ${business.name}. A empresa voltou ao modo gratuito.`)
+    } catch (requestError) {
+      setBusinesses(current => withBusinessAccess(current, business.id, previous))
+      setActionError(requestError instanceof ApiError
+        ? requestError.message
+        : 'Não foi possível alterar o acesso operacional da empresa.')
     } finally {
       setBusyId('')
     }
@@ -167,7 +203,12 @@ export function AdminPage() {
         </form>
       </section>}
 
-      {error && <p className="form-error platform-admin__error" role="alert">{error}</p>}
+      {actionError && <p className="form-error platform-admin__error" role="alert">{actionError}</p>}
+      {success && <p className="form-success platform-admin__success" role="status">{success}</p>}
+      {loadError && businesses.length > 0 && <div className="platform-admin__refresh-error" role="alert">
+        <span>{loadError}</span>
+        <button type="button" onClick={()=>void load()}>Tentar novamente</button>
+      </div>}
 
       <section className="platform-admin__list-header">
         <div><h2>Empresas cadastradas</h2><p>{businesses.length} {businesses.length === 1 ? 'empresa' : 'empresas'}</p></div>
@@ -177,6 +218,10 @@ export function AdminPage() {
       </section>
 
       {loading ? <div className="platform-admin__empty">Carregando empresas…</div> :
+        loadError && businesses.length === 0 ? <div className="platform-admin__empty platform-admin__load-error" role="alert">
+          <Building2 size={28}/><strong>Não foi possível carregar as empresas</strong><span>{loadError}</span>
+          <PrimaryButton onClick={()=>void load()}>Tentar novamente</PrimaryButton>
+        </div> :
         businesses.length === 0 ? <div className="platform-admin__empty">
           <Building2 size={28}/><strong>Nenhuma empresa cadastrada</strong><span>Crie o primeiro tenant da Alovia.</span>
         </div> :
@@ -184,7 +229,7 @@ export function AdminPage() {
           {businesses.map(business => <article className="platform-admin__business" key={business.id}>
             <div className="platform-admin__business-top">
               <div className="platform-admin__business-icon"><Building2 size={20}/></div>
-              <div className="platform-admin__business-name"><h3>{business.name}</h3><span>{business.owners[0] ?? 'Sem OWNER'}</span></div>
+              <div className="platform-admin__business-name"><h3>{business.name}</h3><span>{business.owners.join(', ') || 'Sem OWNER'}</span></div>
               <span className={`platform-admin__status ${business.active ? 'is-active' : 'is-inactive'}`}>
                 {business.active ? 'Ativa' : 'Inativa'}
               </span>
@@ -194,17 +239,44 @@ export function AdminPage() {
               <span>{business.timezone}</span>
             </div>
             <div className="platform-admin__access">
-              <strong className={business.access_mode==='paid'?'is-paid':'is-free'}>{business.access_mode==='paid'?'Pago':'Gratuito'}</strong>
-              <span>{business.access_mode==='paid'?'Categoria e origem do acesso não registradas no modelo atual.':'Acesso demonstrativo, sem operação paga.'}</span>
+              <strong className={business.access_mode==='paid'?'is-paid':'is-free'}>{business.access_mode==='paid'?'Acesso liberado':'Gratuito'}</strong>
+              <span>{business.access_mode==='paid'
+                ? 'Plano comercial: não registrado. A origem da liberação não existe no modelo atual.'
+                : 'Acesso demonstrativo, sem operação liberada.'}</span>
             </div>
-            <button className="platform-admin__toggle" type="button" disabled={busyId === business.id}
-              onClick={()=>void toggleBusiness(business)}>
-              <CirclePower size={18}/>{busyId === business.id ? 'Salvando…' : business.active ? 'Desativar empresa' : 'Reativar empresa'}
-            </button>
+            <div className="platform-admin__actions">
+              <button className="platform-admin__toggle" type="button" disabled={busyId === business.id}
+                onClick={()=>setAccessConfirmation(business)}>
+                <KeyRound size={18}/>{busyId === business.id ? 'Salvando…' : business.access_mode==='free' ? 'Liberar funcionalidades' : 'Revogar liberação'}
+              </button>
+              <button className="platform-admin__toggle" type="button" disabled={busyId === business.id}
+                onClick={()=>void toggleBusiness(business)}>
+                <CirclePower size={18}/>{busyId === business.id ? 'Salvando…' : business.active ? 'Desativar empresa' : 'Reativar empresa'}
+              </button>
+            </div>
           </article>)}
         </div>}
 
       <div className="platform-admin__logout"><SessionActions /></div>
     </main>
+    <BottomSheet
+      open={!!accessConfirmation}
+      title={accessConfirmation?.access_mode === 'free' ? 'Liberar funcionalidades' : 'Revogar liberação'}
+      description={accessConfirmation?.name}
+      onClose={()=>setAccessConfirmation(null)}
+    >
+      {accessConfirmation && <div className="platform-admin__access-confirmation">
+        <p>{accessConfirmation.access_mode === 'free'
+          ? 'Liberar funcionalidades pagas para esta empresa sem criar cobrança ou assinatura?'
+          : 'Revogar a liberação e retornar esta empresa ao modo gratuito?'}</p>
+        <p>Esta ação altera somente o acesso operacional. Nenhum pagamento ou assinatura será criado ou modificado.</p>
+        <div>
+          <button className="platform-admin__toggle" type="button" onClick={()=>setAccessConfirmation(null)}>Cancelar</button>
+          <PrimaryButton onClick={()=>void confirmAccessChange()}>
+            {accessConfirmation.access_mode === 'free' ? 'Confirmar liberação' : 'Confirmar revogação'}
+          </PrimaryButton>
+        </div>
+      </div>}
+    </BottomSheet>
   </>
 }

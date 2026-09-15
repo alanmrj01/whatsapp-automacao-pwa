@@ -87,7 +87,7 @@ test('one entitlement policy separates free demo from paid operational access', 
 
 test('every free operational screen shows the exact fictitious-data warning', () => {
   const notice = read('src/features/access/DemoDataNotice.tsx')
-  assert.equal(DEMO_DATA_NOTICE,'Dados demonstrativos — exemplos fictícios para você visualizar como o Alovia funciona.')
+  assert.equal(DEMO_DATA_NOTICE,'Modo demonstração — dados ilustrativos para você visualizar como o ALOVIA funciona.')
   assert.match(notice,/DEMO_DATA_NOTICE/)
   for (const page of ['DashboardPage.tsx','appointments/AgendaPage.tsx','conversations/ConversationsPage.tsx']) {
     const path = page.includes('/') ? `src/features/${page}` : `src/features/dashboard/${page}`
@@ -113,27 +113,62 @@ test('demo agenda is static, opens details and routes every mutation to upgrade'
   assert.match(agenda,/openUpgrade\('Criar um novo agendamento'\)/)
   assert.match(agenda,/Exemplo somente para visualização/)
   assert.doesNotMatch(agenda,/saveDemoAppointment|cancelDemoAppointment|setAppointments/)
-  assert.equal(demoAppointments.length,4)
+  assert.equal(demoAppointments.length,3)
+  assert.ok(demoAppointments.every(item => demoConversations.some(conversation => conversation.id===item.conversationId && conversation.appointmentId===item.id)))
 })
 
-test('demo conversations open complete customer and assistant histories without send actions', () => {
+test('demo conversations cover the service journey and route reply actions to upgrade', () => {
   const page = read('src/features/conversations/ConversationsPage.tsx')
   assert.ok(demoConversations.every(item=>item.messages.length>=5))
   assert.ok(demoConversations.some(item=>item.messages.some(message=>message.direction==='assistant'&&/agendamento|disponibilidade/i.test(message.body))))
-  assert.match(page,/setSelected\(item\.id\)/)
-  assert.match(page,/Assistente Alovia/)
-  assert.doesNotMatch(page,/send|enviar/i)
+  for (const scenario of ['valor correto','disponibilidade','endereço','Agendamento','Reagendamento','Dúvida frequente resolvida']) {
+    assert.match(JSON.stringify(demoConversations),new RegExp(scenario,'i'))
+  }
+  assert.ok(demoConversations.some(item=>item.messages.some(message=>message.direction==='system')))
+  assert.match(page,/selectDemo\(item\.id\)/)
+  assert.match(page,/Assistente ALOVIA/)
+  assert.match(page,/Atualização do atendimento/)
+  assert.match(page,/>Anterior</)
+  assert.match(page,/>Próxima</)
+  assert.match(page,/openUpgrade\('Responder ou assumir uma conversa'\)/)
   assert.equal(demoOverview.waiting,demoConversations.filter(item=>item.status==='waiting').length)
+  assert.equal(demoOverview.inProgress,demoConversations.filter(item=>item.status==='in_progress').length)
+  assert.equal(demoOverview.appointmentsToday,demoAppointments.filter(item=>item.date===demoToday).length)
 })
 
 test('blocked free actions open the shared acquisition prompt instead of becoming dead controls', () => {
   const dashboard = read('src/features/dashboard/DashboardPage.tsx')
   const agenda = read('src/features/appointments/AgendaPage.tsx')
   const more = read('src/features/more/MorePage.tsx')
+  const conversations = read('src/features/conversations/ConversationsPage.tsx')
+  const whatsapp = read('src/features/whatsapp/WhatsAppPage.tsx')
   const prompt = read('src/features/access/UpgradePrompt.tsx')
-  for (const source of [dashboard,agenda,more]) assert.match(source,/openUpgrade/)
+  for (const source of [dashboard,agenda,more,conversations,whatsapp]) assert.match(source,/openUpgrade/)
   assert.match(prompt,/Disponível no plano pago/)
-  assert.match(prompt,/nenhuma cobrança é criada/)
+  assert.match(prompt,/nenhuma cobrança é criada/i)
+})
+
+test('WhatsApp status is contextual and connection data avoids refetch on every tab focus', () => {
+  const dashboard = read('src/features/dashboard/DashboardPage.tsx')
+  const whatsapp = read('src/features/whatsapp/WhatsAppPage.tsx')
+  const connection = read('src/features/whatsapp/useConnection.ts')
+  assert.match(dashboard,/whatsapp-summary/)
+  for (const state of ['disconnected','pending','connected','error']) assert.match(whatsapp,new RegExp(state))
+  assert.match(whatsapp,/connection-facts/)
+  assert.match(connection,/staleTime:60_000/)
+  assert.match(connection,/gcTime:5\s*\*\s*60_000/)
+  assert.match(connection,/refetchOnWindowFocus:false/)
+})
+
+test('paid agenda reads the hydrated membership without loading unused product setup data', () => {
+  const agenda = read('src/features/appointments/AgendaPage.tsx')
+  assert.match(agenda,/useAuth\(\)/)
+  assert.doesNotMatch(agenda,/useProductState/)
+})
+
+test('More prioritizes WhatsApp before the remaining operational setup', () => {
+  const more = read('src/features/more/MorePage.tsx')
+  assert.ok(more.indexOf('<Section title="WhatsApp">') < more.indexOf('<Section title="Atendimento">'))
 })
 
 test('real agenda converts company-local schedules to an absolute instant', () => {

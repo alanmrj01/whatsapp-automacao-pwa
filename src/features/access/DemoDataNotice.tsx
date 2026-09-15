@@ -5,8 +5,8 @@ export function DemoDataNotice() {
   return (
     <aside className="demo-banner" aria-label="Aviso de dados demonstrativos">
       <strong>{DEMO_DATA_NOTICE}</strong>
-      <InfoHelp title="Dados de demonstração">
-        Nada desta tela pertence a clientes reais, é persistido ou enviado às APIs operacionais.
+      <InfoHelp title="Modo demonstração">
+        Estes exemplos são fictícios, não são salvos e nunca se misturam aos dados reais da sua empresa.
       </InfoHelp>
     </aside>
   )

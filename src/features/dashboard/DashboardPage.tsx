@@ -1,4 +1,4 @@
-import { CalendarCheck2, CalendarPlus2, CheckCircle2, Clock3, MessagesSquare, Settings2 } from 'lucide-react'
+import { CalendarCheck2, CalendarPlus2, CheckCircle2, Clock3, MessageCircleMore, MessagesSquare, Settings2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { ActionCard } from '../../components/ActionCard'
 import { InfoHelp } from '../../components/InfoHelp'
@@ -13,7 +13,7 @@ import { useBusiness, useDashboardToday } from '../operations/api'
 import { useProductState } from '../product/productState'
 
 const stateLabels = {
-  FREE_DEMO: 'Dados de demonstração',
+  FREE_DEMO: 'Modo demonstração',
   SETUP_PENDING: 'Configuração pendente',
   ACTIVE: 'Operação ativa',
   CONNECTION_PENDING: 'Conexão em andamento',
@@ -21,7 +21,7 @@ const stateLabels = {
 } as const
 
 export function DashboardPage() {
-  const {state,membership} = useProductState()
+  const {state,membership,connection} = useProductState()
   const entitlement = useEntitlements()
   const {openUpgrade} = useUpgradePrompt()
   const dashboard = useDashboardToday()
@@ -37,14 +37,32 @@ export function DashboardPage() {
   const appointments = demo ? demoAppointments.filter(item=>item.date===demoToday).slice(0,3) : dashboard.data?.upcoming_appointments??[]
   const timezone=demo?undefined:business.data?.timezone
   const date = new Intl.DateTimeFormat('pt-BR',{weekday:'long',day:'numeric',month:'long',timeZone:timezone}).format(new Date())
+  const whatsappStatus = demo ? 'demo' : connection.isError ? 'error' : connection.isPending ? 'loading' : connection.data?.status??'disconnected'
+  const whatsappPresentation = {
+    demo:{title:'Conheça o fluxo conectado',label:'Demonstração',tone:'info' as const,description:'Veja como o WhatsApp organiza conversas e agendamentos antes de ativar a operação.'},
+    loading:{title:'Atualizando a conexão',label:'Consultando',tone:'neutral' as const,description:'Atualizando o estado da conexão da empresa.'},
+    disconnected:{title:'Conecte o canal da empresa',label:'Não conectado',tone:'neutral' as const,description:'Conecte o WhatsApp Business oficial para começar a receber atendimentos.'},
+    pending:{title:'Autorização em andamento',label:'Conectando',tone:'warning' as const,description:'A autorização está sendo concluída. Você pode acompanhar o status sem interromper o processo.'},
+    connected:{title:'Canal pronto para atender',label:'Conectado',tone:'success' as const,description:'O canal está pronto para organizar as conversas da sua empresa.'},
+    error:{title:'Revise a conexão',label:'Atenção necessária',tone:'danger' as const,description:'A conexão precisa ser revisada antes de continuar a operação.'},
+  }[whatsappStatus]
 
   return <div className="page-stack operational-page dashboard-page">
     <section className="operational-heading">
-      <div><span className="eyebrow">{date}</span><h1>Visão do dia</h1></div>
+      <div><span className="eyebrow">{membership?.business_name??'Sua empresa'}</span><h1>Visão do dia</h1><p>{date}</p></div>
       <StatusBadge tone={active?'success':state==='ERROR'?'danger':'info'}>{stateLabels[state]}</StatusBadge>
     </section>
 
     {demo && <DemoDataNotice />}
+
+    <section className={`whatsapp-summary whatsapp-summary--${whatsappStatus}`} aria-labelledby="whatsapp-summary-title">
+      <span className="whatsapp-summary__icon"><MessageCircleMore size={22}/></span>
+      <div><span className="eyebrow">WhatsApp</span><h2 id="whatsapp-summary-title">{whatsappPresentation.title}</h2><p>{whatsappPresentation.description}</p></div>
+      <StatusBadge tone={whatsappPresentation.tone}>{whatsappPresentation.label}</StatusBadge>
+      {demo
+        ? <button className="compact-button" type="button" onClick={()=>openUpgrade('Conectar o WhatsApp')}>Conectar WhatsApp</button>
+        : <Link className="compact-button" to="/app/whatsapp">{whatsappStatus==='disconnected'?'Conectar':whatsappStatus==='error'?'Revisar':'Ver conexão'}</Link>}
+    </section>
 
     {!demo && !active && <section className="setup-callout">
       <div><strong>{state==='CONNECTION_PENDING'?'Estamos preparando sua conexão':state==='ERROR'?'Revise a configuração':'Complete a configuração da operação'}</strong><span>Próxima etapa disponível em Mais.</span></div>

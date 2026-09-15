@@ -22,6 +22,12 @@ Defina `VITE_API_BASE_URL` com a origem pública do backend, sem `/api/v1`. Vazi
 a mesma origem (requer proxy de `/api` ao backend). Nunca coloque secrets em
 variáveis `VITE_*`: elas são públicas no bundle.
 
+## Deploy previews
+
+Deploy previews podem definir `VITE_API_BASE_URL` no contexto `deploy-preview` da
+Netlify para apontar temporariamente o PWA para uma revisão candidata do backend,
+sem alterar a configuração de produção.
+
 Localmente, use o mesmo hostname no PWA e na API (por exemplo `127.0.0.1` em portas
 distintas), configure essa origem exata em `PWA_ALLOWED_ORIGINS` do backend e acesse
 `http://127.0.0.1:5173`. Produção exige HTTPS e mesmo site da API ou proxy same-origin
