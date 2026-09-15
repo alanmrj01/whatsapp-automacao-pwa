@@ -45,7 +45,8 @@
 .plan-selection-summary,
 .billing-choice,
 .checkout-summary,
-.checkout-payment-card {
+.checkout-payment-card,
+.checkout-return-card {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
@@ -64,7 +65,8 @@
 .plan-selection-summary p,
 .billing-choice__heading p,
 .checkout-summary p,
-.checkout-payment-card p {
+.checkout-payment-card p,
+.checkout-return-card p {
   color: var(--color-text-soft);
 }
 
@@ -436,6 +438,11 @@
   margin-top: 4px;
 }
 
+.checkout-payment-error {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
 .checkout-payment-button {
   grid-column: 1 / -1;
   width: 100%;
@@ -443,8 +450,59 @@
 }
 
 .checkout-payment-button:disabled {
-  cursor: not-allowed;
-  opacity: .58;
+  cursor: wait;
+  opacity: .72;
+}
+
+.checkout-return-page {
+  min-height: min(66vh,560px);
+  place-content: center;
+}
+
+.checkout-return-card {
+  display: grid;
+  max-width: 560px;
+  gap: 18px;
+  padding: 22px;
+}
+
+.checkout-return-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--color-surface-subtle);
+}
+
+.checkout-return-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.checkout-return-card h1,
+.checkout-return-card p {
+  margin: 0;
+}
+
+.checkout-return-card h1 {
+  margin-top: 5px;
+}
+
+.checkout-return-card p {
+  margin-top: 7px;
+  line-height: 1.5;
+}
+
+.checkout-return-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.checkout-return-actions .primary-button,
+.checkout-return-actions .secondary-button {
+  justify-content: center;
 }
 
 @media (min-width: 760px) {
