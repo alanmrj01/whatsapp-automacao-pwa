@@ -18,10 +18,11 @@ export function WhatsAppPage() {
   const {membership} = useAuth()
   const entitlement = useEntitlements()
   const {openUpgrade} = useUpgradePrompt()
-  const free = entitlement.isFree
+  const demo = entitlement.usesDemoData
+  const readOnly = entitlement.isReadOnlyRetained
   const connection = useConnection()
 
-  if (free) {
+  if (demo) {
     return (
       <div className="page-stack whatsapp-page">
         <section className="connection-card connection-card--alovia">
@@ -32,7 +33,7 @@ export function WhatsAppPage() {
           <span className="eyebrow">Canal principal de atendimento</span>
           <h1>WhatsApp</h1>
           <StatusBadge tone="info">Modo demonstração</StatusBadge>
-          <p>Veja como o ALOVIA organiza pedidos, conversas e agendamentos. A conexão oficial com o WhatsApp Business está disponível no plano pago.</p>
+          <p>Veja como o ALOVIA organiza pedidos, conversas e agendamentos. A conexão oficial com o WhatsApp Business está disponível com assinatura.</p>
           <PrimaryButton fullWidth icon={<ArrowRight size={19}/>} onClick={()=>openUpgrade('Conectar o WhatsApp')}>
             Conectar WhatsApp
           </PrimaryButton>
@@ -56,7 +57,7 @@ export function WhatsAppPage() {
   if (connection.isPending) return <div className="page-stack whatsapp-page"><section className="operational-heading"><div><span className="eyebrow">Canal principal</span><h1>WhatsApp</h1></div></section><LoadingState /></div>
   if (connection.isError) return <div className="page-stack whatsapp-page"><section className="operational-heading"><div><span className="eyebrow">Canal principal</span><h1>WhatsApp</h1></div></section><ErrorState onRetry={()=>void connection.refetch()} /></div>
   const {status,mode} = connection.data
-  const canConnect = canConfigureWhatsApp(membership?.role) && (status === 'disconnected' || status === 'error')
+  const canConnect = entitlement.isPaid && canConfigureWhatsApp(membership?.role) && (status === 'disconnected' || status === 'error')
 
   return (
     <div className="page-stack whatsapp-page">
@@ -79,6 +80,11 @@ export function WhatsAppPage() {
           {mode&&<div><dt>Forma de operação</dt><dd>{connectionModeLabels[mode]}</dd></div>}
           <div><dt>Situação</dt><dd>Conexão ativa</dd></div>
         </dl>}
+        {readOnly&&<div className="account-note">
+          <strong>Dados da conexão preservados</strong>
+          <span>Seu acesso operacional está pausado. Reative uma assinatura para alterar ou reconectar o WhatsApp.</span>
+          <PrimaryButton fullWidth onClick={()=>openUpgrade('Reativar a operação do WhatsApp')}>Ver planos</PrimaryButton>
+        </div>}
         {canConnect && <PrimaryButton
           fullWidth
           icon={<ArrowRight size={19} />}
@@ -86,7 +92,7 @@ export function WhatsAppPage() {
         >
           {status==='error'?'Tentar conectar novamente':'Conectar WhatsApp'}
         </PrimaryButton>}
-        {!canConfigureWhatsApp(membership?.role) && <p>Acesso de leitura. A configuração é gerenciada pelo administrador.</p>}
+        {!canConfigureWhatsApp(membership?.role) && !readOnly && <p>Acesso de leitura. A configuração é gerenciada pelo administrador.</p>}
       </section>
 
       <section className="alovia-flow" aria-labelledby="alovia-flow-title">

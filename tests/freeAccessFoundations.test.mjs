@@ -52,6 +52,7 @@ test('auth foundation exposes free/paid access, signup and explicit reconnect UX
 
   assert.match(types, /AccessMode = 'free' \| 'paid'/)
   assert.match(types, /access_mode: AccessMode/)
+  assert.match(types, /has_had_operational_access\?: boolean/)
   assert.match(context, /signup:/)
   assert.match(context, /reconnect:/)
   assert.match(router, /path="\/criar-conta"/)
@@ -66,14 +67,14 @@ test('auth foundation exposes free/paid access, signup and explicit reconnect UX
   assert.match(recovery, /Reconectar/)
   assert.match(recovery, /Sair da conta/)
   assert.match(protectedRoute, /auth\.state === 'unavailable'.*SessionRecovery/s)
-  assert.match(connection, /membership\?\.access_mode === 'paid'/)
+  assert.match(connection, /canReadOperationalData/)
 })
 
-test('free WhatsApp CTA routes to upgrade without starting the Meta connection', () => {
+test('never-activated free WhatsApp CTA routes to upgrade without starting the Meta connection', () => {
   const whatsapp = read('src/features/whatsapp/WhatsAppPage.tsx')
   const dashboard = read('src/features/dashboard/DashboardPage.tsx')
-  assert.match(whatsapp, /if \(free\)/)
-  assert.match(whatsapp, /conexão oficial com o WhatsApp Business está disponível no plano pago/i)
+  assert.match(whatsapp, /if \(demo\)/)
+  assert.match(whatsapp, /conexão oficial com o WhatsApp Business está disponível com assinatura/i)
   assert.match(whatsapp, /openUpgrade\('Conectar o WhatsApp'\)/)
   assert.match(whatsapp, /Conectar WhatsApp/)
   assert.match(dashboard, /Modo demonstração/)

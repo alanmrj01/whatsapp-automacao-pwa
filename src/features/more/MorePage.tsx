@@ -16,13 +16,14 @@ export function MorePage() {
   const whatsappReady = connection.data?.status==='connected'||setup.data?.whatsapp||state==='ACTIVE'
   const paid = entitlement.isPaid
   const completed = state==='FREE_DEMO'?1:setup.data?.completed??0
-  const connectionLabel = state==='FREE_DEMO'?'Disponível no plano pago':connection.isPending?'Consultando':connection.isError||connection.data?.status==='error'?'Atenção necessária':connection.data?.status==='pending'?'Conectando':whatsappReady?'Conectado':'Não conectado'
+  const connectionLabel = state==='FREE_DEMO'?'Disponível com assinatura':connection.isPending?'Consultando':connection.isError||connection.data?.status==='error'?'Atenção necessária':connection.data?.status==='pending'?'Conectando':whatsappReady?'Conectado':'Não conectado'
+  const planLabel = paid?'Acesso liberado':entitlement.isReadOnlyRetained?'Acesso pausado':'Gratuito'
 
   return <div className="page-stack operational-page compact-page">
     <section className="operational-heading"><div><span className="eyebrow">{membership?.business_name??'Sua empresa'}</span><h1>Mais</h1></div></section>
 
     <section className="setup-progress" id="configuracao" aria-labelledby="setup-title">
-      <div className="section-title-row"><div><span className="eyebrow">Primeiros passos</span><h2 id="setup-title">Configuração {completed} de 5</h2></div><InfoHelp title="Progresso da configuração">Em contas pagas, cada etapa é confirmada pelos dados reais da empresa ativa.</InfoHelp></div>
+      <div className="section-title-row"><div><span className="eyebrow">Primeiros passos</span><h2 id="setup-title">Configuração {completed} de 5</h2></div><InfoHelp title="Progresso da configuração">Em contas com acesso operacional, cada etapa é confirmada pelos dados reais da empresa ativa.</InfoHelp></div>
       <div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={5} aria-valuenow={completed}><span style={{width:`${completed/5*100}%`}}/></div>
       <ol className="setup-steps">
         <SetupStep ready={state==='FREE_DEMO'||!!setup.data?.company} number={1}>Dados da empresa</SetupStep>
@@ -47,7 +48,12 @@ export function MorePage() {
       <div className="list-surface"><ListRow icon={CalendarCog} title="Agenda e disponibilidade" to={paid?'/app/mais/agenda':undefined} onClick={!paid?()=>openUpgrade('Configurar agenda e disponibilidade'):undefined}/><ListRow icon={UsersRound} title="Técnicos e responsáveis" to={paid?'/app/mais/equipe':undefined} onClick={!paid?()=>openUpgrade('Gerenciar técnicos e responsáveis'):undefined}/></div>
     </Section>
     <Section title="Conta">
-      <div className="list-surface"><ListRow icon={CreditCard} title="Plano" subtitle={paid?'Pago':'Gratuito'} onClick={!paid?()=>openUpgrade('Recursos do plano pago'):undefined}/><ListRow icon={CircleUserRound} title="Usuário"/><ListRow icon={LockKeyhole} title="Segurança"/><ListRow icon={ShieldCheck} title="Privacidade"/></div>
+      <div className="list-surface">
+        <ListRow icon={CreditCard} title="Plano" subtitle={planLabel} to="/app/mais/plano"/>
+        <ListRow icon={CircleUserRound} title="Usuário" to="/app/mais/usuario"/>
+        <ListRow icon={LockKeyhole} title="Segurança" to="/app/mais/seguranca"/>
+        <ListRow icon={ShieldCheck} title="Privacidade" to="/app/mais/privacidade"/>
+      </div>
     </Section>
     <SessionActions />
   </div>
