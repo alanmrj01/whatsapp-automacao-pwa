@@ -33,21 +33,22 @@ export function AgendaPage() {
   const entitlement = useEntitlements()
   const {openUpgrade} = useUpgradePrompt()
   const demo = entitlement.usesDemoData
+  const canMutate = entitlement.canMutateOperationalData
   const [searchParams,setSearchParams] = useSearchParams()
   const [selectedDate,setSelectedDate] = useState(demo?demoToday:new Date().toISOString().slice(0,10))
   const [selectedDemo,setSelectedDemo] = useState<DemoAppointment|null>(null)
   const dayAppointments = useMemo(()=>demoAppointments.filter(item=>item.date===selectedDate).sort((a,b)=>a.time.localeCompare(b.time)),[selectedDate])
 
   useEffect(()=>{
-    if (demo&&searchParams.get('action')==='new') {
+    if (!canMutate&&searchParams.get('action')==='new') {
       openUpgrade('Criar um novo agendamento')
       setSearchParams({}, {replace:true})
     }
-  },[demo,openUpgrade,searchParams,setSearchParams])
+  },[canMutate,openUpgrade,searchParams,setSearchParams])
 
   const openNew = () => openUpgrade('Criar um novo agendamento')
 
-  if (!demo) return <RealAgenda selectedDate={selectedDate} setSelectedDate={setSelectedDate} />
+  if (!demo) return <RealAgenda selectedDate={selectedDate} setSelectedDate={setSelectedDate} canMutate={canMutate} />
 
   return <div className="page-stack operational-page compact-page">
     <section className="operational-heading"><div><span className="eyebrow">Agenda demonstrativa</span><h1>Agenda</h1></div><button className="compact-button" type="button" onClick={openNew}><CalendarPlus2 size={18}/>Novo</button></section>
@@ -69,7 +70,7 @@ export function AgendaPage() {
           <StatusBadge tone={statusTones[item.status]}>{statusLabels[item.status]}</StatusBadge>
         </button>
       </article>)}
-    </section> : <EmptyState icon={Clock3} title="Dia livre" description="Nenhum exemplo fictício nesta data." action={<button className="primary-button" type="button" onClick={openNew}>Conhecer plano pago</button>} />}
+    </section> : <EmptyState icon={Clock3} title="Dia livre" description="Nenhum exemplo fictício nesta data." action={<button className="primary-button" type="button" onClick={openNew}>Conhecer planos</button>} />}
 
     <BottomSheet open={!!selectedDemo} title={selectedDemo?.service??'Agendamento fictício'} description="Exemplo somente para visualização." onClose={()=>setSelectedDemo(null)}>
       {selectedDemo&&<dl className="demo-detail-list">
@@ -118,10 +119,10 @@ function realDraft(date:string,timeZone:string,item?:Appointment):RealDraft {
   } : {customer_id:'',new_customer_name:'',new_customer_phone:'',service_id:'',employee_id:'',date,time:'09:00',end_time:'10:00',status:'pending',notes:''}
 }
 
-function RealAgenda({selectedDate,setSelectedDate}:{selectedDate:string;setSelectedDate:(value:string)=>void}) {
+function RealAgenda({selectedDate,setSelectedDate,canMutate}:{selectedDate:string;setSelectedDate:(value:string)=>void;canMutate:boolean}) {
   const [searchParams,setSearchParams]=useSearchParams()
   const {membership}=useAuth()
-  const canEdit=membership?.role!=='viewer'
+  const canEdit=canMutate&&membership?.role!=='viewer'
   const appointments=useAppointments(selectedDate)
   const customers=useCustomers()
   const services=useServices()
@@ -142,7 +143,7 @@ function RealAgenda({selectedDate,setSelectedDate}:{selectedDate:string;setSelec
   const submit=async(event:FormEvent)=>{
     event.preventDefault()
     const draft=visibleDraft
-    if(!draft)return
+    if(!draft||!canEdit)return
     setError('')
     try {
       let customerId=draft.customer_id
@@ -159,6 +160,7 @@ function RealAgenda({selectedDate,setSelectedDate}:{selectedDate:string;setSelec
 
   return <div className="page-stack operational-page compact-page">
     <section className="operational-heading"><div><span className="eyebrow">Planejamento real</span><h1>Agenda</h1></div>{canEdit&&<button className="compact-button" type="button" onClick={()=>setDraft(realDraft(selectedDate,timezone))}><CalendarPlus2 size={18}/>Novo</button>}</section>
+    {!canMutate&&<section className="account-note" role="status"><strong>Agenda preservada</strong><span>Você pode consultar seus atendimentos. Alterações ficam disponíveis com uma assinatura ativa.</span></section>}
     <section className="agenda-date-picker" aria-label="Selecionar data">
       <button type="button" aria-label="Dia anterior" onClick={()=>setSelectedDate(moveDate(selectedDate,-1))}><ChevronLeft/></button>
       <label><span>{readableDate(selectedDate)}</span><input type="date" value={selectedDate} onChange={event=>setSelectedDate(event.target.value)}/></label>
@@ -166,12 +168,17 @@ function RealAgenda({selectedDate,setSelectedDate}:{selectedDate:string;setSelec
     </section>
     {(appointments.isPending||business.isPending)&&<LoadingState/>}
     {(appointments.isError||business.isError)&&<ErrorState onRetry={()=>{void appointments.refetch();void business.refetch()}}/>}
-    {appointments.data&&business.data&&<><div className="section-title-row"><h2>{items.length} {items.length===1?'atendimento':'atendimentos'}</h2><InfoHelp title="Agenda operacional">Alterações são persistidas na empresa ativa e respeitam técnico, serviço e conflitos de horário.</InfoHelp></div>
-      {items.length?<section className="agenda-list">{items.map(item=><article className={item.status==='cancelled'?'agenda-row is-cancelled':'agenda-row'} key={item.id}><button type="button" onClick={()=>canEdit&&setDraft(realDraft(selectedDate,timezone,item))} aria-label={`Abrir agendamento de ${item.customer_name}`}><time>{timeValue(item.starts_at,timezone)}</time><div><strong>{item.customer_name}</strong><span>{item.service_name}</span><small><UserRound size={14}/>{item.employee_name}</small></div><StatusBadge tone={statusTones[item.status]}>{statusLabels[item.status]}</StatusBadge></button></article>)}</section>
+    {appointments.data&&business.data&&<><div className="section-title-row"><h2>{items.length} {items.length===1?'atendimento':'atendimentos'}</h2><InfoHelp title="Agenda operacional">Os dados exibidos pertencem à empresa ativa e permanecem preservados mesmo quando o acesso operacional está pausado.</InfoHelp></div>
+      {items.length?<section className="agenda-list">{items.map(item=><article className={item.status==='cancelled'?'agenda-row is-cancelled':'agenda-row'} key={item.id}><button type="button" onClick={()=>setDraft(realDraft(selectedDate,timezone,item))} aria-label={`Abrir agendamento de ${item.customer_name}`}><time>{timeValue(item.starts_at,timezone)}</time><div><strong>{item.customer_name}</strong><span>{item.service_name}</span><small><UserRound size={14}/>{item.employee_name}</small></div><StatusBadge tone={statusTones[item.status]}>{statusLabels[item.status]}</StatusBadge></button></article>)}</section>
       :<EmptyState icon={Clock3} title="Dia livre" description={canEdit?'Crie um agendamento para esta data.':'Nenhum atendimento nesta data.'} action={canEdit?<button className="primary-button" type="button" onClick={()=>setDraft(realDraft(selectedDate,timezone))}>Novo agendamento</button>:undefined}/>}</>}
 
-    <BottomSheet open={!!visibleDraft} title={visibleDraft?.id?'Editar agendamento':'Novo agendamento'} description="Os dados serão salvos na empresa ativa." onClose={closeDraft}>
-      {visibleDraft&&<form className="appointment-form" onSubmit={submit}>
+    <BottomSheet open={!!visibleDraft} title={canEdit?(visibleDraft?.id?'Editar agendamento':'Novo agendamento'):'Detalhes do agendamento'} description={canEdit?'Os dados serão salvos na empresa ativa.':'Consulta somente leitura.'} onClose={closeDraft}>
+      {visibleDraft&&!canEdit&&<dl className="demo-detail-list">
+        <div><dt>Data e horário</dt><dd>{readableDate(visibleDraft.date)} · {visibleDraft.time}–{visibleDraft.end_time}</dd></div>
+        <div><dt>Status</dt><dd>{statusLabels[visibleDraft.status]}</dd></div>
+        <div><dt>Observações</dt><dd>{visibleDraft.notes||'Sem observações.'}</dd></div>
+      </dl>}
+      {visibleDraft&&canEdit&&<form className="appointment-form" onSubmit={submit}>
         <label>Cliente<select required value={visibleDraft.customer_id} onChange={event=>update('customer_id',event.target.value)}><option value="">Selecione</option>{customers.data?.items.map(item=><option value={item.id} key={item.id}>{item.name}{item.phone?` · ${item.phone}`:''}</option>)}<option value="new">Novo cliente</option></select></label>
         {visibleDraft.customer_id==='new'&&<><label>Nome do cliente<input required value={visibleDraft.new_customer_name} onChange={event=>update('new_customer_name',event.target.value)}/></label><label>Telefone E.164<input required placeholder="+5512999999999" value={visibleDraft.new_customer_phone} onChange={event=>update('new_customer_phone',event.target.value)}/></label></>}
         <div className="form-grid"><label>Data<input required type="date" value={visibleDraft.date} onChange={event=>update('date',event.target.value)}/></label><label>Início<input required type="time" value={visibleDraft.time} onChange={event=>update('time',event.target.value)}/></label></div>

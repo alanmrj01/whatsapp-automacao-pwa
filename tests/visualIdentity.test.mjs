@@ -31,7 +31,7 @@ test('niche UX keeps the approved priority and technical context', () => {
 
   assert.match(conversations, /Conversas prioritárias e não lidas aparecem primeiro/i)
   assert.match(conversations, /Buscar conversa/i)
-  assert.match(dashboard, /Visão do dia/)
+  assert.match(dashboard, /<h1>Dashboard<\/h1>/)
   assert.match(agenda, /DemoDataNotice/)
   assert.match(read('src/features/access/entitlements.ts'), /Modo demonstração — dados ilustrativos para você visualizar como o ALOVIA funciona\./)
   assert.match(whatsapp, /Do pedido à visita técnica/)

@@ -1,8 +1,8 @@
 import { entitlementsFor } from '../access/entitlements.ts'
 
-export type ProductState = 'FREE_DEMO' | 'SETUP_PENDING' | 'ACTIVE' | 'CONNECTION_PENDING' | 'ERROR'
+export type ProductState = 'FREE_DEMO' | 'READ_ONLY' | 'SETUP_PENDING' | 'ACTIVE' | 'CONNECTION_PENDING' | 'ERROR'
 
-type AccessSnapshot = {access_mode:'free'|'paid'}
+type AccessSnapshot = {access_mode:'free'|'paid';has_had_operational_access?:boolean}
 type ConnectionSnapshot = {status:'disconnected'|'pending'|'connected'|'error'}
 type SetupSnapshot = {completed:number;total:number}
 
@@ -12,7 +12,9 @@ export function deriveProductState(
   query?: {isPending?: boolean; isError?: boolean},
   setup?: SetupSnapshot,
 ): ProductState {
-  if (entitlementsFor(membership).usesDemoData) return 'FREE_DEMO'
+  const entitlement = entitlementsFor(membership)
+  if (entitlement.usesDemoData) return 'FREE_DEMO'
+  if (entitlement.isReadOnlyRetained) return 'READ_ONLY'
   if (query?.isError) return 'ERROR'
   if (connection?.status === 'pending') return 'CONNECTION_PENDING'
   if (query?.isPending) return 'SETUP_PENDING'

@@ -1,24 +1,33 @@
 import { useMemo, useState, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { BottomSheet } from '../../components/BottomSheet'
 import { UpgradePromptContext } from './upgradePromptContext'
 
 export function UpgradePromptProvider({ children }: { children: ReactNode }) {
+  const navigate = useNavigate()
   const [feature, setFeature] = useState<string | null>(null)
-  const value = useMemo(() => ({openUpgrade: (name = 'este recurso') => setFeature(name)}), [])
+  const value = useMemo(() => ({openUpgrade: (name = 'Este recurso') => setFeature(name)}), [])
+
+  function viewPlans() {
+    setFeature(null)
+    navigate('/app/mais/plano')
+  }
 
   return (
     <UpgradePromptContext.Provider value={value}>
       {children}
       <BottomSheet
         open={feature !== null}
-        title="Disponível no plano pago"
-        description={`${feature ?? 'Este recurso'} faz parte da experiência operacional da Alovia.`}
+        title="Disponível com assinatura"
+        description={`${feature ?? 'Este recurso'} é liberado nos planos Basic e Plus.`}
         onClose={() => setFeature(null)}
       >
-        <div className="upgrade-prompt">
-          <p>Sua conta gratuita continua sem cobrança. A demonstração permanece disponível somente para leitura.</p>
-          <p>O plano pago libera a operação real deste recurso para a empresa ativa. Nenhuma cobrança é criada sem sua confirmação.</p>
-          <button className="primary-button" type="button" onClick={() => setFeature(null)}>Continuar no modo demonstração</button>
+        <div className="upgrade-prompt upgrade-prompt--compact">
+          <p>Assine para usar esta função com os dados reais da sua empresa.</p>
+          <div className="upgrade-prompt__actions">
+            <button className="primary-button" type="button" onClick={viewPlans}>Ver planos</button>
+            <button className="compact-button" type="button" onClick={() => setFeature(null)}>Agora não</button>
+          </div>
         </div>
       </BottomSheet>
     </UpgradePromptContext.Provider>

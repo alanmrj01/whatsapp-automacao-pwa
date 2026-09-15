@@ -5,6 +5,7 @@ export type Membership = {
   business_name: string
   role: MembershipRole
   access_mode: AccessMode
+  has_had_operational_access?: boolean
 }
 export type SessionUser = {
   id: string

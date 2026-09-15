@@ -61,7 +61,7 @@ test('main navigation stays focused and WhatsApp setup remains available from Mo
   assert.match(more, /Configuração \{completed\} de 5/)
 })
 
-test('free dashboard is populated from isolated demo data and points to setup', () => {
+test('never-activated free dashboard is populated from isolated demo data and points to setup', () => {
   const dashboard = read('src/features/dashboard/DashboardPage.tsx')
   const conversations = read('src/features/conversations/ConversationsPage.tsx')
   const agenda = read('src/features/appointments/AgendaPage.tsx')
@@ -70,7 +70,8 @@ test('free dashboard is populated from isolated demo data and points to setup', 
   assert.match(dashboard, /\/app\/mais#configuracao/)
   assert.match(dashboard, /\/app\/agenda\?action=new/)
   assert.doesNotMatch(`${dashboard}${conversations}${agenda}`, /api\.request/)
-  assert.match(connection, /enabled:!!membership && paid/)
+  assert.match(connection, /canReadOperationalData/)
+  assert.match(connection, /enabled:!!membership && canRead/)
 })
 
 test('one entitlement policy separates free demo from paid operational access', () => {
@@ -136,7 +137,7 @@ test('demo conversations cover the service journey and route reply actions to up
   assert.equal(demoOverview.appointmentsToday,demoAppointments.filter(item=>item.date===demoToday).length)
 })
 
-test('blocked free actions open the shared acquisition prompt instead of becoming dead controls', () => {
+test('blocked free actions open the compact subscription prompt instead of becoming dead controls', () => {
   const dashboard = read('src/features/dashboard/DashboardPage.tsx')
   const agenda = read('src/features/appointments/AgendaPage.tsx')
   const more = read('src/features/more/MorePage.tsx')
@@ -144,8 +145,9 @@ test('blocked free actions open the shared acquisition prompt instead of becomin
   const whatsapp = read('src/features/whatsapp/WhatsAppPage.tsx')
   const prompt = read('src/features/access/UpgradePrompt.tsx')
   for (const source of [dashboard,agenda,more,conversations,whatsapp]) assert.match(source,/openUpgrade/)
-  assert.match(prompt,/Disponível no plano pago/)
-  assert.match(prompt,/nenhuma cobrança é criada/i)
+  assert.match(prompt,/Disponível com assinatura/)
+  assert.match(prompt,/Assine para usar esta função com os dados reais da sua empresa\./)
+  assert.match(prompt,/Ver planos/)
 })
 
 test('WhatsApp status is contextual and connection data avoids refetch on every tab focus', () => {

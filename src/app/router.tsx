@@ -8,6 +8,11 @@ const AgendaPage = lazy(async () => ({default:(await import('../features/appoint
 const ConversationsPage = lazy(async () => ({default:(await import('../features/conversations/ConversationsPage')).ConversationsPage}))
 const DashboardPage = lazy(async () => ({default:(await import('../features/dashboard/DashboardPage')).DashboardPage}))
 const MorePage = lazy(async () => ({default:(await import('../features/more/MorePage')).MorePage}))
+const PlanPage = lazy(async () => ({default:(await import('../features/billing/PlanPage')).PlanPage}))
+const AccountPages = () => import('../features/more/AccountPages')
+const UserSettingsPage = lazy(async () => ({default:(await AccountPages()).UserSettingsPage}))
+const SecuritySettingsPage = lazy(async () => ({default:(await AccountPages()).SecuritySettingsPage}))
+const PrivacySettingsPage = lazy(async () => ({default:(await AccountPages()).PrivacySettingsPage}))
 const OperationalSettings = () => import('../features/more/OperationalSettingsPages')
 const AgendaSettingsPage = lazy(async () => ({default:(await OperationalSettings()).AgendaSettingsPage}))
 const AutomationSettingsPage = lazy(async () => ({default:(await OperationalSettings()).AutomationSettingsPage}))
@@ -53,6 +58,10 @@ export function AppRouter() {
             <Route path="whatsapp/business" element={<RoleGuard><CoexistenceInfoPage /></RoleGuard>} />
             <Route path="whatsapp/exclusivo" element={<RoleGuard><ApiOnlyInfoPage /></RoleGuard>} />
             <Route path="mais" element={<MorePage />} />
+            <Route path="mais/plano" element={<PlanPage />} />
+            <Route path="mais/usuario" element={<UserSettingsPage />} />
+            <Route path="mais/seguranca" element={<SecuritySettingsPage />} />
+            <Route path="mais/privacidade" element={<PrivacySettingsPage />} />
             <Route path="mais/empresa" element={<PaidOperationalGuard><CompanySettingsPage /></PaidOperationalGuard>} />
             <Route path="mais/horarios" element={<PaidOperationalGuard><WorkingHoursSettingsPage /></PaidOperationalGuard>} />
             <Route path="mais/automacao" element={<PaidOperationalGuard><AutomationSettingsPage /></PaidOperationalGuard>} />

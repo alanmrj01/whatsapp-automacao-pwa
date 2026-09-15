@@ -14,6 +14,7 @@ import { useProductState } from '../product/productState'
 
 const stateLabels = {
   FREE_DEMO: 'Modo demonstração',
+  READ_ONLY: 'Somente leitura',
   SETUP_PENDING: 'Configuração pendente',
   ACTIVE: 'Operação ativa',
   CONNECTION_PENDING: 'Conexão em andamento',
@@ -27,6 +28,8 @@ export function DashboardPage() {
   const dashboard = useDashboardToday()
   const business = useBusiness()
   const demo = entitlement.usesDemoData
+  const canMutate = entitlement.canMutateOperationalData
+  const readOnly = entitlement.isReadOnlyRetained
   const active = state === 'ACTIVE'
   const metrics = demo ? demoOverview : dashboard.data ? {
     waiting:dashboard.data.metrics.waiting_count,
@@ -48,8 +51,8 @@ export function DashboardPage() {
   }[whatsappStatus]
 
   return <div className="page-stack operational-page dashboard-page">
-    <section className="operational-heading">
-      <div><span className="eyebrow">{membership?.business_name??'Sua empresa'}</span><h1>Visão do dia</h1><p>{date}</p></div>
+    <section className="operational-heading dashboard-heading">
+      <div><span className="eyebrow dashboard-business-name">{membership?.business_name??'Sua empresa'}</span><h1>Dashboard</h1><p>{date}</p></div>
       <StatusBadge tone={active?'success':state==='ERROR'?'danger':'info'}>{stateLabels[state]}</StatusBadge>
     </section>
 
@@ -64,9 +67,14 @@ export function DashboardPage() {
         : <Link className="compact-button" to="/app/whatsapp">{whatsappStatus==='disconnected'?'Conectar':whatsappStatus==='error'?'Revisar':'Ver conexão'}</Link>}
     </section>
 
-    {!demo && !active && <section className="setup-callout">
+    {!demo && !active && !readOnly && <section className="setup-callout">
       <div><strong>{state==='CONNECTION_PENDING'?'Estamos preparando sua conexão':state==='ERROR'?'Revise a configuração':'Complete a configuração da operação'}</strong><span>Próxima etapa disponível em Mais.</span></div>
       <Link className="compact-button" to="/app/mais#configuracao">Continuar</Link>
+    </section>}
+
+    {readOnly && <section className="setup-callout setup-callout--read-only">
+      <div><strong>Seus dados continuam aqui</strong><span>O acesso operacional está pausado. Você pode consultar o histórico sem perder informações.</span></div>
+      <Link className="compact-button" to="/app/mais/plano">Ver planos</Link>
     </section>}
 
     {!demo&&(dashboard.isPending||business.isPending)&&<LoadingState/>}
@@ -95,9 +103,9 @@ export function DashboardPage() {
       <div className="section-title-row"><h2 id="quick-actions-title">Ações rápidas</h2></div>
       <div className="quick-actions quick-actions--operational">
         <ActionCard icon={MessagesSquare} title="Abrir fila" description="Conversas prioritárias" to="/app/conversas" />
-        <ActionCard icon={CalendarPlus2} title="Novo agendamento" description={demo?'Disponível no plano pago':'Criar na agenda'} to={demo?undefined:'/app/agenda?action=new'} onClick={demo?()=>openUpgrade('Criar um novo agendamento'):undefined} />
+        <ActionCard icon={CalendarPlus2} title="Novo agendamento" description={!canMutate?'Disponível com assinatura':'Criar na agenda'} to={canMutate?'/app/agenda?action=new':undefined} onClick={!canMutate?()=>openUpgrade('Criar um novo agendamento'):undefined} />
         <ActionCard icon={CalendarCheck2} title="Ver agenda" description="Dia e próximos horários" to="/app/agenda" />
-        <ActionCard icon={Settings2} title="Configurar empresa" description={demo?'Disponível no plano pago':membership?.business_name??'Sua operação'} to={demo?undefined:'/app/mais#configuracao'} onClick={demo?()=>openUpgrade('Configurar a operação'):undefined} />
+        <ActionCard icon={Settings2} title="Configurar empresa" description={!canMutate?'Disponível com assinatura':membership?.business_name??'Sua operação'} to={canMutate?'/app/mais#configuracao':undefined} onClick={!canMutate?()=>openUpgrade('Configurar a operação'):undefined} />
       </div>
     </section>
   </div>
