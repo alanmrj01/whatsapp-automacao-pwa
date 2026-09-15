@@ -45,14 +45,18 @@ export const plans: Plan[] = [
 
 export const defaultBillingCycle: BillingCycle = 'quarterly'
 
+function roundMoney(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100
+}
+
 export function cyclePrice(plan: Plan, cycle: BillingCycle) {
   const months = cycle === 'monthly' ? 1 : cycle === 'quarterly' ? 3 : 12
   const discount = billingCycles.find(item=>item.id===cycle)?.discount ?? 0
-  const total = plan.monthlyPrice * months * (1-discount)
+  const total = roundMoney(plan.monthlyPrice * months * (1-discount))
   return {
     months,
     total,
-    monthlyEquivalent: total/months,
+    monthlyEquivalent: roundMoney(total/months),
   }
 }
 
