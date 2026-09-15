@@ -1,5 +1,7 @@
 import { Check, ChevronLeft, LockKeyhole } from 'lucide-react'
+import { useRef, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
+import { api } from '../../lib/api'
 import {
   billingCycles,
   cyclePrice,
@@ -23,10 +25,21 @@ function chargeLabel(cycle: BillingCycle, total: number) {
   return `${formatBRL(total)} por ano`
 }
 
+type CheckoutResponse = {
+  checkout_id:string
+  checkout_url:string
+  plan:PlanId
+  cycle:BillingCycle
+  amount_cents:number
+}
+
 export function CheckoutPage() {
   const [params] = useSearchParams()
   const planId = params.get('plan')
   const cycleParam = params.get('cycle')
+  const requestKey = useRef<string>(crypto.randomUUID())
+  const [sending,setSending] = useState(false)
+  const [error,setError] = useState<string | null>(null)
 
   if (!isPlanId(planId) || !isBillingCycle(cycleParam)) {
     return <Navigate to="/app/mais/plano" replace />
@@ -38,13 +51,38 @@ export function CheckoutPage() {
   const price = cyclePrice(plan,cycleParam)
   const cycle = billingCycles.find(item=>item.id===cycleParam)
 
+  async function continueToPayment() {
+    if (sending) return
+    setSending(true)
+    setError(null)
+    try {
+      const checkout = await api.request<CheckoutResponse>('/billing/checkouts',{
+        method:'POST',
+        headers:{'Idempotency-Key':requestKey.current},
+        body:JSON.stringify({
+          plan:planId,
+          cycle:cycleParam,
+          return_origin:window.location.origin,
+        }),
+      })
+      const destination = new URL(checkout.checkout_url)
+      if (destination.protocol !== 'https:' || !destination.hostname.endsWith('asaas.com')) {
+        throw new Error('invalid checkout host')
+      }
+      window.location.assign(destination.toString())
+    } catch {
+      setError('Não foi possível abrir o pagamento agora. Tente novamente.')
+      setSending(false)
+    }
+  }
+
   return <div className="page-stack operational-page compact-page checkout-page">
     <section className="operational-heading account-heading checkout-heading">
       <div>
         <Link className="account-back" to={`/app/mais/plano?cycle=${cycleParam}`}><ChevronLeft size={18}/>Planos</Link>
         <span className="eyebrow">Checkout</span>
         <h1>Finalize sua assinatura</h1>
-        <p>Confira sua escolha antes de seguir para o pagamento.</p>
+        <p>Confira sua escolha e siga para o pagamento seguro.</p>
       </div>
     </section>
 
@@ -73,10 +111,11 @@ export function CheckoutPage() {
       <div className="checkout-payment-card__icon" aria-hidden="true"><LockKeyhole size={19}/></div>
       <div>
         <h2 id="checkout-payment-title">Pagamento seguro</h2>
-        <p>Na próxima etapa você escolhe a forma de pagamento e conclui a assinatura.</p>
+        <p>Você será direcionado ao ambiente seguro do Asaas para concluir a assinatura com cartão de crédito.</p>
       </div>
-      <button className="primary-button checkout-payment-button" type="button" disabled>
-        Continuar para pagamento
+      {error&&<p className="form-error checkout-payment-error" role="alert">{error}</p>}
+      <button className="primary-button checkout-payment-button" type="button" onClick={continueToPayment} disabled={sending}>
+        {sending?'Abrindo pagamento…':'Continuar para pagamento'}
       </button>
     </section>
   </div>
