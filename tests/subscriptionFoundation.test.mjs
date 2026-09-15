@@ -58,6 +58,12 @@ test('plan page is concise and sends the selected offer straight to checkout', (
   assert.match(checkout,/Finalize sua assinatura/)
   assert.match(checkout,/Pagamento seguro/)
   assert.match(checkout,/cyclePrice\(plan,cycleParam\)/)
+  assert.match(checkout,/Cartão de crédito/)
+  assert.match(checkout,/Pix Automático/)
+  assert.match(checkout,/payment_method:paymentMethod/)
+  assert.match(checkout,/payer_cpf_cnpj:payerDocument/)
+  assert.match(checkout,/Copiar código Pix/)
+  assert.doesNotMatch(checkout,/Boleto/)
   assert.match(router,/path="checkout" element=\{<CheckoutPage \/>\}/)
 })
 
