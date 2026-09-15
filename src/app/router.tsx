@@ -10,6 +10,7 @@ const DashboardPage = lazy(async () => ({default:(await import('../features/dash
 const MorePage = lazy(async () => ({default:(await import('../features/more/MorePage')).MorePage}))
 const PlanPage = lazy(async () => ({default:(await import('../features/billing/PlanPage')).PlanPage}))
 const CheckoutPage = lazy(async () => ({default:(await import('../features/billing/CheckoutPage')).CheckoutPage}))
+const CheckoutReturnPage = lazy(async () => ({default:(await import('../features/billing/CheckoutReturnPage')).CheckoutReturnPage}))
 const AccountPages = () => import('../features/more/AccountPages')
 const UserSettingsPage = lazy(async () => ({default:(await AccountPages()).UserSettingsPage}))
 const SecuritySettingsPage = lazy(async () => ({default:(await AccountPages()).SecuritySettingsPage}))
@@ -61,6 +62,7 @@ export function AppRouter() {
             <Route path="mais" element={<MorePage />} />
             <Route path="mais/plano" element={<PlanPage />} />
             <Route path="checkout" element={<CheckoutPage />} />
+            <Route path="checkout/retorno" element={<CheckoutReturnPage />} />
             <Route path="mais/usuario" element={<UserSettingsPage />} />
             <Route path="mais/seguranca" element={<SecuritySettingsPage />} />
             <Route path="mais/privacidade" element={<PrivacySettingsPage />} />
