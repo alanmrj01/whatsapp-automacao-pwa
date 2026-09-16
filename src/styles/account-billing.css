@@ -316,6 +316,21 @@
   justify-content: center;
 }
 
+.plan-card.is-coming-soon {
+  border-color: rgba(11, 103, 240, 0.34);
+}
+
+.plan-coming-soon {
+  margin: 0;
+  padding: 0.78rem 0.9rem;
+  border-radius: 0.85rem;
+  background: #edf5ff;
+  color: #174a87;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
 .plan-footnote {
   margin: -2px 0 2px;
   color: var(--color-text-soft);

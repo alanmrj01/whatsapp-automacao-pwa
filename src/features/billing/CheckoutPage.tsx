@@ -7,6 +7,7 @@ import {
   billingCycles,
   cyclePrice,
   formatBRL,
+  isPurchasablePlan,
   plans,
   type BillingCycle,
   type PlanId,
@@ -106,6 +107,10 @@ export function CheckoutPage() {
 
   if (!isPlanId(planId) || !isBillingCycle(cycleParam)) {
     return <Navigate to="/app/mais/plano" replace />
+  }
+
+  if (!isPurchasablePlan(planId)) {
+    return <Navigate to={`/app/mais/plano?cycle=${cycleParam}&unavailable=${planId}`} replace />
   }
 
   const plan = plans.find(item=>item.id===planId)

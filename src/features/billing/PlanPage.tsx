@@ -5,6 +5,7 @@ import {
   cyclePrice,
   defaultBillingCycle,
   formatBRL,
+  isPurchasablePlan,
   plans,
   type BillingCycle,
   type PlanId,
@@ -23,15 +24,24 @@ export function PlanPage() {
   const [params,setParams] = useSearchParams()
   const cycleParam = params.get('cycle')
   const cycle: BillingCycle = isBillingCycle(cycleParam) ? cycleParam : defaultBillingCycle
+  const plusUnavailable = params.get('unavailable') === 'plus'
 
   function changeCycle(next: BillingCycle) {
     const nextParams = new URLSearchParams(params)
     nextParams.set('cycle',next)
     nextParams.delete('plan')
+    nextParams.delete('unavailable')
     setParams(nextParams,{replace:true})
   }
 
   function choosePlan(plan: PlanId) {
+    if (!isPurchasablePlan(plan)) {
+      const nextParams = new URLSearchParams(params)
+      nextParams.set('cycle',cycle)
+      nextParams.set('unavailable',plan)
+      setParams(nextParams,{replace:true})
+      return
+    }
     navigate(`/app/checkout?plan=${plan}&cycle=${cycle}`)
   }
 
@@ -72,7 +82,8 @@ export function PlanPage() {
       {plans.map(plan=>{
         const price = cyclePrice(plan,cycle)
         const cycleLabel = billingCycles.find(item=>item.id===cycle)?.label
-        return <article className={`plan-card plan-card--${plan.id}`} key={plan.id}>
+        const comingSoon = plan.id === 'plus' && plusUnavailable
+        return <article className={`plan-card plan-card--${plan.id}${comingSoon?' is-coming-soon':''}`} key={plan.id}>
           <div className="plan-card__heading">
             <div>
               <span className="eyebrow">ALOVIA</span>
@@ -93,8 +104,9 @@ export function PlanPage() {
           </ul>
 
           <button className="primary-button plan-card__cta" type="button" onClick={()=>choosePlan(plan.id)}>
-            {planCta(plan.id)}
+            {comingSoon?'Disponível em breve':planCta(plan.id)}
           </button>
+          {comingSoon&&<p className="plan-coming-soon" role="status">O plano Plus estará disponível em breve. Para começar agora, escolha o plano Basic.</p>}
         </article>
       })}
     </section>
