@@ -42,7 +42,11 @@
 .account-note,
 .account-card,
 .account-action-section,
-.plan-selection-summary {
+.plan-selection-summary,
+.billing-choice,
+.checkout-summary,
+.checkout-payment-card,
+.checkout-return-card {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
@@ -58,7 +62,11 @@
 .account-note span,
 .account-detail small,
 .account-action-section p,
-.plan-selection-summary p {
+.plan-selection-summary p,
+.billing-choice__heading p,
+.checkout-summary p,
+.checkout-payment-card p,
+.checkout-return-card p {
   color: var(--color-text-soft);
 }
 
@@ -141,6 +149,26 @@
   gap: 10px;
 }
 
+.plan-heading p {
+  max-width: 620px;
+}
+
+.billing-choice {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.billing-choice__heading h2,
+.billing-choice__heading p {
+  margin: 0;
+}
+
+.billing-choice__heading p {
+  margin-top: 4px;
+  font-size: .84rem;
+}
+
 .billing-cycle-tabs {
   display: grid;
   grid-template-columns: repeat(3,minmax(0,1fr));
@@ -150,8 +178,8 @@
 .billing-cycle-tabs button {
   position: relative;
   display: grid;
-  min-height: 74px;
-  gap: 2px;
+  min-height: 82px;
+  gap: 3px;
   align-content: center;
   padding: 10px 8px;
   border: 1px solid var(--color-border);
@@ -159,15 +187,17 @@
   background: var(--color-surface);
   color: inherit;
   cursor: pointer;
+  transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
 }
 
 .billing-cycle-tabs button.is-selected {
   border-color: var(--color-primary-600);
+  background: color-mix(in srgb,var(--color-primary-600) 6%,var(--color-surface));
   box-shadow: 0 0 0 2px rgb(15 111 158 / 14%);
 }
 
 .billing-cycle-tabs strong {
-  font-size: .86rem;
+  font-size: .88rem;
 }
 
 .billing-cycle-tabs span {
@@ -176,8 +206,18 @@
 }
 
 .billing-cycle-tabs small {
-  font-size: .68rem;
+  justify-self: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--color-surface-subtle);
   color: var(--color-text-soft);
+  font-size: .67rem;
+  font-weight: 800;
+}
+
+.billing-cycle-tabs button.is-selected small {
+  background: var(--color-primary-600);
+  color: #fff;
 }
 
 .plan-grid {
@@ -195,8 +235,8 @@
   box-shadow: var(--shadow-sm);
 }
 
-.plan-card.is-selected {
-  border-color: var(--color-primary-600);
+.plan-card--plus {
+  border-color: color-mix(in srgb,var(--color-primary-600) 42%,var(--color-border));
 }
 
 .plan-card__heading {
@@ -209,6 +249,10 @@
 .plan-card__heading h2,
 .plan-card__heading p {
   margin: 0;
+}
+
+.plan-card__heading h2 {
+  font-size: 1.35rem;
 }
 
 .plan-card__heading p {
@@ -243,8 +287,9 @@
 
 .plan-price small {
   flex-basis: 100%;
-  margin-top: 4px;
+  margin-top: 5px;
   color: var(--color-text-soft);
+  font-weight: 650;
 }
 
 .plan-features {
@@ -266,6 +311,33 @@
   margin-top: 2px;
 }
 
+.plan-card__cta {
+  width: 100%;
+  justify-content: center;
+}
+
+.plan-card.is-coming-soon {
+  border-color: rgba(11, 103, 240, 0.34);
+}
+
+.plan-coming-soon {
+  margin: 0;
+  padding: 0.78rem 0.9rem;
+  border-radius: 0.85rem;
+  background: #edf5ff;
+  color: #174a87;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.plan-footnote {
+  margin: -2px 0 2px;
+  color: var(--color-text-soft);
+  font-size: .78rem;
+  text-align: center;
+}
+
 .plan-selection-summary {
   display: grid;
   gap: 8px;
@@ -281,6 +353,173 @@
   margin: 0;
 }
 
+.checkout-heading p {
+  max-width: 560px;
+}
+
+.checkout-summary {
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+}
+
+.checkout-summary__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.checkout-summary__top h2,
+.checkout-summary__top p {
+  margin: 0;
+}
+
+.checkout-summary__top p {
+  margin-top: 5px;
+}
+
+.checkout-cycle {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: var(--color-surface-subtle);
+  font-size: .74rem;
+}
+
+.checkout-price {
+  display: grid;
+  gap: 5px;
+  padding: 16px 0;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.checkout-price > div {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.checkout-price strong {
+  font-size: clamp(1.8rem,7vw,2.25rem);
+  line-height: 1;
+}
+
+.checkout-price span,
+.checkout-price small {
+  color: var(--color-text-soft);
+}
+
+.checkout-includes {
+  display: grid;
+  gap: 9px;
+}
+
+.checkout-includes span {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.checkout-includes svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.checkout-payment-card {
+  display: grid;
+  grid-template-columns: 42px minmax(0,1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 16px;
+}
+
+.checkout-payment-card__icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-subtle);
+}
+
+.checkout-payment-card h2,
+.checkout-payment-card p {
+  margin: 0;
+}
+
+.checkout-payment-card p {
+  margin-top: 4px;
+}
+
+.checkout-payment-error {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.checkout-payment-button {
+  grid-column: 1 / -1;
+  width: 100%;
+  justify-content: center;
+}
+
+.checkout-payment-button:disabled {
+  cursor: wait;
+  opacity: .72;
+}
+
+.checkout-return-page {
+  min-height: min(66vh,560px);
+  place-content: center;
+}
+
+.checkout-return-card {
+  display: grid;
+  max-width: 560px;
+  gap: 18px;
+  padding: 22px;
+}
+
+.checkout-return-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--color-surface-subtle);
+}
+
+.checkout-return-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.checkout-return-card h1,
+.checkout-return-card p {
+  margin: 0;
+}
+
+.checkout-return-card h1 {
+  margin-top: 5px;
+}
+
+.checkout-return-card p {
+  margin-top: 7px;
+  line-height: 1.5;
+}
+
+.checkout-return-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.checkout-return-actions .primary-button,
+.checkout-return-actions .secondary-button {
+  justify-content: center;
+}
+
 @media (min-width: 760px) {
   .plan-grid {
     grid-template-columns: repeat(2,minmax(0,1fr));
@@ -288,5 +527,10 @@
 
   .billing-cycle-tabs {
     max-width: 650px;
+  }
+
+  .checkout-summary,
+  .checkout-payment-card {
+    max-width: 680px;
   }
 }
