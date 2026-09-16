@@ -2,14 +2,12 @@
   command = "npm run build"
   publish = "dist"
 
-# SANDBOX HOMOLOGATION ONLY ON THIS PR BRANCH.
-# Before merging this branch, restore the production backend target below.
 # Keep auth/session same-origin from the browser's perspective. The PWA calls
 # /api/* on its own origin and Netlify proxies to Cloud Run server-side.
 # Login gets a stricter per-IP edge limit before the generic auth/API proxies.
 [[redirects]]
   from = "/api/v1/auth/login"
-  to = "https://candidate-asaas-sandbox---whatsapp-backend-76kppogwfq-rj.a.run.app/api/v1/auth/login"
+  to = "https://whatsapp-backend-186627697999.southamerica-east1.run.app/api/v1/auth/login"
   status = 200
   force = true
   [redirects.rate_limit]
@@ -21,7 +19,7 @@
 # with normal multi-tab session restoration.
 [[redirects]]
   from = "/api/v1/auth/*"
-  to = "https://candidate-asaas-sandbox---whatsapp-backend-76kppogwfq-rj.a.run.app/api/v1/auth/:splat"
+  to = "https://whatsapp-backend-186627697999.southamerica-east1.run.app/api/v1/auth/:splat"
   status = 200
   force = true
   [redirects.rate_limit]
@@ -31,7 +29,7 @@
 
 [[redirects]]
   from = "/api/*"
-  to = "https://candidate-asaas-sandbox---whatsapp-backend-76kppogwfq-rj.a.run.app/api/:splat"
+  to = "https://whatsapp-backend-186627697999.southamerica-east1.run.app/api/:splat"
   status = 200
   force = true
 
