@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
+  cancelMetaEmbeddedSignup,
   canStartEmbeddedSignup,
   createEmbeddedSignupRunner,
   EmbeddedSignupCancelledError,
   EmbeddedSignupError,
   launchMetaEmbeddedSignup,
+  resumeMetaEmbeddedSignup,
   trustedMetaOriginHostname,
 } from '../src/features/whatsapp/embeddedSignup.ts'
 
@@ -17,8 +19,25 @@ const configuration = {
   mode: 'coexistence',
 }
 
+const passiveClock = {
+  setTimeout() { return 1 },
+  clearTimeout() {},
+  setInterval() { return 1 },
+  clearInterval() {},
+}
+
 function runtimeFor(login, {popup = null, fastPopupClose = false, clock = null} = {}) {
   const listeners = new Set()
+  const windowListeners = new Map()
+  const documentListeners = new Map()
+  const add = (map, type, listener) => {
+    if (!map.has(type)) map.set(type, new Set())
+    map.get(type).add(listener)
+  }
+  const remove = (map, type, listener) => map.get(type)?.delete(listener)
+  const dispatch = (map, type) => {
+    for (const listener of map.get(type) ?? []) listener()
+  }
   const runtime = {
     FB: undefined,
     fbAsyncInit: undefined,
@@ -43,9 +62,23 @@ function runtimeFor(login, {popup = null, fastPopupClose = false, clock = null} 
       info(...values) { runtime.logs.push(values) },
     },
     open() { return popup },
-    addEventListener(type, listener) { if (type === 'message') listeners.add(listener) },
-    removeEventListener(type, listener) { if (type === 'message') listeners.delete(listener) },
+    addEventListener(type, listener) {
+      if (type === 'message') listeners.add(listener)
+      else add(windowListeners, type, listener)
+    },
+    removeEventListener(type, listener) {
+      if (type === 'message') listeners.delete(listener)
+      else remove(windowListeners, type, listener)
+    },
+    dispatch(type) { dispatch(windowListeners, type) },
+    setVisibility(state) {
+      runtime.document.visibilityState = state
+      dispatch(documentListeners, 'visibilitychange')
+    },
     document: {
+      visibilityState: 'visible',
+      addEventListener(type, listener) { add(documentListeners, type, listener) },
+      removeEventListener(type, listener) { remove(documentListeners, type, listener) },
       getElementById() { return null },
       createElement() {
         return {
@@ -166,7 +199,7 @@ test('evento com current_step não conclui antes do SessionInfo terminal', async
     waba_id:'333333333333333',
   })
   assert.equal(terminalSent, true)
-  assert.match(JSON.stringify(runtime.logs), /wa_session_intermediate_step/)
+  assert.match(JSON.stringify(runtime.logs), /intermediate_step_received/)
 })
 
 test('subdomínio HTTPS legítimo da Meta entrega SessionInfo no mobile', async () => {
@@ -224,6 +257,163 @@ test('callback vazio no mobile/PWA não cancela enquanto o fluxo Meta continua',
   const result = await launchMetaEmbeddedSignup(configuration, runtime)
   assert.deepEqual(result, {
     authorization_code:'mobile-code',
+    waba_id:'333333333333333',
+  })
+})
+
+test('visibility hidden -> visible preserva e retoma a mesma tentativa', async () => {
+  let loginCalls = 0
+  let resumeRequests = 0
+  const observations = []
+  const runtime = runtimeFor(({listeners, callback}) => {
+    loginCalls++
+    if (loginCalls === 1) {
+      callback({})
+      send(listeners, {
+        type:'WA_EMBEDDED_SIGNUP',
+        event:'FINISH',
+        data:{waba_id:'333333333333333'},
+      })
+      return
+    }
+    callback({authResponse:{code:'resumed-mobile-code'}})
+  }, {clock:passiveClock})
+
+  const pending = launchMetaEmbeddedSignup(configuration, runtime, {
+    onObservation: observation => observations.push(observation),
+    onResumeRequired: () => { resumeRequests++ },
+  })
+  await new Promise(resolve => setImmediate(resolve))
+  runtime.setVisibility('hidden')
+  runtime.setVisibility('visible')
+
+  assert.equal(resumeRequests, 1)
+  assert.equal(resumeMetaEmbeddedSignup(), true)
+  assert.deepEqual(await pending, {
+    authorization_code:'resumed-mobile-code',
+    waba_id:'333333333333333',
+  })
+  assert.equal(loginCalls, 2)
+  assert.deepEqual(
+    observations.filter(value => value.stage === 'page_hidden' || value.stage === 'page_visible').map(value => value.stage),
+    ['page_hidden', 'page_visible'],
+  )
+})
+
+test('pageshow durante tentativa oferece retomada sem iniciar outro login', async () => {
+  let loginCalls = 0
+  let resumeRequests = 0
+  let messageListeners
+  const runtime = runtimeFor(({listeners, callback}) => {
+    loginCalls++
+    messageListeners = listeners
+    callback({})
+  }, {clock:passiveClock})
+  const pending = launchMetaEmbeddedSignup(configuration, runtime, {
+    onResumeRequired: () => { resumeRequests++ },
+  })
+
+  await new Promise(resolve => setImmediate(resolve))
+  runtime.dispatch('pageshow')
+  assert.equal(resumeRequests, 1)
+  assert.equal(loginCalls, 1)
+  send(messageListeners, {type:'WA_EMBEDDED_SIGNUP', event:'CANCEL', data:{}})
+  await assert.rejects(pending, EmbeddedSignupCancelledError)
+})
+
+test('focus durante tentativa oferece retomada sem login concorrente', async () => {
+  let loginCalls = 0
+  let resumeRequests = 0
+  let messageListeners
+  const runtime = runtimeFor(({listeners, callback}) => {
+    loginCalls++
+    messageListeners = listeners
+    callback({})
+  }, {clock:passiveClock})
+  const pending = launchMetaEmbeddedSignup(configuration, runtime, {
+    onResumeRequired: () => { resumeRequests++ },
+  })
+
+  await new Promise(resolve => setImmediate(resolve))
+  runtime.dispatch('focus')
+  assert.equal(resumeRequests, 1)
+  assert.equal(loginCalls, 1)
+  send(messageListeners, {type:'WA_EMBEDDED_SIGNUP', event:'ERROR', data:{}})
+  await assert.rejects(pending, EmbeddedSignupError)
+})
+
+test('pageshow recupera tentativa quando o callback inicial nunca chega', async () => {
+  const callbacks = []
+  let messageListeners
+  let resumeRequests = 0
+  const runtime = runtimeFor(({listeners, callback}) => {
+    messageListeners = listeners
+    callbacks.push(callback)
+  }, {clock:passiveClock})
+  const pending = launchMetaEmbeddedSignup(configuration, runtime, {
+    onResumeRequired: () => { resumeRequests++ },
+  })
+  await new Promise(resolve => setImmediate(resolve))
+
+  runtime.dispatch('pagehide')
+  runtime.dispatch('pageshow')
+  assert.equal(resumeRequests, 1)
+  assert.equal(resumeMetaEmbeddedSignup(), true)
+  assert.equal(callbacks.length, 2)
+
+  callbacks[0]({authResponse:{code:'late-obsolete-code'}})
+  send(messageListeners, {
+    type:'WA_EMBEDDED_SIGNUP', event:'FINISH',
+    data:{waba_id:'333333333333333'},
+  })
+  let settled = false
+  void pending.then(() => { settled = true })
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(settled, false)
+
+  callbacks[1]({authResponse:{code:'current-resume-code'}})
+  assert.deepEqual(await pending, {
+    authorization_code:'current-resume-code',
+    waba_id:'333333333333333',
+  })
+})
+
+test('retomada fica vinculada ao tenant que iniciou a tentativa', async () => {
+  let loginCalls = 0
+  const runtime = runtimeFor(({callback}) => {
+    loginCalls++
+    callback({})
+  }, {clock:passiveClock})
+  const pending = launchMetaEmbeddedSignup(configuration, runtime, {
+    attemptKey:'business-a',
+    onResumeRequired: () => {},
+  })
+  await new Promise(resolve => setImmediate(resolve))
+  runtime.dispatch('pageshow')
+
+  assert.equal(resumeMetaEmbeddedSignup('business-b'), false)
+  assert.equal(loginCalls, 1)
+  assert.equal(cancelMetaEmbeddedSignup('business-b'), false)
+  assert.equal(cancelMetaEmbeddedSignup('business-a'), true)
+  await assert.rejects(pending, EmbeddedSignupCancelledError)
+})
+
+test('SessionInfo e callback duplicados são idempotentes e preservam o primeiro código', async () => {
+  const runtime = runtimeFor(({listeners, callback}) => {
+    send(listeners, {
+      type:'WA_EMBEDDED_SIGNUP', event:'FINISH',
+      data:{waba_id:'333333333333333'},
+    })
+    send(listeners, {
+      type:'WA_EMBEDDED_SIGNUP', event:'FINISH',
+      data:{waba_id:'333333333333333'},
+    })
+    callback({authResponse:{code:'first-code'}})
+    callback({authResponse:{code:'duplicate-code'}})
+  })
+
+  assert.deepEqual(await launchMetaEmbeddedSignup(configuration, runtime), {
+    authorization_code:'first-code',
     waba_id:'333333333333333',
   })
 })
@@ -354,4 +544,25 @@ test('duplo clique compartilha uma única conclusão e atualiza o status uma vez
     starts:1, launches:1, completions:1, updates:1,
   })
   assert.deepEqual(phases, ['opening', 'processing', 'success'])
+})
+
+test('falha de complete é sanitizada e observada sem resposta interna', async () => {
+  const observations = []
+  const phases = []
+  const run = createEmbeddedSignupRunner({
+    start: () => configuration,
+    launch: async () => ({authorization_code:'code', waba_id:'333333333333333'}),
+    complete: async () => { throw new Error('private Meta response') },
+    onPhase: (phase, error) => phases.push([phase,error?.message]),
+    onConnected: async () => {},
+    onObservation: observation => observations.push(observation.stage),
+  })
+
+  await assert.rejects(run(), error => {
+    assert.equal(error instanceof EmbeddedSignupError, true)
+    assert.equal(error.message.includes('private Meta response'), false)
+    return true
+  })
+  assert.deepEqual(observations, ['complete_request_started', 'complete_request_failed'])
+  assert.equal(JSON.stringify(phases).includes('private Meta response'), false)
 })

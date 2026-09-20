@@ -1,6 +1,25 @@
 import type { WhatsAppConnection } from './types'
 
-export type EmbeddedSignupPhase = 'idle' | 'opening' | 'processing' | 'success' | 'error'
+export type EmbeddedSignupPhase = 'idle' | 'opening' | 'waiting' | 'processing' | 'success' | 'error'
+
+export type EmbeddedSignupObservation = {
+  stage: 'sdk_ready' | 'login_opened' | 'login_callback_received'
+    | 'wa_session_event_received' | 'intermediate_step_received'
+    | 'page_hidden' | 'page_visible' | 'window_focus' | 'pageshow'
+    | 'popup_closed' | 'embedded_signup_ready_to_complete'
+    | 'complete_request_started' | 'complete_request_succeeded'
+    | 'complete_request_failed' | 'timeout'
+  authorization_code_received?: boolean
+  waba_id_received?: boolean
+  phone_number_id_received?: boolean
+  intermediate_step_received?: boolean
+}
+
+type EmbeddedSignupHooks = {
+  attemptKey?: string
+  onObservation?: (observation: EmbeddedSignupObservation) => void
+  onResumeRequired?: () => void
+}
 
 export type EmbeddedSignupConfiguration = {
   app_id: string
@@ -34,6 +53,23 @@ type EmbeddedSignupWindow = Window & {
   console?: Pick<Console, 'info'>
 }
 
+let activeAttempt: {
+  key?: string
+  resume: () => boolean
+  cancel: () => void
+} | null = null
+
+export function resumeMetaEmbeddedSignup(attemptKey?: string) {
+  if (!activeAttempt || activeAttempt.key !== attemptKey) return false
+  return activeAttempt.resume()
+}
+
+export function cancelMetaEmbeddedSignup(attemptKey?: string) {
+  if (!activeAttempt || activeAttempt.key !== attemptKey) return false
+  activeAttempt.cancel()
+  return true
+}
+
 export class EmbeddedSignupCancelledError extends Error {
   constructor() {
     super('Conexão cancelada. Você pode tentar novamente quando quiser.')
@@ -58,14 +94,15 @@ export function canStartEmbeddedSignup(
 export function launchMetaEmbeddedSignup(
   configuration: EmbeddedSignupConfiguration,
   runtime: EmbeddedSignupWindow = window,
+  hooks: EmbeddedSignupHooks = {},
 ): Promise<EmbeddedSignupResult> {
   validateConfiguration(configuration)
   if (runtime.FB) {
-    initializeSdk(runtime.FB, configuration, runtime)
-    return openEmbeddedSignup(runtime.FB, configuration, runtime)
+    initializeSdk(runtime.FB, configuration, runtime, hooks.onObservation)
+    return openEmbeddedSignup(runtime.FB, configuration, runtime, hooks)
   }
-  return prepareMetaEmbeddedSignup(configuration, runtime).then(
-    sdk => openEmbeddedSignup(sdk, configuration, runtime),
+  return prepareMetaEmbeddedSignup(configuration, runtime, hooks.onObservation).then(
+    sdk => openEmbeddedSignup(sdk, configuration, runtime, hooks),
   )
 }
 
@@ -73,16 +110,28 @@ function openEmbeddedSignup(
   sdk: FacebookSdk,
   configuration: EmbeddedSignupConfiguration,
   runtime: EmbeddedSignupWindow,
+  hooks: EmbeddedSignupHooks,
 ): Promise<EmbeddedSignupResult> {
   return new Promise((resolve, reject) => {
     let authorizationCode: string | null = null
     let assets: {waba_id:string; phone_number_id?:string} | null = null
     let settled = false
+    let loginInProgress = false
+    let loginGeneration = 0
+    let emptyCallbackReceived = false
+    let pageWasHidden = false
+    let returnedToApp = false
+    let resumeNotified = false
     let popupWindow: Window | null = null
     let popupPoll: number | null = null
 
+    const observe = (
+      stage: EmbeddedSignupObservation['stage'],
+      fields: Omit<EmbeddedSignupObservation, 'stage'> = {},
+    ) => traceMetaSignup(runtime, stage, fields, hooks.onObservation)
+
     const timeout = runtime.setTimeout(() => {
-      traceMetaSignup(runtime, 'timeout')
+      observe('timeout')
       finish(new EmbeddedSignupError())
     }, 120_000)
 
@@ -95,7 +144,12 @@ function openEmbeddedSignup(
     const cleanup = () => {
       runtime.clearTimeout(timeout)
       runtime.removeEventListener('message', sessionListener)
+      runtime.removeEventListener('pagehide', pageHideListener)
+      runtime.removeEventListener('pageshow', pageShowListener)
+      runtime.removeEventListener('focus', focusListener)
+      runtime.document.removeEventListener?.('visibilitychange', visibilityListener)
       stopPopupWatch()
+      if (activeAttempt?.resume === resumeLogin) activeAttempt = null
     }
     const finish = (error?: Error) => {
       if (settled) return
@@ -106,7 +160,52 @@ function openEmbeddedSignup(
       else reject(new EmbeddedSignupError())
     }
     const maybeFinish = () => {
-      if (authorizationCode && assets) finish()
+      if (authorizationCode && assets) {
+        observe('embedded_signup_ready_to_complete', {
+          authorization_code_received: true,
+          waba_id_received: true,
+          phone_number_id_received: assets.phone_number_id !== undefined,
+        })
+        finish()
+      }
+    }
+    const notifyResume = () => {
+      if (settled || loginInProgress || resumeNotified || !returnedToApp) return
+      resumeNotified = true
+      hooks.onResumeRequired?.()
+    }
+    function pageHideListener() {
+      pageWasHidden = true
+      observe('page_hidden')
+    }
+    function pageShowListener() {
+      returnedToApp = true
+      loginInProgress = false
+      observe('pageshow')
+      notifyResume()
+    }
+    function focusListener() {
+      if (popupWindow && !popupWindow.closed) {
+        observe('window_focus')
+        return
+      }
+      if (pageWasHidden || emptyCallbackReceived || authorizationCode || assets) {
+        returnedToApp = true
+        loginInProgress = false
+      }
+      observe('window_focus')
+      notifyResume()
+    }
+    function visibilityListener() {
+      if (runtime.document.visibilityState === 'hidden') {
+        pageWasHidden = true
+        observe('page_hidden')
+        return
+      }
+      returnedToApp = pageWasHidden || returnedToApp
+      if (returnedToApp) loginInProgress = false
+      observe('page_visible')
+      notifyResume()
     }
     function sessionListener(event: MessageEvent) {
       const originHostname = trustedMetaOriginHostname(event.origin)
@@ -116,9 +215,7 @@ function openEmbeddedSignup(
       const wabaId = numericMetaId(payload.data?.waba_id)
       const phoneNumberId = optionalNumericMetaId(payload.data?.phone_number_id)
       const hasCurrentStep = payload.data?.current_step !== undefined
-      traceMetaSignup(runtime, 'wa_session_event_received', {
-        event_name: safeEventName(payload.event),
-        origin_hostname: originHostname,
+      observe('wa_session_event_received', {
         waba_id_received: wabaId !== null,
         phone_number_id_received: phoneNumberId !== undefined,
         intermediate_step_received: hasCurrentStep,
@@ -132,50 +229,24 @@ function openEmbeddedSignup(
         return
       }
       if (hasCurrentStep) {
-        traceMetaSignup(runtime, 'wa_session_intermediate_step', {
-          event_name: safeEventName(payload.event),
-        })
+        observe('intermediate_step_received', {intermediate_step_received:true})
         return
       }
       // The current Meta sample treats WA_EMBEDDED_SIGNUP SessionInfo as
       // complete based on its assets, not on a closed list of event names.
       // Messages that only describe an intermediate current_step remain open.
       if (!wabaId) return
-      assets = {waba_id:wabaId, ...(phoneNumberId ? {phone_number_id:phoneNumberId} : {})}
+      assets ??= {waba_id:wabaId, ...(phoneNumberId ? {phone_number_id:phoneNumberId} : {})}
       maybeFinish()
     }
 
     runtime.addEventListener('message', sessionListener)
+    runtime.addEventListener('pagehide', pageHideListener)
+    runtime.addEventListener('pageshow', pageShowListener)
+    runtime.addEventListener('focus', focusListener)
+    runtime.document.addEventListener?.('visibilitychange', visibilityListener)
 
-    const originalWindowOpen = typeof runtime.open === 'function'
-      ? runtime.open.bind(runtime)
-      : null
-    if (originalWindowOpen) {
-      runtime.open = ((url?: string | URL, target?: string, features?: string) => {
-        const popup = originalWindowOpen(url, target, features)
-        if (popup) popupWindow = popup
-        return popup
-      }) as typeof runtime.open
-    }
-
-    try {
-      traceMetaSignup(runtime, 'login_opened')
-      sdk.login((response) => {
-        const code = response.authResponse?.code?.trim()
-        traceMetaSignup(runtime, 'login_callback_received', {
-          authorization_code_received: Boolean(code),
-        })
-        if (!code) {
-          // Mobile browsers and installed PWAs can return an empty login
-          // callback while the Meta flow is still open in another tab/window.
-          // Only an explicit Meta CANCEL or the overall timeout should
-          // classify the flow as cancelled/failed. A mobile tab can close
-          // before the authorization code or SessionInfo reaches the opener.
-          return
-        }
-        authorizationCode = code
-        maybeFinish()
-      }, {
+    const loginOptions = {
         config_id: configuration.configuration_id,
         response_type: 'code',
         override_default_response_type: true,
@@ -184,19 +255,77 @@ function openEmbeddedSignup(
           version: configuration.embedded_signup_version,
           featureType: 'whatsapp_business_app_onboarding',
         },
-      })
-    } catch {
-      finish(new EmbeddedSignupError())
-    } finally {
-      if (originalWindowOpen) runtime.open = originalWindowOpen as typeof runtime.open
+      }
+    const requestLogin = (resume: boolean) => {
+      if (settled || loginInProgress) return false
+      loginInProgress = true
+      const generation = ++loginGeneration
+      resumeNotified = false
+      returnedToApp = false
+      const originalWindowOpen = typeof runtime.open === 'function'
+        ? runtime.open.bind(runtime)
+        : null
+      if (originalWindowOpen) {
+        runtime.open = ((url?: string | URL, target?: string, features?: string) => {
+          const popup = originalWindowOpen(url, target, features)
+          if (popup) popupWindow = popup
+          return popup
+        }) as typeof runtime.open
+      }
+      try {
+        observe('login_opened')
+        sdk.login((response) => {
+          if (settled || generation !== loginGeneration) return
+          loginInProgress = false
+          const code = response.authResponse?.code?.trim()
+          observe('login_callback_received', {
+            authorization_code_received: Boolean(code),
+          })
+          if (!code) {
+            // The SDK callback is single-shot. Mobile/PWA can return it empty
+            // after switching apps, so the same attempt remains resumable.
+            emptyCallbackReceived = true
+            notifyResume()
+            return
+          }
+          authorizationCode ??= code
+          emptyCallbackReceived = false
+          maybeFinish()
+        }, loginOptions)
+      } catch {
+        loginInProgress = false
+        if (resume) {
+          returnedToApp = true
+          notifyResume()
+          return false
+        }
+        finish(new EmbeddedSignupError())
+        return false
+      } finally {
+        if (originalWindowOpen) runtime.open = originalWindowOpen as typeof runtime.open
+      }
+      return true
     }
+
+    function resumeLogin() {
+      return requestLogin(true)
+    }
+    activeAttempt = {
+      key: hooks.attemptKey,
+      resume: resumeLogin,
+      cancel: () => finish(new EmbeddedSignupCancelledError()),
+    }
+    requestLogin(false)
 
     if (settled || !popupWindow) return
     popupPoll = runtime.setInterval(() => {
       if (settled) return
       if (popupWindow?.closed) {
-        traceMetaSignup(runtime, 'popup_closed')
+        returnedToApp = true
+        loginInProgress = false
+        observe('popup_closed')
         stopPopupWatch()
+        notifyResume()
       }
     }, 500)
   })
@@ -205,10 +334,11 @@ function openEmbeddedSignup(
 export async function prepareMetaEmbeddedSignup(
   configuration: EmbeddedSignupConfiguration,
   runtime: EmbeddedSignupWindow = window,
+  observer?: (observation: EmbeddedSignupObservation) => void,
 ): Promise<FacebookSdk> {
   validateConfiguration(configuration)
   const sdk = await loadFacebookSdk(runtime)
-  initializeSdk(sdk, configuration, runtime)
+  initializeSdk(sdk, configuration, runtime, observer)
   return sdk
 }
 
@@ -216,6 +346,7 @@ function initializeSdk(
   sdk: FacebookSdk,
   configuration: EmbeddedSignupConfiguration,
   runtime: EmbeddedSignupWindow,
+  observer?: (observation: EmbeddedSignupObservation) => void,
 ) {
   sdk.init({
     appId: configuration.app_id,
@@ -223,7 +354,7 @@ function initializeSdk(
     xfbml: false,
     version: configuration.graph_version,
   })
-  traceMetaSignup(runtime, 'sdk_ready')
+  traceMetaSignup(runtime, 'sdk_ready', {}, observer)
 }
 
 function validateConfiguration(configuration: EmbeddedSignupConfiguration) {
@@ -242,6 +373,7 @@ export function createEmbeddedSignupRunner(dependencies: {
   complete: (result: EmbeddedSignupResult) => Promise<WhatsAppConnection>
   onPhase: (phase: EmbeddedSignupPhase, error?: Error) => void
   onConnected: (connection: WhatsAppConnection) => Promise<void>
+  onObservation?: (observation: EmbeddedSignupObservation) => void
 }) {
   let inFlight: Promise<WhatsAppConnection> | null = null
   return () => {
@@ -253,7 +385,15 @@ export function createEmbeddedSignupRunner(dependencies: {
       const launched = dependencies.launch(configuration)
       const result = await launched
       dependencies.onPhase('processing')
-      const connection = await dependencies.complete(result)
+      dependencies.onObservation?.({stage:'complete_request_started'})
+      let connection: WhatsAppConnection
+      try {
+        connection = await dependencies.complete(result)
+      } catch (error) {
+        dependencies.onObservation?.({stage:'complete_request_failed'})
+        throw error
+      }
+      dependencies.onObservation?.({stage:'complete_request_succeeded'})
       await dependencies.onConnected(connection)
       dependencies.onPhase('success')
       return connection
@@ -302,17 +442,19 @@ export function trustedMetaOriginHostname(origin: string): string | null {
   return null
 }
 
-function safeEventName(value: string | undefined): string {
-  return value && /^[A-Z0-9_]{1,80}$/.test(value) ? value : 'unspecified'
-}
-
 function traceMetaSignup(
   runtime: EmbeddedSignupWindow,
-  stage: string,
-  fields: Record<string, string | boolean> = {},
+  stage: EmbeddedSignupObservation['stage'],
+  fields: Omit<EmbeddedSignupObservation, 'stage'> = {},
+  observer?: (observation: EmbeddedSignupObservation) => void,
 ) {
   try {
     runtime.console?.info('meta_embedded_signup', {stage, ...fields})
+  } catch {
+    // Diagnostics must never interfere with onboarding.
+  }
+  try {
+    observer?.({stage, ...fields})
   } catch {
     // Diagnostics must never interfere with onboarding.
   }
