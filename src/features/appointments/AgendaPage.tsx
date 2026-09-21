@@ -115,8 +115,8 @@ export function AgendaPage() {
         mode={calendarMode}
         selectedDate={selectedDate}
         onMode={mode=>{setCalendarMode(mode);setView(mode)}}
-        onPrevious={()=>setSelectedDate(value=>calendarMode==='month'?moveMonth(value,-1):moveDate(value,-7))}
-        onNext={()=>setSelectedDate(value=>calendarMode==='month'?moveMonth(value,1):moveDate(value,7))}
+        onPrevious={()=>setSelectedDate(calendarMode==='month'?moveMonth(selectedDate,-1):moveDate(selectedDate,-7))}
+        onNext={()=>setSelectedDate(calendarMode==='month'?moveMonth(selectedDate,1):moveDate(selectedDate,7))}
         onToday={()=>setSelectedDate(demoToday)}
       />
       <AgendaCalendar
@@ -319,7 +319,7 @@ function RealAgenda({selectedDate,setSelectedDate,canMutate,initialView,setOuter
         <p className="agenda-calendar-note">Toque em um dia para abrir a lista completa, editar ou criar atendimentos.</p>
       </>}
     </>:<>
-      <DayHeader selectedDate={selectedDate} onBack={()=>setCalendar(calendarMode)} onPrevious={()=>setSelectedDate(value=>moveDate(value,-1))} onNext={()=>setSelectedDate(value=>moveDate(value,1))}/>
+      <DayHeader selectedDate={selectedDate} onBack={()=>setCalendar(calendarMode)} onPrevious={()=>setSelectedDate(moveDate(selectedDate,-1))} onNext={()=>setSelectedDate(moveDate(selectedDate,1))}/>
       {(appointments.isPending||business.isPending)&&<LoadingState/>}
       {(appointments.isError||business.isError)&&<ErrorState onRetry={()=>{void appointments.refetch();void business.refetch()}}/>}
       {appointments.data&&business.data&&<><div className="section-title-row"><h2>{items.length} {items.length===1?'atendimento':'atendimentos'}</h2><InfoHelp title="Agenda operacional">Os dados exibidos pertencem à empresa ativa e permanecem preservados mesmo quando o acesso operacional está pausado.</InfoHelp></div>
