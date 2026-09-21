@@ -315,3 +315,230 @@
     padding-left: 10px;
   }
 }
+
+
+.conversation-contact-avatar-button,
+.conversation-route-shell .conversation-detail-header__identity {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.conversation-contact-avatar-button {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.conversation-route-shell .conversation-detail-header__identity {
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.conversation-route-shell .conversation-detail-header__identity:focus-visible,
+.conversation-contact-avatar-button:focus-visible {
+  outline: 3px solid #b7d2fb;
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+
+.conversation-contact-sheet {
+  display: grid;
+  gap: 18px;
+}
+
+.conversation-contact-profile {
+  padding: 6px 0 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-align: center;
+}
+
+.conversation-contact-profile__avatar {
+  width: 72px;
+  height: 72px;
+  margin-bottom: 7px;
+  font-size: 1.05rem;
+}
+
+.conversation-contact-profile strong {
+  font-size: 1.08rem;
+}
+
+.conversation-contact-profile span,
+.conversation-contact-profile small {
+  color: var(--color-text-muted);
+  font-size: .78rem;
+}
+
+.conversation-contact-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 8px;
+}
+
+.conversation-contact-quick-actions button {
+  min-width: 0;
+  min-height: 74px;
+  padding: 10px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  color: var(--color-primary-700);
+  background: #fff;
+  font: inherit;
+  font-size: .71rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.conversation-contact-quick-actions button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.conversation-contact-section {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 15px;
+  background: #fff;
+}
+
+.conversation-contact-section h3 {
+  padding: 11px 13px 6px;
+  color: var(--color-text-muted);
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.conversation-contact-row {
+  width: 100%;
+  min-height: 62px;
+  padding: 10px 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text);
+  background: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.conversation-contact-row.is-static {
+  cursor: default;
+}
+
+.conversation-contact-row > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.conversation-contact-row span {
+  color: var(--color-text-muted);
+  font-size: .68rem;
+}
+
+.conversation-contact-row strong {
+  overflow: hidden;
+  font-size: .82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conversation-contact-name-form {
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--color-border);
+}
+
+.conversation-contact-name-form label {
+  display: grid;
+  gap: 5px;
+  color: var(--color-text-soft);
+  font-size: .72rem;
+  font-weight: 700;
+}
+
+.conversation-contact-name-form input {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 11px;
+  font: inherit;
+  font-size: 16px;
+}
+
+.conversation-contact-name-form > div,
+.conversation-contact-delete__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.conversation-contact-danger {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #f0c9ce;
+  border-radius: 13px;
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 750;
+}
+
+.conversation-contact-delete {
+  display: grid;
+  gap: 16px;
+}
+
+.conversation-contact-delete__warning {
+  padding: 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  border-radius: 14px;
+  color: #7d252d;
+  background: var(--color-danger-bg);
+}
+
+.conversation-contact-delete__warning div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.conversation-contact-delete__warning span {
+  color: var(--color-text-soft);
+  font-size: .76rem;
+  line-height: 1.4;
+}
+
+@media (max-width: 380px) {
+  .conversation-contact-quick-actions button {
+    min-height: 68px;
+    font-size: .66rem;
+  }
+}
