@@ -3,7 +3,7 @@ import { queryClient } from '../../app/queryClient'
 import { api } from '../../lib/api'
 import { useAuth } from '../auth/useAuth'
 import { entitlementsFor, requirePaidAccess } from '../access/entitlements'
-import type { Appointment, AppointmentInput, AutomationSettings, Business, ConversationDetail, ConversationList, ConversationMessage, Customer, DashboardToday, Employee, OperationalRole, Service, SetupStatus, WorkingHours } from './types'
+import type { Appointment, AppointmentInput, AssistantExclusion, AutomationSettings, Business, ConversationDetail, ConversationList, ConversationMessage, Customer, DashboardToday, Employee, OperationalRole, Service, SetupStatus, WorkingHours } from './types'
 
 const root = (businessId?:string) => ['operations',businessId] as const
 const json = (value:object) => JSON.stringify(value)
@@ -34,6 +34,11 @@ export function useAppointments(date:string) {
   const context=usePaidContext()
   return useQuery({queryKey:[...root(context.businessId),'appointments',date],queryFn:({signal})=>api.request<{items:Appointment[]}>(`/appointments?date=${encodeURIComponent(date)}`,{signal}),enabled:context.enabled,retry:false})
 }
+export function useAppointmentsRange(startsAt:string,endsBefore:string,enabled=true) {
+  const context=usePaidContext()
+  const params=new URLSearchParams({starts_at:startsAt,ends_before:endsBefore})
+  return useQuery({queryKey:[...root(context.businessId),'appointments-range',startsAt,endsBefore],queryFn:({signal})=>api.request<{items:Appointment[]}>(`/appointments?${params}`,{signal}),enabled:context.enabled&&enabled&&!!startsAt&&!!endsBefore,retry:false})
+}
 export function useSaveAppointment() {
   const context=usePaidContext()
   return useMutation({mutationFn:({id,values}:{id?:string;values:AppointmentInput})=>paidMutation(context,()=>api.request<Appointment>(id?`/appointments/${id}`:'/appointments',{method:id?'PATCH':'POST',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'appointments','dashboard','setup')})
@@ -53,6 +58,18 @@ export function useConversation(id:string|null) {
   const context=usePaidContext()
   return useQuery({queryKey:[...root(context.businessId),'conversation',id],queryFn:({signal})=>api.request<ConversationDetail>(`/conversations/${id}`,{signal}),enabled:context.enabled&&!!id,retry:false,refetchInterval:context.enabled&&id?5_000:false})
 }
+export function useSetConversationPinned() {
+  const context=usePaidContext()
+  return useMutation({mutationFn:({id,pinned}:{id:string;pinned:boolean})=>paidMutation(context,()=>api.request<ConversationDetail>(`/conversations/${id}/pinned`,{method:'PATCH',body:json({pinned})})),onSuccess:()=>invalidate(context.businessId,'conversations','conversation')})
+}
+export function useSetConversationRead() {
+  const context=usePaidContext()
+  return useMutation({mutationFn:({id,unread}:{id:string;unread:boolean})=>paidMutation(context,()=>api.request<ConversationDetail>(`/conversations/${id}/read`,{method:'PATCH',body:json({unread})})),onSuccess:()=>invalidate(context.businessId,'conversations','conversation','dashboard')})
+}
+export function useArchiveConversation() {
+  const context=usePaidContext()
+  return useMutation({mutationFn:(id:string)=>paidMutation(context,()=>api.request<void>(`/conversations/${id}`,{method:'DELETE'})),onSuccess:()=>invalidate(context.businessId,'conversations','conversation','dashboard')})
+}
 export function useUpdateCustomerName() {
   const context=usePaidContext()
   return useMutation({mutationFn:({id,name}:{id:string;name:string|null})=>paidMutation(context,()=>api.request<ConversationDetail>(`/conversations/${id}/customer`,{method:'PATCH',body:json({name})})),onSuccess:()=>invalidate(context.businessId,'conversations','conversation','dashboard')})
@@ -71,7 +88,19 @@ export function useBusiness() {
 }
 export function useUpdateBusiness() {
   const context=usePaidContext()
-  return useMutation({mutationFn:(values:Partial<Pick<Business,'name'|'timezone'|'slot_interval_minutes'>>)=>paidMutation(context,()=>api.request<Business>('/business',{method:'PATCH',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'business','setup')})
+  return useMutation({mutationFn:(values:Partial<Pick<Business,'name'|'timezone'|'slot_interval_minutes'|'service_origin_address'|'default_travel_minutes'|'travel_fallback_allowed'|'travel_before_buffer_minutes'|'travel_after_buffer_minutes'>>)=>paidMutation(context,()=>api.request<Business>('/business',{method:'PATCH',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'business','setup')})
+}
+export function useAssistantExclusions() {
+  const context=usePaidContext()
+  return useQuery({queryKey:[...root(context.businessId),'assistant-exclusions'],queryFn:({signal})=>api.request<AssistantExclusion[]>('/automation/exclusions',{signal}),enabled:context.enabled,retry:false})
+}
+export function useAddAssistantExclusion() {
+  const context=usePaidContext()
+  return useMutation({mutationFn:({customer_id,reason}:{customer_id:string;reason?:string|null})=>paidMutation(context,()=>api.request<AssistantExclusion>('/automation/exclusions',{method:'POST',body:json({customer_id,reason:reason||null})})),onSuccess:()=>invalidate(context.businessId,'assistant-exclusions','conversation','conversations')})
+}
+export function useRemoveAssistantExclusion() {
+  const context=usePaidContext()
+  return useMutation({mutationFn:(id:string)=>paidMutation(context,()=>api.request<void>(`/automation/exclusions/${id}`,{method:'DELETE'})),onSuccess:()=>invalidate(context.businessId,'assistant-exclusions','conversation','conversations')})
 }
 export function useEmployees() {
   const context=usePaidContext()
