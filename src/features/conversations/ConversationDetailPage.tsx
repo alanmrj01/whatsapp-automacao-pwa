@@ -1,13 +1,17 @@
-import { ArrowLeft, Bot, Check, Copy, Pencil, Send } from 'lucide-react'
+import { ArrowLeft, Bot, CalendarPlus2, Check, CheckCheck, Copy, Info, Pencil, Pin, PinOff, Send, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { BottomSheet } from '../../components/BottomSheet'
 import { ErrorState } from '../../components/ErrorState'
 import { LoadingState } from '../../components/LoadingState'
 import { useAuth } from '../auth/useAuth'
 import {
+  useArchiveConversation,
   useBusiness,
   useConversation,
   useSendConversationMessage,
+  useSetConversationPinned,
+  useSetConversationRead,
   useUpdateConversationAssistant,
   useUpdateCustomerName,
 } from '../operations/api'
@@ -31,13 +35,19 @@ const outboundStatusLabels: Record<string,string> = {
 
 export function ConversationDetailPage() {
   const {conversationId=''}=useParams()
+  const navigate=useNavigate()
   const {membership}=useAuth()
   const detail=useConversation(conversationId||null)
   const business=useBusiness()
   const rename=useUpdateCustomerName()
   const assistant=useUpdateConversationAssistant()
   const send=useSendConversationMessage()
+  const pin=useSetConversationPinned()
+  const read=useSetConversationRead()
+  const archive=useArchiveConversation()
+  const [contactOpen,setContactOpen]=useState(false)
   const [editingName,setEditingName]=useState(false)
+  const [confirmDelete,setConfirmDelete]=useState(false)
   const [name,setName]=useState('')
   const [text,setText]=useState('')
   const [idempotencyKey,setIdempotencyKey]=useState(()=>crypto.randomUUID())
@@ -55,6 +65,13 @@ export function ConversationDetailPage() {
     threadEndRef.current?.scrollIntoView({block:'end'})
   },[orderedMessages.length])
 
+  useEffect(()=>{
+    if(!canMutate||!detail.data||detail.data.unread_count<=0||read.isPending)return
+    read.mutate({id:detail.data.id,unread:false})
+  // Deliberately react only to the unread count of the opened conversation.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[canMutate,detail.data?.id,detail.data?.unread_count])
+
   if(detail.isPending||business.isPending)return <div className="conversation-detail-page conversation-detail-page--state"><LoadingState/></div>
   if(detail.isError||business.isError||!detail.data)return <div className="conversation-detail-page conversation-detail-page--state"><ErrorState onRetry={()=>{void detail.refetch();void business.refetch()}}/></div>
   const conversation=detail.data
@@ -67,10 +84,24 @@ export function ConversationDetailPage() {
       {onSuccess:()=>{setText('');setIdempotencyKey(crypto.randomUUID())}},
     )
   }
+
+  const openContact=()=>{
+    setName(conversation.customer_name)
+    setEditingName(false)
+    setConfirmDelete(false)
+    setContactOpen(true)
+  }
+
   const saveName=()=>rename.mutate(
     {id:conversation.id,name:name.trim()||null},
     {onSuccess:()=>setEditingName(false)},
   )
+
+  const createAppointment=()=>{
+    setContactOpen(false)
+    const params=new URLSearchParams({action:'new',customer:conversation.customer_id})
+    navigate(`/app/agenda?${params}`)
+  }
 
   return <div className="conversation-detail-page">
     <header className="conversation-detail-header">
@@ -78,41 +109,28 @@ export function ConversationDetailPage() {
         <ArrowLeft size={22}/>
       </Link>
 
-      <div className="conversation-avatar conversation-detail-avatar" aria-hidden="true">
-        {initials(conversation.customer_name)}
-      </div>
+      <button className="conversation-contact-avatar-button" type="button" onClick={openContact} aria-label="Abrir dados do contato">
+        <span className="conversation-avatar conversation-detail-avatar" aria-hidden="true">
+          {initials(conversation.customer_name)}
+        </span>
+      </button>
 
-      <div className="conversation-detail-header__identity">
+      <button className="conversation-detail-header__identity" type="button" onClick={openContact} aria-label="Abrir dados do contato">
         <strong>{conversation.customer_name}</strong>
         <span>{conversation.customer_phone??'Contato do WhatsApp'}</span>
         <small>{conversationStatusLabels[conversation.status]}</small>
-      </div>
+      </button>
 
       <div className="conversation-detail-header__actions" aria-label="Ações da conversa">
-        {canMutate&&<button
+        <button
           type="button"
           className="conversation-header-action"
-          aria-label="Editar nome do contato"
-          title="Editar nome"
-          onClick={()=>{setName(conversation.customer_name);setEditingName(value=>!value)}}
-        ><Pencil size={19}/></button>}
-        {canMutate&&<button
-          type="button"
-          className={`conversation-header-action ${conversation.assistant_enabled?'is-active':''}`}
-          aria-label={conversation.assistant_enabled?'Pausar Assistente Virtual':'Reativar Assistente Virtual'}
-          title={conversation.assistant_enabled?'Pausar Assistente Virtual':'Reativar Assistente Virtual'}
-          disabled={assistant.isPending}
-          onClick={()=>assistant.mutate({id:conversation.id,enabled:!conversation.assistant_enabled})}
-        ><Bot size={20}/></button>}
+          aria-label="Dados do contato"
+          title="Dados do contato"
+          onClick={openContact}
+        ><Info size={20}/></button>
       </div>
     </header>
-
-    {editingName&&<form className="conversation-name-form conversation-name-form--messenger" onSubmit={event=>{event.preventDefault();saveName()}}>
-      <label>Novo nome<input maxLength={255} value={name} onChange={event=>setName(event.target.value)} autoFocus/></label>
-      <button className="primary-button" disabled={rename.isPending}>Salvar</button>
-    </form>}
-
-    {(rename.isError||assistant.isError)&&<p className="form-error conversation-inline-error" role="alert">Não foi possível salvar a alteração. Tente novamente.</p>}
 
     <main className="conversation-thread" aria-live="polite" aria-label="Histórico da conversa">
       {orderedMessages.map(message=><MessageBubble
@@ -164,6 +182,56 @@ export function ConversationDetailPage() {
       </div>
       {send.isError&&<p className="form-error conversation-send-error" role="alert">Não foi possível confirmar o envio. O histórico foi atualizado; verifique o status da mensagem antes de tentar novamente.</p>}
     </footer>
+
+    <BottomSheet
+      open={contactOpen}
+      title={confirmDelete?'Excluir conversa':'Dados do contato'}
+      description={confirmDelete?'O histórico será preservado e a conversa volta à lista se o contato enviar uma nova mensagem.':'Gerencie o contato e as ações desta conversa.'}
+      onClose={()=>{setContactOpen(false);setEditingName(false);setConfirmDelete(false)}}
+    >
+      {confirmDelete ? <div className="conversation-contact-delete">
+        <div className="conversation-contact-delete__warning"><Trash2 size={22}/><div><strong>Excluir {conversation.customer_name} da lista?</strong><span>Essa ação não apaga as mensagens armazenadas.</span></div></div>
+        {archive.isError&&<p className="form-error" role="alert">Não foi possível excluir a conversa.</p>}
+        <div className="conversation-contact-delete__actions">
+          <button className="secondary-button" type="button" onClick={()=>setConfirmDelete(false)}>Cancelar</button>
+          <button className="danger-button" type="button" disabled={archive.isPending} onClick={()=>archive.mutate(conversation.id,{onSuccess:()=>navigate('/app/conversas',{replace:true})})}>{archive.isPending?'Excluindo…':'Excluir conversa'}</button>
+        </div>
+      </div> : <div className="conversation-contact-sheet">
+        <section className="conversation-contact-profile">
+          <div className="conversation-avatar conversation-contact-profile__avatar" aria-hidden="true">{initials(conversation.customer_name)}</div>
+          <strong>{conversation.customer_name}</strong>
+          <span>{conversation.customer_phone??'Número não informado'}</span>
+          <small>{conversationStatusLabels[conversation.status]}</small>
+        </section>
+
+        <div className="conversation-contact-quick-actions" aria-label="Ações rápidas">
+          <button type="button" onClick={createAppointment}><CalendarPlus2/><span>Agendar</span></button>
+          <button type="button" disabled={!canMutate||pin.isPending} onClick={()=>pin.mutate({id:conversation.id,pinned:!conversation.pinned})}>{conversation.pinned?<PinOff/>:<Pin/>}<span>{conversation.pinned?'Desafixar':'Fixar'}</span></button>
+          <button type="button" disabled={!canMutate||read.isPending} onClick={()=>read.mutate({id:conversation.id,unread:conversation.unread_count===0})}><CheckCheck/><span>{conversation.unread_count>0?'Marcar lida':'Não lida'}</span></button>
+        </div>
+
+        <section className="conversation-contact-section">
+          <h3>Contato</h3>
+          {editingName ? <form className="conversation-contact-name-form" onSubmit={event=>{event.preventDefault();saveName()}}>
+            <label>Nome<input maxLength={255} value={name} onChange={event=>setName(event.target.value)} autoFocus/></label>
+            <div><button className="secondary-button" type="button" onClick={()=>setEditingName(false)}>Cancelar</button><button className="primary-button" disabled={rename.isPending}>Salvar</button></div>
+          </form> : <button className="conversation-contact-row" type="button" disabled={!canMutate} onClick={()=>{setName(conversation.customer_name);setEditingName(true)}}><div><span>Nome</span><strong>{conversation.customer_name}</strong></div><Pencil size={18}/></button>}
+          <div className="conversation-contact-row is-static"><div><span>WhatsApp</span><strong>{conversation.customer_phone??'Não informado'}</strong></div></div>
+          {rename.isError&&<p className="form-error" role="alert">Não foi possível alterar o nome.</p>}
+        </section>
+
+        <section className="conversation-contact-section">
+          <h3>Atendimento</h3>
+          <button className="conversation-contact-row" type="button" disabled={!canMutate||assistant.isPending} onClick={()=>assistant.mutate({id:conversation.id,enabled:!conversation.assistant_enabled})}>
+            <div><span>Assistente Virtual</span><strong>{conversation.assistant_enabled?'Respondendo automaticamente':'Pausado neste contato'}</strong></div>
+            <Bot size={19}/>
+          </button>
+          {assistant.isError&&<p className="form-error" role="alert">Não foi possível alterar o Assistente Virtual.</p>}
+        </section>
+
+        <button className="conversation-contact-danger" type="button" disabled={!canMutate} onClick={()=>setConfirmDelete(true)}><Trash2 size={18}/>Excluir conversa</button>
+      </div>}
+    </BottomSheet>
   </div>
 }
 
