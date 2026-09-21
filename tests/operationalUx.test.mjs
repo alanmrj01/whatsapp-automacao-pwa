@@ -171,6 +171,21 @@ test('paid agenda reads the hydrated membership without loading unused product s
 test('More prioritizes WhatsApp before the remaining operational setup', () => {
   const more = read('src/features/more/MorePage.tsx')
   assert.ok(more.indexOf('<Section title="WhatsApp">') < more.indexOf('<Section title="Atendimento">'))
+  assert.match(more,/title="Assistente Virtual"/)
+  assert.match(more,/title="Técnicos e responsáveis"/)
+  assert.doesNotMatch(more,/Equipe e responsáveis/)
+  assert.ok(more.indexOf('title="Dados da empresa"') < more.indexOf('title="Técnicos e responsáveis"'))
+})
+
+test('services are managed with company data instead of agenda settings', () => {
+  const settings = read('src/features/more/OperationalSettingsPages.tsx')
+  const companyStart = settings.indexOf('export function CompanySettingsPage')
+  const agendaStart = settings.indexOf('export function AgendaSettingsPage')
+  const servicesStart = settings.indexOf('function ServicesSettings')
+  assert.ok(companyStart >= 0 && servicesStart > companyStart)
+  assert.match(settings,/title="Serviços oferecidos"/)
+  assert.match(settings,/Os serviços são gerenciados em Dados da empresa/)
+  assert.doesNotMatch(settings.slice(agendaStart, settings.indexOf('function AgendaInterval')),/useCreateService|Novo serviço/)
 })
 
 test('real agenda converts company-local schedules to an absolute instant', () => {
