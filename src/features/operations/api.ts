@@ -51,7 +51,7 @@ export function useConversations(search:string,status:string) {
 }
 export function useConversation(id:string|null) {
   const context=usePaidContext()
-  return useQuery({queryKey:[...root(context.businessId),'conversation',id],queryFn:({signal})=>api.request<ConversationDetail>(`/conversations/${id}`,{signal}),enabled:context.enabled&&!!id,retry:false})
+  return useQuery({queryKey:[...root(context.businessId),'conversation',id],queryFn:({signal})=>api.request<ConversationDetail>(`/conversations/${id}`,{signal}),enabled:context.enabled&&!!id,retry:false,refetchInterval:context.enabled&&id?5_000:false})
 }
 export function useUpdateCustomerName() {
   const context=usePaidContext()
@@ -63,7 +63,7 @@ export function useUpdateConversationAssistant() {
 }
 export function useSendConversationMessage() {
   const context=usePaidContext()
-  return useMutation({mutationFn:({id,text,idempotencyKey}:{id:string;text:string;idempotencyKey:string})=>paidMutation(context,()=>api.request<ConversationMessage>(`/conversations/${id}/messages`,{method:'POST',headers:{'Idempotency-Key':idempotencyKey},body:json({text})})),onSuccess:()=>invalidate(context.businessId,'conversations','conversation','dashboard')})
+  return useMutation({mutationFn:({id,text,idempotencyKey}:{id:string;text:string;idempotencyKey:string})=>paidMutation(context,()=>api.request<ConversationMessage>(`/conversations/${id}/messages`,{method:'POST',headers:{'Idempotency-Key':idempotencyKey},body:json({text})})),onSettled:()=>invalidate(context.businessId,'conversations','conversation','dashboard')})
 }
 export function useBusiness() {
   const context=usePaidContext()
