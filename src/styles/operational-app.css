@@ -342,3 +342,78 @@
   .segmented-control { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); overflow:visible; }
   .segmented-control button { width:100%; padding-inline:10px; }
 }
+
+
+.conversation-row.is-pinned {
+  background: #f8fbff;
+}
+
+.conversation-row__trailing {
+  position: relative;
+  align-self: center;
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+}
+
+.conversation-menu-trigger {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: var(--color-text-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.conversation-menu-trigger:hover,
+.conversation-menu-trigger:focus-visible {
+  color: var(--color-primary-700);
+  background: var(--color-primary-50);
+}
+
+.conversation-menu {
+  position: absolute;
+  z-index: 30;
+  top: 36px;
+  right: 0;
+  width: min(230px,78vw);
+  padding: 6px;
+  display: grid;
+  border: 1px solid var(--color-border);
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 14px 38px rgb(23 43 68 / 18%);
+}
+
+.conversation-menu button {
+  min-height: 44px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  border-radius: 9px;
+  color: var(--color-text);
+  background: transparent;
+  font: inherit;
+  font-size: .76rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.conversation-menu button:hover {
+  background: var(--color-surface-subtle);
+}
+
+.conversation-menu button.is-danger {
+  color: var(--color-danger);
+}
+
+.conversation-delete-confirm {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
