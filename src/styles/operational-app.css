@@ -417,3 +417,35 @@
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
+
+
+.settings-field-help {
+  margin-top: -1px;
+  color: var(--color-text-muted);
+  font-size: .69rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.settings-number-with-unit {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.settings-number-with-unit input {
+  min-height: 46px;
+  border: 0!important;
+  border-radius: 0!important;
+}
+
+.settings-number-with-unit span {
+  padding: 0 12px;
+  color: var(--color-text-muted);
+  font-size: .74rem;
+  font-weight: 700;
+}
