@@ -20,10 +20,21 @@ const titles: Record<string, string> = {
 
 export function AppShell() {
   const { pathname } = useLocation()
+  const isConversationDetail = /^\/app\/conversas\/[^/]+$/.test(pathname)
   const isWhatsAppDetail = pathname.startsWith('/app/whatsapp/')
   const isSettingsDetail = pathname.startsWith('/app/mais/')
   const isDetail = isWhatsAppDetail||isSettingsDetail
   const title = titles[pathname] ?? 'Conectar WhatsApp'
+
+  if (isConversationDetail) {
+    return (
+      <UpgradePromptProvider>
+        <div className="conversation-fullscreen-shell">
+          <Outlet />
+        </div>
+      </UpgradePromptProvider>
+    )
+  }
 
   return (
     <UpgradePromptProvider>
