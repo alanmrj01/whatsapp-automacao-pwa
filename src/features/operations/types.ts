@@ -38,6 +38,7 @@ export type Conversation = {
   status:ConversationStatus
   unread_count:number
   priority:boolean
+  pinned:boolean
   assignee_name:string|null
 }
 export type ConversationList = {items:Conversation[];page:number;page_size:number;total:number}
@@ -50,7 +51,7 @@ export type ConversationDetail = Conversation & {
   free_form_window_expires_at:string|null
 }
 export type SetupStatus = {company:boolean;business_hours:boolean;automation:boolean;agenda:boolean;whatsapp:boolean;completed:number;total:5;next_step:'company'|'business_hours'|'automation'|'agenda'|'whatsapp'|'complete'}
-export type Business = {id:string;name:string;timezone:string;slot_interval_minutes:number}
+export type Business = {id:string;name:string;timezone:string;slot_interval_minutes:number;service_origin_address:string;default_travel_minutes:number|null;travel_fallback_allowed:boolean;travel_before_buffer_minutes:number;travel_after_buffer_minutes:number}
 export type OperationalRole = 'technician'|'assistant'|'administrator'
 export type Employee = {id:string;name:string;active:boolean;operational_role:OperationalRole;service_ids:string[]}
 export type WorkingHours = {id:string;employee_id:string;employee_name:string;weekday:number;start_time:string;end_time:string}
@@ -63,4 +64,5 @@ export type AutomationSettings = {
   supported_options:string[]
 }
 export type Customer = {id:string;name:string;phone:string|null}
+export type AssistantExclusion = {id:string;customer_id:string|null;customer_name:string;customer_phone:string|null;reason:string|null;active:boolean}
 export type Service = {id:string;name:string;duration_minutes:number;active:boolean}
