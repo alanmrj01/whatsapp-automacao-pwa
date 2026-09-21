@@ -1,4 +1,4 @@
-import { CalendarCog, Clock3, Plus, Save, UsersRound } from 'lucide-react'
+import { BotOff, CalendarCog, Clock3, Plus, Save, Trash2, UsersRound } from 'lucide-react'
 import { useState } from 'react'
 import { ErrorState } from '../../components/ErrorState'
 import { InfoHelp } from '../../components/InfoHelp'
@@ -6,8 +6,8 @@ import { LoadingState } from '../../components/LoadingState'
 import { StatusBadge } from '../../components/StatusBadge'
 import { canConfigureWhatsApp } from '../auth/types'
 import { useAuth } from '../auth/useAuth'
-import { useAutomationSettings, useBusiness, useCreateEmployee, useCreateService, useCreateWorkingHours, useDeleteWorkingHours, useEmployees, useServices, useUpdateAutomation, useUpdateBusiness, useUpdateEmployee, useUpdateEmployeeServices, useUpdateService, useWorkingHours } from '../operations/api'
-import type { AutomationSettings, Employee, OperationalRole, Service } from '../operations/types'
+import { useAddAssistantExclusion, useAssistantExclusions, useAutomationSettings, useBusiness, useCreateEmployee, useCreateService, useCreateWorkingHours, useCustomers, useDeleteWorkingHours, useEmployees, useRemoveAssistantExclusion, useServices, useUpdateAutomation, useUpdateBusiness, useUpdateEmployee, useUpdateEmployeeServices, useUpdateService, useWorkingHours } from '../operations/api'
+import type { AssistantExclusion, AutomationSettings, Business, Customer, Employee, OperationalRole, Service } from '../operations/types'
 
 const weekdays=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo']
 const windowOptions=[5,10,20,30,60,120,240,360,720,1440,2160]
@@ -42,14 +42,63 @@ export function WorkingHoursSettingsPage() {
 }
 
 export function AutomationSettingsPage() {
-  const query=useAutomationSettings(),canEdit=useCanConfigure()
-  return <SettingsShell><PageHeading eyebrow="Atendimento" title="Assistente Virtual" help="Configura o comportamento do atendimento automático e a retomada após uma intervenção humana."/>{query.isPending&&<LoadingState/>}{query.isError&&<ErrorState onRetry={()=>void query.refetch()}/>} {query.data&&<AutomationForm settings={query.data} canEdit={canEdit} key={JSON.stringify(query.data)}/>}</SettingsShell>
+  const query=useAutomationSettings(),customers=useCustomers(),exclusions=useAssistantExclusions(),canEdit=useCanConfigure()
+  const pending=query.isPending||customers.isPending||exclusions.isPending
+  const error=query.isError||customers.isError||exclusions.isError
+  return <SettingsShell>
+    <PageHeading eyebrow="Atendimento" title="Assistente Virtual" help="Configure o atendimento automático e defina contatos que devem ser atendidos somente por pessoas da equipe."/>
+    {pending&&<LoadingState/>}
+    {error&&<ErrorState onRetry={()=>{void query.refetch();void customers.refetch();void exclusions.refetch()}}/>}
+    {query.data&&customers.data&&exclusions.data&&<>
+      <AutomationForm settings={query.data} canEdit={canEdit} key={JSON.stringify(query.data)}/>
+      <AssistantExclusions customers={customers.data.items} exclusions={exclusions.data} canEdit={canEdit}/>
+    </>}
+  </SettingsShell>
 }
 
 function AutomationForm({settings,canEdit}:{settings:AutomationSettings;canEdit:boolean}) {
   const update=useUpdateAutomation(),[enabled,setEnabled]=useState(settings.assistant_enabled),[minutes,setMinutes]=useState(settings.human_control_window_minutes),[greeting,setGreeting]=useState(settings.greeting_message),[fallback,setFallback]=useState(settings.fallback_message),[handoff,setHandoff]=useState(settings.handoff_message),[saved,setSaved]=useState(false)
   const submit=()=>update.mutate({assistant_enabled:enabled,human_control_window_minutes:minutes,greeting_message:greeting,fallback_message:fallback,handoff_message:handoff},{onSuccess:()=>setSaved(true)})
-  return <form className="settings-form" onSubmit={event=>{event.preventDefault();setSaved(false);submit()}}><label className="check-row"><input type="checkbox" checked={enabled} disabled={!canEdit} onChange={event=>setEnabled(event.target.checked)}/>Assistente Virtual ativo</label><label>Tempo de controle humano<select value={minutes} disabled={!canEdit} onChange={event=>setMinutes(Number(event.target.value))}>{windowOptions.map(value=><option value={value} key={value}>{value<60?`${value} minutos`:value%1440===0?`${value/1440} dia(s)`:`${value/60} hora(s)`}</option>)}</select></label><label>Mensagem inicial<textarea required maxLength={1000} rows={3} value={greeting} disabled={!canEdit} onChange={event=>setGreeting(event.target.value)}/></label><label>Mensagem de fallback<textarea required maxLength={1000} rows={3} value={fallback} disabled={!canEdit} onChange={event=>setFallback(event.target.value)}/></label><label>Mensagem de encaminhamento<textarea required maxLength={1000} rows={3} value={handoff} disabled={!canEdit} onChange={event=>setHandoff(event.target.value)}/></label><p className="settings-note">Uma nova ação manual renova esta janela. Depois dela, o Assistente Virtual pode retomar conforme as políticas existentes.</p>{update.isError&&<MutationError/>}{saved&&<p className="form-success">Configuração salva.</p>}{canEdit&&<button className="primary-button" disabled={update.isPending}><Save size={18}/>Salvar</button>}</form>
+  return <form className="settings-form" onSubmit={event=>{event.preventDefault();setSaved(false);submit()}}>
+    <label className="check-row"><input type="checkbox" checked={enabled} disabled={!canEdit} onChange={event=>setEnabled(event.target.checked)}/>Assistente Virtual ativo</label>
+    <label>Tempo antes do Assistente retomar após atendimento humano
+      <select value={minutes} disabled={!canEdit} onChange={event=>setMinutes(Number(event.target.value))}>{windowOptions.map(value=><option value={value} key={value}>{value<60?`${value} minutos`:value%1440===0?`${value/1440} dia(s)`:`${value/60} hora(s)`}</option>)}</select>
+    </label>
+    <label>Mensagem inicial<textarea required maxLength={1000} rows={3} value={greeting} disabled={!canEdit} onChange={event=>setGreeting(event.target.value)}/></label>
+    <label>Mensagem quando não entende o pedido<textarea required maxLength={1000} rows={3} value={fallback} disabled={!canEdit} onChange={event=>setFallback(event.target.value)}/></label>
+    <label>Mensagem ao encaminhar para atendimento humano<textarea required maxLength={1000} rows={3} value={handoff} disabled={!canEdit} onChange={event=>setHandoff(event.target.value)}/></label>
+    <p className="settings-note">Quando alguém da equipe responde manualmente, o Assistente fica pausado nessa conversa pelo período acima. Contatos da lista abaixo nunca recebem respostas automáticas.</p>
+    {update.isError&&<MutationError/>}{saved&&<p className="form-success">Configuração salva.</p>}
+    {canEdit&&<button className="primary-button" disabled={update.isPending}><Save size={18}/>Salvar configurações</button>}
+  </form>
+}
+
+function AssistantExclusions({customers,exclusions,canEdit}:{customers:Customer[];exclusions:AssistantExclusion[];canEdit:boolean}) {
+  const add=useAddAssistantExclusion(),remove=useRemoveAssistantExclusion()
+  const [customerId,setCustomerId]=useState(''),[reason,setReason]=useState('')
+  const excludedCustomerIds=new Set(exclusions.map(item=>item.customer_id).filter((value):value is string=>!!value))
+  const available=customers.filter(item=>!excludedCustomerIds.has(item.id))
+  const submit=()=>{if(!customerId)return;add.mutate({customer_id:customerId,reason:reason.trim()||null},{onSuccess:()=>{setCustomerId('');setReason('')}})}
+  return <section aria-labelledby="assistant-exclusions-title">
+    <div className="section-title-row"><div><span className="eyebrow">Exceções permanentes</span><h2 id="assistant-exclusions-title">Contatos sem resposta automática</h2></div><InfoHelp title="Contatos sem resposta automática">Mensagens desses contatos continuam aparecendo normalmente em Conversas, mas o Assistente Virtual nunca responde sozinho. A equipe assume o atendimento manual.</InfoHelp></div>
+    {canEdit&&<form className="settings-form settings-form--inline" onSubmit={event=>{event.preventDefault();submit()}}>
+      <label>Contato
+        <select required value={customerId} onChange={event=>setCustomerId(event.target.value)}>
+          <option value="">Selecione um contato</option>
+          {available.map(item=><option value={item.id} key={item.id}>{item.name}{item.phone?` · ${item.phone}`:''}</option>)}
+        </select>
+      </label>
+      <label>Motivo (opcional)<input maxLength={2000} value={reason} onChange={event=>setReason(event.target.value)} placeholder="Ex.: cliente VIP, atendimento interno, fornecedor"/></label>
+      <p className="settings-note">Use esta lista para clientes, fornecedores ou contatos que devem ser tratados exclusivamente por uma pessoa.</p>
+      {add.isError&&<MutationError/>}
+      <button className="primary-button" disabled={add.isPending||!customerId}><BotOff size={18}/>Nunca responder automaticamente</button>
+    </form>}
+    <div className="settings-list">
+      {exclusions.map(item=><article className="settings-row" key={item.id}><BotOff/><div><strong>{item.customer_name}</strong><span>{item.customer_phone??'Sem telefone'}{item.reason?` · ${item.reason}`:''}</span></div>{canEdit&&<button className="danger-button" type="button" disabled={remove.isPending} onClick={()=>remove.mutate(item.id)}><Trash2 size={16}/>Remover</button>}</article>)}
+      {!exclusions.length&&<p className="settings-empty">Nenhum contato está bloqueado para respostas automáticas.</p>}
+      {remove.isError&&<MutationError/>}
+    </div>
+  </section>
 }
 
 export function TeamSettingsPage() {
@@ -67,12 +116,61 @@ function EmployeeEditor({employee,services,canEdit}:{employee:Employee;services:
 
 export function AgendaSettingsPage() {
   const business=useBusiness(),canEdit=useCanConfigure()
-  return <SettingsShell><PageHeading eyebrow="Agenda" title="Agenda e disponibilidade" help="Defina a grade usada para organizar os horários disponíveis. Os serviços são gerenciados em Dados da empresa."/>{business.isPending&&<LoadingState/>}{business.isError&&<ErrorState onRetry={()=>void business.refetch()}/>} {business.data&&<AgendaInterval intervalValue={business.data.slot_interval_minutes} canEdit={canEdit} key={business.data.slot_interval_minutes}/>}</SettingsShell>
+  return <SettingsShell>
+    <PageHeading eyebrow="Agenda" title="Agenda e disponibilidade" help="Defina como os horários são oferecidos, de onde o técnico parte e quanto tempo deve ser reservado para deslocamento entre atendimentos."/>
+    {business.isPending&&<LoadingState/>}
+    {business.isError&&<ErrorState onRetry={()=>void business.refetch()}/>}
+    {business.data&&<AgendaAvailabilityForm business={business.data} canEdit={canEdit} key={JSON.stringify(business.data)}/>}
+  </SettingsShell>
 }
 
-function AgendaInterval({intervalValue,canEdit}:{intervalValue:number;canEdit:boolean}) {
-  const update=useUpdateBusiness(),[interval,setInterval]=useState(intervalValue)
-  return <form className="settings-form" onSubmit={event=>{event.preventDefault();update.mutate({slot_interval_minutes:interval})}}><label>Intervalo da grade (minutos)<input type="number" min={5} max={480} value={interval} disabled={!canEdit} onChange={event=>setInterval(Number(event.target.value))}/></label>{update.isError&&<MutationError/>}{canEdit&&<button className="primary-button" disabled={update.isPending}><Save size={18}/>Salvar intervalo</button>}</form>
+function AgendaAvailabilityForm({business,canEdit}:{business:Business;canEdit:boolean}) {
+  const update=useUpdateBusiness()
+  const [interval,setInterval]=useState(business.slot_interval_minutes)
+  const [origin,setOrigin]=useState(business.service_origin_address)
+  const [fallbackEnabled,setFallbackEnabled]=useState(business.travel_fallback_allowed)
+  const [travelMinutes,setTravelMinutes]=useState(business.default_travel_minutes??30)
+  const [beforeBuffer,setBeforeBuffer]=useState(business.travel_before_buffer_minutes)
+  const [afterBuffer,setAfterBuffer]=useState(business.travel_after_buffer_minutes)
+  const [saved,setSaved]=useState(false)
+  const submit=()=>update.mutate({
+    slot_interval_minutes:interval,
+    service_origin_address:origin,
+    travel_fallback_allowed:fallbackEnabled,
+    default_travel_minutes:fallbackEnabled?travelMinutes:business.default_travel_minutes,
+    travel_before_buffer_minutes:beforeBuffer,
+    travel_after_buffer_minutes:afterBuffer,
+  },{onSuccess:()=>setSaved(true)})
+  return <form className="settings-form" onSubmit={event=>{event.preventDefault();setSaved(false);submit()}}>
+    <label>Intervalo entre horários oferecidos
+      <input type="number" min={5} max={480} value={interval} disabled={!canEdit} onChange={event=>setInterval(Number(event.target.value))}/>
+      <small className="settings-field-help">Define de quantos em quantos minutos podem começar novos atendimentos. Ex.: 30 min permite 08:00, 08:30, 09:00. Não altera a duração de cada serviço.</small>
+    </label>
+
+    <label>Local de saída dos técnicos
+      <input required minLength={3} maxLength={500} value={origin} disabled={!canEdit} onChange={event=>setOrigin(event.target.value)} placeholder="Ex.: Rua da Oficina, 100, São José dos Campos - SP"/>
+      <small className="settings-field-help">É a origem usada como referência para reservar tempo de deslocamento até o cliente.</small>
+    </label>
+
+    <label className="check-row"><input type="checkbox" checked={fallbackEnabled} disabled={!canEdit} onChange={event=>setFallbackEnabled(event.target.checked)}/>Usar tempo padrão de deslocamento quando não houver cálculo de rota disponível</label>
+
+    {fallbackEnabled&&<label>Tempo padrão de deslocamento
+      <div className="settings-number-with-unit"><input type="number" min={0} max={480} value={travelMinutes} disabled={!canEdit} onChange={event=>setTravelMinutes(Number(event.target.value))}/><span>min</span></div>
+      <small className="settings-field-help">Esse tempo é reservado antes e depois do serviço para evitar agendamentos que se sobreponham ao deslocamento.</small>
+    </label>}
+
+    <div className="form-grid">
+      <label>Margem antes do serviço
+        <div className="settings-number-with-unit"><input type="number" min={0} max={240} value={beforeBuffer} disabled={!canEdit} onChange={event=>setBeforeBuffer(Number(event.target.value))}/><span>min</span></div>
+      </label>
+      <label>Margem depois do serviço
+        <div className="settings-number-with-unit"><input type="number" min={0} max={240} value={afterBuffer} disabled={!canEdit} onChange={event=>setAfterBuffer(Number(event.target.value))}/><span>min</span></div>
+      </label>
+    </div>
+    <p className="settings-note">A duração de cada atendimento continua sendo definida em Dados da empresa → Serviços oferecidos. Para o agendamento automático funcionar, o serviço também precisa estar associado a um técnico ativo com horário de trabalho configurado.</p>
+    {update.isError&&<MutationError/>}{saved&&<p className="form-success">Configuração da agenda salva.</p>}
+    {canEdit&&<button className="primary-button" disabled={update.isPending}><Save size={18}/>Salvar agenda e disponibilidade</button>}
+  </form>
 }
 
 function ServiceEditor({service,canEdit}:{service:Service;canEdit:boolean}) {
