@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight, LockKeyhole, MessageCircleMore, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { EmptyState } from '../../components/EmptyState'
 import { BottomSheet } from '../../components/BottomSheet'
 import { ErrorState } from '../../components/ErrorState'
@@ -11,7 +11,7 @@ import { demoConversations } from '../../demo/operationalDemo'
 import { DemoDataNotice } from '../access/DemoDataNotice'
 import { useEntitlements } from '../access/useEntitlements'
 import { useUpgradePrompt } from '../access/upgradePromptContext'
-import { useBusiness, useConversation, useConversations } from '../operations/api'
+import { useBusiness, useConversations } from '../operations/api'
 import type { Conversation, ConversationStatus } from '../operations/types'
 
 const labels = {waiting:'Aguardando',in_progress:'Em atendimento',answered:'Respondida'} as const
@@ -22,10 +22,8 @@ export function ConversationsPage() {
   const [searchParams,setSearchParams] = useSearchParams()
   const [search,setSearch] = useState('')
   const [filter,setFilter] = useState<'all'|ConversationStatus>('all')
-  const [selected,setSelected] = useState<string|null>(null)
   const demo = entitlement.usesDemoData
   const realConversations=useConversations(search,filter==='all'?'':filter)
-  const detail=useConversation(selected)
   const business=useBusiness()
   const conversations = useMemo(()=>demoConversations.filter(item=>{
     const matchesFilter = filter==='all'||item.status===filter
@@ -81,12 +79,7 @@ export function ConversationsPage() {
       <ConversationFilters filter={filter} setFilter={setFilter}/>
       {(realConversations.isPending||business.isPending)&&<LoadingState/>}
       {(realConversations.isError||business.isError)&&<ErrorState onRetry={()=>{void realConversations.refetch();void business.refetch()}}/>}
-      {realConversations.data&&business.data&&<RealConversationList items={realConversations.data.items} onSelect={setSelected} timezone={business.data.timezone}/>}
-      <BottomSheet open={!!selected} title={detail.data?.customer_name??'Conversa'} description={detail.data?.customer_phone??'Histórico da conversa'} onClose={()=>setSelected(null)}>
-        {detail.isPending&&<LoadingState/>}
-        {detail.isError&&<ErrorState onRetry={()=>void detail.refetch()}/>}
-        {detail.data&&<div className="message-history">{detail.data.messages.map(message=><article className={`message-history__item message-history__item--${message.direction}`} key={message.id}><span>{message.direction==='inbound'?'Cliente':'Empresa'}</span><p>{message.body??`Mensagem ${message.message_type}`}</p><time>{formatMoment(message.created_at,business.data?.timezone)}</time></article>)}</div>}
-      </BottomSheet>
+      {realConversations.data&&business.data&&<RealConversationList items={realConversations.data.items} timezone={business.data.timezone}/>}
     </>}
   </div>
 }
@@ -102,7 +95,7 @@ function formatMoment(value:string|null,timeZone?:string) {
   return new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',timeZone}).format(new Date(value))
 }
 
-function RealConversationList({items,onSelect,timezone}:{items:Conversation[];onSelect:(id:string)=>void;timezone:string}) {
+function RealConversationList({items,timezone}:{items:Conversation[];timezone:string}) {
   if(!items.length)return <EmptyState icon={MessageCircleMore} title="Nenhuma conversa" description="A fila não possui itens para este filtro."/>
-  return <section className="conversation-list" aria-live="polite">{items.map(item=><article className={item.priority?'conversation-row is-priority':'conversation-row'} key={item.id}><div className="conversation-avatar" aria-hidden="true">{item.customer_name.split(' ').map(value=>value[0]).join('').slice(0,2)}</div><button type="button" className="conversation-copy conversation-copy--button" onClick={()=>onSelect(item.id)}><div><strong>{item.customer_name}</strong><time>{formatMoment(item.last_message_at,timezone)}</time></div><p>{item.last_content??'Sem conteúdo textual'}</p><footer><span>{item.assignee_name??'Sem responsável'}</span><StatusBadge tone={item.status==='waiting'?'warning':item.status==='answered'?'success':'info'}>{labels[item.status]}</StatusBadge></footer></button>{item.unread_count>0&&<span className="unread-count" aria-label={`${item.unread_count} mensagens não lidas`}>{item.unread_count}</span>}</article>)}</section>
+  return <section className="conversation-list" aria-live="polite">{items.map(item=><article className={item.priority?'conversation-row is-priority':'conversation-row'} key={item.id}><div className="conversation-avatar" aria-hidden="true">{item.customer_name.split(' ').map(value=>value[0]).join('').slice(0,2)}</div><Link className="conversation-copy conversation-copy--button" to={`/app/conversas/${item.id}`} aria-label={`Abrir conversa com ${item.customer_name}`}><div><strong>{item.customer_name}</strong><time>{formatMoment(item.last_message_at,timezone)}</time></div><p>{item.last_content??'Sem conteúdo textual'}</p><footer><span>{item.assignee_name??'Sem responsável'}</span><StatusBadge tone={item.status==='waiting'?'warning':item.status==='answered'?'success':'info'}>{labels[item.status]}</StatusBadge></footer></Link>{item.unread_count>0&&<span className="unread-count" aria-label={`${item.unread_count} mensagens não lidas`}>{item.unread_count}</span>}</article>)}</section>
 }

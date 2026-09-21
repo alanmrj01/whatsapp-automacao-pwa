@@ -42,11 +42,25 @@ export type Conversation = {
 }
 export type ConversationList = {items:Conversation[];page:number;page_size:number;total:number}
 export type ConversationMessage = {id:string;direction:'inbound'|'outbound';message_type:string;body:string|null;status:string;created_at:string}
-export type ConversationDetail = Conversation & {messages:ConversationMessage[]}
+export type ConversationDetail = Conversation & {
+  messages:ConversationMessage[]
+  assistant_enabled:boolean
+  automation_suppressed_until:string|null
+  free_form_window_open:boolean
+  free_form_window_expires_at:string|null
+}
 export type SetupStatus = {company:boolean;business_hours:boolean;automation:boolean;agenda:boolean;whatsapp:boolean;completed:number;total:5;next_step:'company'|'business_hours'|'automation'|'agenda'|'whatsapp'|'complete'}
 export type Business = {id:string;name:string;timezone:string;slot_interval_minutes:number}
-export type Employee = {id:string;name:string;active:boolean;service_ids:string[]}
+export type OperationalRole = 'technician'|'assistant'|'administrator'
+export type Employee = {id:string;name:string;active:boolean;operational_role:OperationalRole;service_ids:string[]}
 export type WorkingHours = {id:string;employee_id:string;employee_name:string;weekday:number;start_time:string;end_time:string}
-export type AutomationSettings = {human_control_window_minutes:number;supported_options:string[]}
+export type AutomationSettings = {
+  assistant_enabled:boolean
+  human_control_window_minutes:number
+  greeting_message:string
+  fallback_message:string
+  handoff_message:string
+  supported_options:string[]
+}
 export type Customer = {id:string;name:string;phone:string|null}
 export type Service = {id:string;name:string;duration_minutes:number;active:boolean}

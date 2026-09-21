@@ -23,6 +23,7 @@ test('paid operation uses authenticated public APIs while free mode disables eve
   const dashboard = read('src/features/dashboard/DashboardPage.tsx')
   const agenda = read('src/features/appointments/AgendaPage.tsx')
   const conversations = read('src/features/conversations/ConversationsPage.tsx')
+  const conversationDetail = read('src/features/conversations/ConversationDetailPage.tsx')
   assert.match(operations,/entitlementsFor\(membership\)\.canReadOperationalData/)
   assert.match(operations,/enabled:context\.enabled/)
   assert.match(operations,/requirePaidAccess\(context\.membership\)/)
@@ -31,7 +32,7 @@ test('paid operation uses authenticated public APIs while free mode disables eve
   assert.match(agenda,/useAppointments/)
   assert.match(agenda,/useSaveAppointment/)
   assert.match(conversations,/useConversations/)
-  assert.match(conversations,/useConversation/)
+  assert.match(conversationDetail,/useConversation/)
 })
 
 test('setup and More routes are backed by real data and configuration mutations', () => {

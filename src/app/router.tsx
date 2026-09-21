@@ -6,6 +6,7 @@ import { ProtectedRoute, RoleGuard } from '../features/auth/ProtectedRoute'
 
 const AgendaPage = lazy(async () => ({default:(await import('../features/appointments/AgendaPage')).AgendaPage}))
 const ConversationsPage = lazy(async () => ({default:(await import('../features/conversations/ConversationsPage')).ConversationsPage}))
+const ConversationDetailPage = lazy(async () => ({default:(await import('../features/conversations/ConversationDetailPage')).ConversationDetailPage}))
 const DashboardPage = lazy(async () => ({default:(await import('../features/dashboard/DashboardPage')).DashboardPage}))
 const MorePage = lazy(async () => ({default:(await import('../features/more/MorePage')).MorePage}))
 const PlanPage = lazy(async () => ({default:(await import('../features/billing/PlanPage')).PlanPage}))
@@ -56,6 +57,7 @@ export function AppRouter() {
             <Route index element={<DashboardPage />} />
             <Route path="agenda" element={<AgendaPage />} />
             <Route path="conversas" element={<ConversationsPage />} />
+            <Route path="conversas/:conversationId" element={<PaidOperationalGuard><ConversationDetailPage /></PaidOperationalGuard>} />
             <Route path="whatsapp" element={<WhatsAppPage />} />
             <Route path="whatsapp/business" element={<RoleGuard><CoexistenceInfoPage /></RoleGuard>} />
             <Route path="whatsapp/exclusivo" element={<RoleGuard><ApiOnlyInfoPage /></RoleGuard>} />

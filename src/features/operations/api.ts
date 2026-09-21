@@ -3,7 +3,7 @@ import { queryClient } from '../../app/queryClient'
 import { api } from '../../lib/api'
 import { useAuth } from '../auth/useAuth'
 import { entitlementsFor, requirePaidAccess } from '../access/entitlements'
-import type { Appointment, AppointmentInput, AutomationSettings, Business, ConversationDetail, ConversationList, Customer, DashboardToday, Employee, Service, SetupStatus, WorkingHours } from './types'
+import type { Appointment, AppointmentInput, AutomationSettings, Business, ConversationDetail, ConversationList, ConversationMessage, Customer, DashboardToday, Employee, OperationalRole, Service, SetupStatus, WorkingHours } from './types'
 
 const root = (businessId?:string) => ['operations',businessId] as const
 const json = (value:object) => JSON.stringify(value)
@@ -53,6 +53,18 @@ export function useConversation(id:string|null) {
   const context=usePaidContext()
   return useQuery({queryKey:[...root(context.businessId),'conversation',id],queryFn:({signal})=>api.request<ConversationDetail>(`/conversations/${id}`,{signal}),enabled:context.enabled&&!!id,retry:false})
 }
+export function useUpdateCustomerName() {
+  const context=usePaidContext()
+  return useMutation({mutationFn:({id,name}:{id:string;name:string|null})=>paidMutation(context,()=>api.request<ConversationDetail>(`/conversations/${id}/customer`,{method:'PATCH',body:json({name})})),onSuccess:()=>invalidate(context.businessId,'conversations','conversation','dashboard')})
+}
+export function useUpdateConversationAssistant() {
+  const context=usePaidContext()
+  return useMutation({mutationFn:({id,enabled}:{id:string;enabled:boolean})=>paidMutation(context,()=>api.request<ConversationDetail>(`/conversations/${id}/assistant`,{method:'PATCH',body:json({enabled})})),onSuccess:()=>invalidate(context.businessId,'conversations','conversation','dashboard')})
+}
+export function useSendConversationMessage() {
+  const context=usePaidContext()
+  return useMutation({mutationFn:({id,text,idempotencyKey}:{id:string;text:string;idempotencyKey:string})=>paidMutation(context,()=>api.request<ConversationMessage>(`/conversations/${id}/messages`,{method:'POST',headers:{'Idempotency-Key':idempotencyKey},body:json({text})})),onSuccess:()=>invalidate(context.businessId,'conversations','conversation','dashboard')})
+}
 export function useBusiness() {
   const context=usePaidContext()
   return useQuery({queryKey:[...root(context.businessId),'business'],queryFn:({signal})=>api.request<Business>('/business',{signal}),enabled:context.enabled,retry:false})
@@ -67,11 +79,11 @@ export function useEmployees() {
 }
 export function useCreateEmployee() {
   const context=usePaidContext()
-  return useMutation({mutationFn:(name:string)=>paidMutation(context,()=>api.request<Employee>('/employees',{method:'POST',body:json({name})})),onSuccess:()=>invalidate(context.businessId,'employees','setup')})
+  return useMutation({mutationFn:({name,operational_role}:{name:string;operational_role:OperationalRole})=>paidMutation(context,()=>api.request<Employee>('/employees',{method:'POST',body:json({name,operational_role})})),onSuccess:()=>invalidate(context.businessId,'employees','setup')})
 }
 export function useUpdateEmployee() {
   const context=usePaidContext()
-  return useMutation({mutationFn:({id,values}:{id:string;values:Partial<Pick<Employee,'name'|'active'>>})=>paidMutation(context,()=>api.request<Employee>(`/employees/${id}`,{method:'PATCH',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'employees','setup')})
+  return useMutation({mutationFn:({id,values}:{id:string;values:Partial<Pick<Employee,'name'|'active'|'operational_role'>>})=>paidMutation(context,()=>api.request<Employee>(`/employees/${id}`,{method:'PATCH',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'employees','setup')})
 }
 export function useUpdateEmployeeServices() {
   const context=usePaidContext()
@@ -95,7 +107,7 @@ export function useAutomationSettings() {
 }
 export function useUpdateAutomation() {
   const context=usePaidContext()
-  return useMutation({mutationFn:(minutes:number)=>paidMutation(context,()=>api.request<AutomationSettings>('/automation',{method:'PATCH',body:json({human_control_window_minutes:minutes})})),onSuccess:()=>invalidate(context.businessId,'automation','setup')})
+  return useMutation({mutationFn:(values:Partial<Omit<AutomationSettings,'supported_options'>>)=>paidMutation(context,()=>api.request<AutomationSettings>('/automation',{method:'PATCH',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'automation','setup')})
 }
 export function useCustomers() {
   const context=usePaidContext()
