@@ -63,7 +63,10 @@ export function useUpdateConversationAssistant() {
 }
 export function useSendConversationMessage() {
   const context=usePaidContext()
-  return useMutation({mutationFn:({id,text,idempotencyKey}:{id:string;text:string;idempotencyKey:string})=>paidMutation(context,()=>api.request<ConversationMessage>(`/conversations/${id}/messages`,{method:'POST',headers:{'Idempotency-Key':idempotencyKey},body:json({text})})),onSuccess:()=>invalidate(context.businessId,'conversations','conversation','dashboard')})
+  return useMutation({
+    mutationFn:({id,text,idempotencyKey}:{id:string;text:string;idempotencyKey:string})=>paidMutation(context,()=>api.request<ConversationMessage>(`/conversations/${id}/messages`,{method:'POST',headers:{'Idempotency-Key':idempotencyKey},body:json({text})})),
+    onSettled:()=>invalidate(context.businessId,'conversations','conversation','dashboard'),
+  })
 }
 export function useBusiness() {
   const context=usePaidContext()
