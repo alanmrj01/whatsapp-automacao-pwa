@@ -16,15 +16,21 @@ function useCanConfigure() {return canConfigureWhatsApp(useAuth().membership?.ro
 function PageHeading({eyebrow,title,help}:{eyebrow:string;title:string;help:string}) {return <section className="operational-heading"><div><span className="eyebrow">{eyebrow}</span><h1>{title}</h1></div><InfoHelp title={title}>{help}</InfoHelp></section>}
 
 export function CompanySettingsPage() {
-  const query=useBusiness(),canEdit=useCanConfigure()
-  if(query.isPending)return <SettingsShell><LoadingState/></SettingsShell>
-  if(query.isError)return <SettingsShell><ErrorState onRetry={()=>void query.refetch()}/></SettingsShell>
-  return <SettingsShell><PageHeading eyebrow="Empresa" title="Dados da empresa" help="Nome e fuso são aplicados somente à empresa ativa."/>{query.data&&<CompanyForm business={query.data} canEdit={canEdit} key={`${query.data.id}:${query.data.name}:${query.data.timezone}`}/>}</SettingsShell>
+  const query=useBusiness(),services=useServices(),canEdit=useCanConfigure()
+  const pending=query.isPending||services.isPending,error=query.isError||services.isError
+  if(pending)return <SettingsShell><LoadingState/></SettingsShell>
+  if(error)return <SettingsShell><ErrorState onRetry={()=>{void query.refetch();void services.refetch()}}/></SettingsShell>
+  return <SettingsShell><PageHeading eyebrow="Empresa" title="Dados da empresa" help="Dados operacionais e serviços pertencem somente à empresa ativa."/>{query.data&&<CompanyForm business={query.data} canEdit={canEdit} key={`${query.data.id}:${query.data.name}:${query.data.timezone}`}/>} {services.data&&<ServicesSettings services={services.data.items} canEdit={canEdit}/>}</SettingsShell>
 }
 
 function CompanyForm({business,canEdit}:{business:{name:string;timezone:string};canEdit:boolean}) {
   const update=useUpdateBusiness(),[name,setName]=useState(business.name),[timezone,setTimezone]=useState(business.timezone),[saved,setSaved]=useState(false)
   return <form className="settings-form" onSubmit={event=>{event.preventDefault();setSaved(false);update.mutate({name,timezone},{onSuccess:()=>setSaved(true)})}}><label>Nome<input required minLength={2} maxLength={255} value={name} disabled={!canEdit} onChange={event=>setName(event.target.value)}/></label><label>Fuso horário<input required value={timezone} disabled={!canEdit} onChange={event=>setTimezone(event.target.value)}/></label>{update.isError&&<MutationError/>}{saved&&<p className="form-success">Dados salvos.</p>}{canEdit&&<button className="primary-button" disabled={update.isPending}><Save size={18}/>Salvar</button>}</form>
+}
+
+function ServicesSettings({services,canEdit}:{services:Service[];canEdit:boolean}) {
+  const create=useCreateService(),[name,setName]=useState(''),[duration,setDuration]=useState(60)
+  return <section aria-labelledby="company-services-title"><div className="section-title-row"><div><span className="eyebrow">Catálogo operacional</span><h2 id="company-services-title">Serviços oferecidos</h2></div><InfoHelp title="Serviços oferecidos">Estes serviços alimentam a agenda, a disponibilidade dos técnicos e o atendimento do Assistente Virtual.</InfoHelp></div>{canEdit&&<form className="settings-form settings-form--inline" onSubmit={event=>{event.preventDefault();create.mutate({name,duration_minutes:duration},{onSuccess:()=>setName('')})}}><label>Novo serviço<input required minLength={2} value={name} onChange={event=>setName(event.target.value)}/></label><label>Duração padrão (min)<input required type="number" min={1} max={1440} value={duration} onChange={event=>setDuration(Number(event.target.value))}/></label>{create.isError&&<MutationError/>}<button className="primary-button" disabled={create.isPending}><Plus size={18}/>Adicionar serviço</button></form>}<div className="settings-list">{services.map(item=><ServiceEditor service={item} canEdit={canEdit} key={`${item.id}:${item.name}:${item.duration_minutes}:${item.active}`}/>)}{!services.length&&<p className="settings-empty">Nenhum serviço cadastrado.</p>}</div></section>
 }
 
 export function WorkingHoursSettingsPage() {
@@ -36,7 +42,7 @@ export function WorkingHoursSettingsPage() {
 
 export function AutomationSettingsPage() {
   const query=useAutomationSettings(),canEdit=useCanConfigure()
-  return <SettingsShell><PageHeading eyebrow="Atendimento" title="Automação" help="Esta tela expõe somente a janela de controle humano que o motor atual realmente suporta."/>{query.isPending&&<LoadingState/>}{query.isError&&<ErrorState onRetry={()=>void query.refetch()}/>} {query.data&&<AutomationForm minutesValue={query.data.human_control_window_minutes} canEdit={canEdit} key={query.data.human_control_window_minutes}/>}</SettingsShell>
+  return <SettingsShell><PageHeading eyebrow="Atendimento" title="Assistente Virtual" help="Configura o comportamento do atendimento automático e a retomada após uma intervenção humana."/>{query.isPending&&<LoadingState/>}{query.isError&&<ErrorState onRetry={()=>void query.refetch()}/>} {query.data&&<AutomationForm minutesValue={query.data.human_control_window_minutes} canEdit={canEdit} key={query.data.human_control_window_minutes}/>}</SettingsShell>
 }
 
 function AutomationForm({minutesValue,canEdit}:{minutesValue:number;canEdit:boolean}) {
@@ -47,7 +53,7 @@ function AutomationForm({minutesValue,canEdit}:{minutesValue:number;canEdit:bool
 export function TeamSettingsPage() {
   const employees=useEmployees(),services=useServices(),create=useCreateEmployee(),canEdit=useCanConfigure()
   const [name,setName]=useState('')
-  return <SettingsShell><PageHeading eyebrow="Operação" title="Equipe" help="Técnicos desativados permanecem no histórico, mas deixam de receber novos agendamentos."/>{(employees.isPending||services.isPending)&&<LoadingState/>}{(employees.isError||services.isError)&&<ErrorState onRetry={()=>{void employees.refetch();void services.refetch()}}/>}{employees.data&&services.data&&<>{canEdit&&<form className="settings-form settings-form--inline" onSubmit={event=>{event.preventDefault();create.mutate(name,{onSuccess:()=>setName('')})}}><label>Novo técnico<input required minLength={2} value={name} onChange={event=>setName(event.target.value)}/></label>{create.isError&&<MutationError/>}<button className="primary-button" disabled={create.isPending}><Plus size={18}/>Adicionar</button></form>}<div className="settings-list">{employees.data.items.map(item=><EmployeeEditor employee={item} services={services.data.items} canEdit={canEdit} key={`${item.id}:${item.name}:${item.active}:${item.service_ids.join(',')}`}/>)}{!employees.data.items.length&&<p className="settings-empty">Nenhum técnico cadastrado.</p>}</div></>}</SettingsShell>
+  return <SettingsShell><PageHeading eyebrow="Empresa" title="Técnicos e responsáveis" help="Profissionais desativados permanecem no histórico, mas deixam de receber novos agendamentos."/>{(employees.isPending||services.isPending)&&<LoadingState/>}{(employees.isError||services.isError)&&<ErrorState onRetry={()=>{void employees.refetch();void services.refetch()}}/>}{employees.data&&services.data&&<>{canEdit&&<form className="settings-form settings-form--inline" onSubmit={event=>{event.preventDefault();create.mutate(name,{onSuccess:()=>setName('')})}}><label>Novo técnico<input required minLength={2} value={name} onChange={event=>setName(event.target.value)}/></label>{create.isError&&<MutationError/>}<button className="primary-button" disabled={create.isPending}><Plus size={18}/>Adicionar</button></form>}<div className="settings-list">{employees.data.items.map(item=><EmployeeEditor employee={item} services={services.data.items} canEdit={canEdit} key={`${item.id}:${item.name}:${item.active}:${item.service_ids.join(',')}`}/>)}{!employees.data.items.length&&<p className="settings-empty">Nenhum técnico cadastrado.</p>}</div></>}</SettingsShell>
 }
 
 function EmployeeEditor({employee,services,canEdit}:{employee:Employee;services:Service[];canEdit:boolean}) {
@@ -58,9 +64,8 @@ function EmployeeEditor({employee,services,canEdit}:{employee:Employee;services:
 }
 
 export function AgendaSettingsPage() {
-  const business=useBusiness(),services=useServices(),create=useCreateService(),canEdit=useCanConfigure()
-  const [name,setName]=useState(''),[duration,setDuration]=useState(60)
-  return <SettingsShell><PageHeading eyebrow="Catálogo e intervalos" title="Configurar agenda" help="Serviços novos começam com orçamento humano, sem inventar preço comercial."/>{(business.isPending||services.isPending)&&<LoadingState/>}{(business.isError||services.isError)&&<ErrorState onRetry={()=>{void business.refetch();void services.refetch()}}/>}{business.data&&services.data&&<><AgendaInterval intervalValue={business.data.slot_interval_minutes} canEdit={canEdit} key={business.data.slot_interval_minutes}/>{canEdit&&<form className="settings-form settings-form--inline" onSubmit={event=>{event.preventDefault();create.mutate({name,duration_minutes:duration},{onSuccess:()=>setName('')})}}><label>Novo serviço<input required minLength={2} value={name} onChange={event=>setName(event.target.value)}/></label><label>Duração (min)<input required type="number" min={1} max={1440} value={duration} onChange={event=>setDuration(Number(event.target.value))}/></label>{create.isError&&<MutationError/>}<button className="primary-button" disabled={create.isPending}><Plus size={18}/>Adicionar</button></form>}<div className="settings-list">{services.data.items.map(item=><ServiceEditor service={item} canEdit={canEdit} key={`${item.id}:${item.name}:${item.duration_minutes}:${item.active}`}/>)}</div></>}</SettingsShell>
+  const business=useBusiness(),canEdit=useCanConfigure()
+  return <SettingsShell><PageHeading eyebrow="Agenda" title="Agenda e disponibilidade" help="Defina a grade usada para organizar os horários disponíveis. Os serviços são gerenciados em Dados da empresa."/>{business.isPending&&<LoadingState/>}{business.isError&&<ErrorState onRetry={()=>void business.refetch()}/>} {business.data&&<AgendaInterval intervalValue={business.data.slot_interval_minutes} canEdit={canEdit} key={business.data.slot_interval_minutes}/>}</SettingsShell>
 }
 
 function AgendaInterval({intervalValue,canEdit}:{intervalValue:number;canEdit:boolean}) {
