@@ -27,7 +27,7 @@ export function MorePage() {
       <div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={5} aria-valuenow={completed}><span style={{width:`${completed/5*100}%`}}/></div>
       <ol className="setup-steps">
         <SetupStep ready={state==='FREE_DEMO'||!!setup.data?.company} number={1}>Dados da empresa</SetupStep>
-        <SetupStep ready={!!setup.data?.automation} number={2}>Assistente de atendimento</SetupStep>
+        <SetupStep ready={!!setup.data?.automation} number={2}>Assistente Virtual</SetupStep>
         <li className={whatsappReady?'is-complete':''}>{whatsappReady?<Check/>:<span>3</span>}Conectar WhatsApp</li>
         <SetupStep ready={!!setup.data?.business_hours} number={4}>Horários de funcionamento</SetupStep>
         <SetupStep ready={!!setup.data?.agenda} number={5}>Configuração da agenda</SetupStep>
@@ -39,13 +39,13 @@ export function MorePage() {
       <div className="list-surface"><ListRow icon={MessageCircleMore} title="Conexão do WhatsApp" subtitle={connectionLabel} to="/app/whatsapp" trailing={<StatusBadge tone={whatsappReady?'success':connection.isError||connection.data?.status==='error'?'danger':'info'}>{connectionLabel}</StatusBadge>}/></div>
     </Section>
     <Section title="Atendimento">
-      <div className="list-surface"><ListRow icon={Bot} title="Assistente e automação" to={paid?'/app/mais/automacao':undefined} onClick={!paid?()=>openUpgrade('Configurar o assistente de atendimento'):undefined}/><ListRow icon={UsersRound} title="Equipe e responsáveis" to={paid?'/app/mais/equipe':undefined} onClick={!paid?()=>openUpgrade('Gerenciar equipe e responsáveis'):undefined}/></div>
+      <div className="list-surface"><ListRow icon={Bot} title="Assistente Virtual" to={paid?'/app/mais/automacao':undefined} onClick={!paid?()=>openUpgrade('Configurar o Assistente Virtual'):undefined}/></div>
     </Section>
     <Section title="Empresa">
-      <div className="list-surface"><ListRow icon={Building2} title="Dados da empresa" to={paid?'/app/mais/empresa':undefined} onClick={!paid?()=>openUpgrade('Configurar os dados operacionais da empresa'):undefined} trailing={<StatusBadge tone={setup.data?.company||state==='FREE_DEMO'?'success':'warning'}>{setup.data?.company||state==='FREE_DEMO'?'Concluído':'Pendente'}</StatusBadge>}/><ListRow icon={Clock3} title="Horários de funcionamento" to={paid?'/app/mais/horarios':undefined} onClick={!paid?()=>openUpgrade('Configurar horários de funcionamento'):undefined}/></div>
+      <div className="list-surface"><ListRow icon={Building2} title="Dados da empresa" to={paid?'/app/mais/empresa':undefined} onClick={!paid?()=>openUpgrade('Configurar os dados operacionais da empresa'):undefined} trailing={<StatusBadge tone={setup.data?.company||state==='FREE_DEMO'?'success':'warning'}>{setup.data?.company||state==='FREE_DEMO'?'Concluído':'Pendente'}</StatusBadge>}/><ListRow icon={UsersRound} title="Técnicos e responsáveis" to={paid?'/app/mais/equipe':undefined} onClick={!paid?()=>openUpgrade('Gerenciar técnicos e responsáveis'):undefined}/><ListRow icon={Clock3} title="Horários de funcionamento" to={paid?'/app/mais/horarios':undefined} onClick={!paid?()=>openUpgrade('Configurar horários de funcionamento'):undefined}/></div>
     </Section>
     <Section title="Agenda">
-      <div className="list-surface"><ListRow icon={CalendarCog} title="Agenda e disponibilidade" to={paid?'/app/mais/agenda':undefined} onClick={!paid?()=>openUpgrade('Configurar agenda e disponibilidade'):undefined}/><ListRow icon={UsersRound} title="Técnicos e responsáveis" to={paid?'/app/mais/equipe':undefined} onClick={!paid?()=>openUpgrade('Gerenciar técnicos e responsáveis'):undefined}/></div>
+      <div className="list-surface"><ListRow icon={CalendarCog} title="Agenda e disponibilidade" to={paid?'/app/mais/agenda':undefined} onClick={!paid?()=>openUpgrade('Configurar agenda e disponibilidade'):undefined}/></div>
     </Section>
     <Section title="Conta">
       <div className="list-surface">
