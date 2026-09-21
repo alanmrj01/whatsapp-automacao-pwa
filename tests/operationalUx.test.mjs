@@ -185,8 +185,8 @@ test('services are managed with company data instead of agenda settings', () => 
   const servicesStart = settings.indexOf('function ServicesSettings')
   assert.ok(companyStart >= 0 && servicesStart > companyStart)
   assert.match(settings,/title="Serviços oferecidos"/)
-  assert.match(settings,/Os serviços são gerenciados em Dados da empresa/)
-  assert.doesNotMatch(settings.slice(agendaStart, settings.indexOf('function AgendaInterval')),/useCreateService|Novo serviço/)
+  assert.match(settings,/A duração de cada atendimento continua sendo definida em Dados da empresa/)
+  assert.doesNotMatch(settings.slice(agendaStart, settings.indexOf('function ServiceEditor')),/useCreateService|Novo serviço/)
 })
 
 test('real agenda converts company-local schedules to an absolute instant', () => {
