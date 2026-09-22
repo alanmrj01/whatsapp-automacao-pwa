@@ -12,8 +12,8 @@ test('operational product states distinguish demo, setup, active and failures', 
   assert.equal(deriveProductState({access_mode:'free'}),'FREE_DEMO')
   assert.equal(deriveProductState({access_mode:'paid'},{status:'disconnected'}),'SETUP_PENDING')
   assert.equal(deriveProductState({access_mode:'paid'},{status:'connected'}),'ACTIVE')
-  assert.equal(deriveProductState({access_mode:'paid'},{status:'connected'},{},{completed:4,total:5}),'SETUP_PENDING')
-  assert.equal(deriveProductState({access_mode:'paid'},{status:'connected'},{},{completed:5,total:5}),'ACTIVE')
+  assert.equal(deriveProductState({access_mode:'paid'},{status:'connected'},{},{completed:6,total:7}),'SETUP_PENDING')
+  assert.equal(deriveProductState({access_mode:'paid'},{status:'connected'},{},{completed:7,total:7}),'ACTIVE')
   assert.equal(deriveProductState({access_mode:'paid'},{status:'pending'}),'CONNECTION_PENDING')
   assert.equal(deriveProductState({access_mode:'paid'},undefined,{isError:true}),'ERROR')
 })
@@ -35,20 +35,23 @@ test('paid operation uses authenticated public APIs while free mode disables eve
   assert.match(conversationDetail,/useConversation/)
 })
 
-test('setup and More routes are backed by real data and configuration mutations', () => {
+test('paid accounts are guided through seven persisted onboarding steps before normal navigation', () => {
   const operations = read('src/features/operations/api.ts')
   const router = read('src/app/router.tsx')
-  const more = read('src/features/more/MorePage.tsx')
-  const settings = read('src/features/more/OperationalSettingsPages.tsx')
-  for (const route of ['empresa','horarios','automacao','equipe','agenda']) assert.match(router,new RegExp(`mais/${route}`))
+  const onboarding = read('src/features/onboarding/OnboardingPage.tsx')
+  for (const route of ['empresa','servicos','catalogo','horarios','automacao','equipe','agenda']) assert.match(router,new RegExp(`mais/${route}`))
   assert.match(operations,/\/setup\/status/)
-  assert.match(more,/setup\.data\?\.completed/)
-  for (const hook of ['useUpdateBusiness','useCreateWorkingHours','useUpdateAutomation','useCreateEmployee','useCreateService']) assert.match(settings,new RegExp(hook))
+  assert.match(operations,/\/setup\/complete/)
+  assert.match(router,/OnboardingGuard/)
+  assert.match(router,/\/app\/onboarding/)
+  assert.match(onboarding,/Etapa \{step\} de \{TOTAL_STEPS\}/)
+  assert.match(onboarding,/const TOTAL_STEPS=7/)
+  assert.match(onboarding,/As funcionalidades da sua conta estão liberadas/)
 })
 
 test('mutations invalidate only tenant operational resources that changed', () => {
   const operations = read('src/features/operations/api.ts')
-  assert.match(operations,/invalidate\(context\.businessId,'appointments','dashboard','setup'\)/)
+  assert.match(operations,/invalidate\(context\.businessId,'appointments','appointments-range','dashboard','setup'\)/)
   assert.match(operations,/invalidate\(context\.businessId,'working-hours','setup'\)/)
   assert.match(operations,/invalidate\(context\.businessId,'automation','setup'\)/)
   assert.match(operations,/invalidate\(context\.businessId,'employees','setup'\)/)
@@ -59,7 +62,7 @@ test('main navigation stays focused and WhatsApp setup remains available from Mo
   const more = read('src/features/more/MorePage.tsx')
   assert.deepEqual([...navigation.matchAll(/label: '([^']+)'/g)].map(match=>match[1]),['Início','Conversas','Agenda','Mais'])
   assert.match(more, /to="\/app\/whatsapp"/)
-  assert.match(more, /Configuração \{completed\} de 5/)
+  assert.match(more, /Configuração inicial concluída/)
 })
 
 test('never-activated free dashboard is populated from isolated demo data and points to setup', () => {
@@ -178,15 +181,20 @@ test('More prioritizes WhatsApp before the remaining operational setup', () => {
   assert.ok(more.indexOf('title="Dados da empresa"') < more.indexOf('title="Técnicos e responsáveis"'))
 })
 
-test('services are managed with company data instead of agenda settings', () => {
-  const settings = read('src/features/more/OperationalSettingsPages.tsx')
-  const companyStart = settings.indexOf('export function CompanySettingsPage')
-  const agendaStart = settings.indexOf('export function AgendaSettingsPage')
-  const servicesStart = settings.indexOf('function ServicesSettings')
-  assert.ok(companyStart >= 0 && servicesStart > companyStart)
-  assert.match(settings,/title="Serviços oferecidos"/)
-  assert.match(settings,/A duração de cada atendimento continua sendo definida em Dados da empresa/)
-  assert.doesNotMatch(settings.slice(agendaStart, settings.indexOf('function ServiceEditor')),/useCreateService|Novo serviço/)
+test('company data, services and materials are separated into simple focused screens', () => {
+  const company = read('src/features/more/CompanySettingsPage.tsx')
+  const services = read('src/features/more/ServiceCatalogPage.tsx')
+  const materials = read('src/features/more/MaterialsCatalogPage.tsx')
+  const agenda = read('src/features/more/AgendaSettingsPage.tsx')
+  assert.match(company,/Responsável pela empresa/)
+  assert.match(company,/Endereço de saída para o primeiro atendimento/)
+  assert.doesNotMatch(company,/Novo serviço/)
+  assert.match(services,/Catálogo de serviços/)
+  assert.match(services,/Preço \(R\$\)/)
+  assert.match(materials,/Catálogo de equipamentos e materiais/)
+  assert.match(materials,/Descrição/)
+  assert.match(agenda,/Automático pelo ALOVIA/)
+  assert.doesNotMatch(agenda,/Deslocamento entre atendimentos/)
 })
 
 test('real agenda converts company-local schedules to an absolute instant', () => {
