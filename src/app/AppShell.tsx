@@ -12,6 +12,8 @@ const titles: Record<string, string> = {
   '/app/whatsapp': 'WhatsApp',
   '/app/mais': 'Mais',
   '/app/mais/empresa': 'Dados da empresa',
+  '/app/mais/servicos': 'Catálogo de serviços',
+  '/app/mais/catalogo': 'Catálogo da empresa',
   '/app/mais/horarios': 'Horários',
   '/app/mais/automacao': 'Automação',
   '/app/mais/equipe': 'Equipe',
