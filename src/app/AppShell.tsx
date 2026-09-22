@@ -17,6 +17,8 @@ const titles: Record<string, string> = {
   '/app/mais/horarios': 'Horários',
   '/app/mais/automacao': 'Automação',
   '/app/mais/equipe': 'Equipe',
+  '/app/mais/servicos': 'Catálogo de serviços',
+  '/app/mais/catalogo': 'Catálogo da empresa',
   '/app/mais/agenda': 'Configurar agenda',
 }
 
