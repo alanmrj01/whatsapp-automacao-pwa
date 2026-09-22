@@ -1,5 +1,5 @@
 import { ArrowLeft, ArrowRight, Check, MapPin, MessageCircleMore, Plus, Save, Wrench } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ErrorState } from '../../components/ErrorState'
 import { LoadingState } from '../../components/LoadingState'
@@ -20,7 +20,7 @@ import {
   useUpdateService,
   useWorkingHours,
 } from '../operations/api'
-import type { Business, CatalogItem, Employee, Service } from '../operations/types'
+import type { CatalogItem, Service } from '../operations/types'
 import { ConnectWhatsAppSheet } from '../whatsapp/ConnectWhatsAppSheet'
 import { ConnectionStatusBadge } from '../whatsapp/ConnectionStatusBadge'
 import { useConnection } from '../whatsapp/useConnection'
