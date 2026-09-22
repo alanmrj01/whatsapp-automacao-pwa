@@ -1,5 +1,5 @@
 import { Save } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ErrorState } from '../../components/ErrorState'
 import { InfoHelp } from '../../components/InfoHelp'
 import { LoadingState } from '../../components/LoadingState'
@@ -16,16 +16,15 @@ export function CompanySettingsPage() {
   const [responsible,setResponsible]=useState('')
   const [address,setAddress]=useState('')
   const [timezone,setTimezone]=useState('')
-  const [hydrated,setHydrated]=useState(false)
   const [saved,setSaved]=useState(false)
 
-  if(data&&!hydrated){
+  useEffect(()=>{
+    if(!data)return
     setName(data.name)
     setResponsible(data.responsible_name??'')
     setAddress(data.service_origin_address??'')
     setTimezone(data.timezone)
-    setHydrated(true)
-  }
+  },[data])
 
   if(business.isPending)return <Shell><LoadingState/></Shell>
   if(business.isError||!data)return <Shell><ErrorState onRetry={()=>void business.refetch()}/></Shell>
