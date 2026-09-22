@@ -6,7 +6,7 @@ import { ErrorState } from '../../components/ErrorState'
 import { LoadingState } from '../../components/LoadingState'
 import { useAuth } from '../auth/useAuth'
 import {
-  useArchiveConversation,
+  useDeleteConversation,
   useBusiness,
   useConversation,
   useSendConversationMessage,
@@ -44,7 +44,7 @@ export function ConversationDetailPage() {
   const send=useSendConversationMessage()
   const pin=useSetConversationPinned()
   const read=useSetConversationRead()
-  const archive=useArchiveConversation()
+  const archive=useDeleteConversation()
   const [contactOpen,setContactOpen]=useState(false)
   const [editingName,setEditingName]=useState(false)
   const [confirmDelete,setConfirmDelete]=useState(false)
@@ -67,7 +67,7 @@ export function ConversationDetailPage() {
 
   useEffect(()=>{
     if(!canMutate||!detail.data||detail.data.unread_count<=0||read.isPending)return
-    read.mutate({id:detail.data.id,unread:false})
+    read.mutate({id:detail.data.id,read:true})
   // Deliberately react only to the unread count of the opened conversation.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[canMutate,detail.data?.id,detail.data?.unread_count])
@@ -207,7 +207,7 @@ export function ConversationDetailPage() {
         <div className="conversation-contact-quick-actions" aria-label="Ações rápidas">
           <button type="button" onClick={createAppointment}><CalendarPlus2/><span>Agendar</span></button>
           <button type="button" disabled={!canMutate||pin.isPending} onClick={()=>pin.mutate({id:conversation.id,pinned:!conversation.pinned})}>{conversation.pinned?<PinOff/>:<Pin/>}<span>{conversation.pinned?'Desafixar':'Fixar'}</span></button>
-          <button type="button" disabled={!canMutate||read.isPending} onClick={()=>read.mutate({id:conversation.id,unread:conversation.unread_count===0})}><CheckCheck/><span>{conversation.unread_count>0?'Marcar lida':'Não lida'}</span></button>
+          <button type="button" disabled={!canMutate||read.isPending} onClick={()=>read.mutate({id:conversation.id,read:conversation.unread_count>0})}><CheckCheck/><span>{conversation.unread_count>0?'Marcar lida':'Não lida'}</span></button>
         </div>
 
         <section className="conversation-contact-section">
