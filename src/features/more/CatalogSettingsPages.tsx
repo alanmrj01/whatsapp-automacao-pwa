@@ -1,5 +1,6 @@
-import { Boxes, CalendarCog, Plus, Save, Trash2 } from 'lucide-react'
-import { FormEvent, useState } from 'react'
+import { CalendarCog, Plus, Save, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import type { FormEvent } from 'react'
 import { ErrorState } from '../../components/ErrorState'
 import { InfoHelp } from '../../components/InfoHelp'
 import { LoadingState } from '../../components/LoadingState'
