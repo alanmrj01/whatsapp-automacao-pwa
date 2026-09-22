@@ -12,8 +12,8 @@ test('operational product states distinguish demo, setup, active and failures', 
   assert.equal(deriveProductState({access_mode:'free'}),'FREE_DEMO')
   assert.equal(deriveProductState({access_mode:'paid'},{status:'disconnected'}),'SETUP_PENDING')
   assert.equal(deriveProductState({access_mode:'paid'},{status:'connected'}),'ACTIVE')
-  assert.equal(deriveProductState({access_mode:'paid'},{status:'connected'},{},{completed:4,total:5}),'SETUP_PENDING')
-  assert.equal(deriveProductState({access_mode:'paid'},{status:'connected'},{},{completed:5,total:5}),'ACTIVE')
+  assert.equal(deriveProductState({access_mode:'paid'},{status:'connected'},{},{completed:6,total:7}),'SETUP_PENDING')
+  assert.equal(deriveProductState({access_mode:'paid'},{status:'connected'},{},{completed:7,total:7}),'ACTIVE')
   assert.equal(deriveProductState({access_mode:'paid'},{status:'pending'}),'CONNECTION_PENDING')
   assert.equal(deriveProductState({access_mode:'paid'},undefined,{isError:true}),'ERROR')
 })
@@ -40,10 +40,17 @@ test('setup and More routes are backed by real data and configuration mutations'
   const router = read('src/app/router.tsx')
   const more = read('src/features/more/MorePage.tsx')
   const settings = read('src/features/more/OperationalSettingsPages.tsx')
-  for (const route of ['empresa','horarios','automacao','equipe','agenda']) assert.match(router,new RegExp(`mais/${route}`))
+  const catalogs = read('src/features/more/CatalogSettingsPages.tsx')
+  const onboarding = read('src/features/onboarding/OnboardingPage.tsx')
+  for (const route of ['empresa','horarios','automacao','equipe','servicos','catalogo','agenda']) assert.match(router,new RegExp(`mais/${route}`))
+  assert.match(router,/path="onboarding"/)
   assert.match(operations,/\/setup\/status/)
+  assert.match(operations,/\/onboarding\/finalize/)
   assert.match(more,/setup\.data\?\.completed/)
-  for (const hook of ['useUpdateBusiness','useCreateWorkingHours','useUpdateAutomation','useCreateEmployee','useCreateService']) assert.match(settings,new RegExp(hook))
+  for (const hook of ['useUpdateBusiness','useCreateWorkingHours','useUpdateAutomation','useCreateEmployee']) assert.match(settings,new RegExp(hook))
+  for (const hook of ['useCreateService','useCreateCatalogItem','useUpdateCatalogItem']) assert.match(catalogs,new RegExp(hook))
+  assert.match(onboarding,/Etapa \{step\} de \{TOTAL_STEPS\}/)
+  assert.match(onboarding,/TOTAL_STEPS=7/)
 })
 
 test('mutations invalidate only tenant operational resources that changed', () => {
@@ -59,7 +66,7 @@ test('main navigation stays focused and WhatsApp setup remains available from Mo
   const more = read('src/features/more/MorePage.tsx')
   assert.deepEqual([...navigation.matchAll(/label: '([^']+)'/g)].map(match=>match[1]),['Início','Conversas','Agenda','Mais'])
   assert.match(more, /to="\/app\/whatsapp"/)
-  assert.match(more, /Configuração \{completed\} de 5/)
+  assert.match(more, /Configuração \{completed\} de 7/)
 })
 
 test('never-activated free dashboard is populated from isolated demo data and points to setup', () => {
@@ -178,15 +185,21 @@ test('More prioritizes WhatsApp before the remaining operational setup', () => {
   assert.ok(more.indexOf('title="Dados da empresa"') < more.indexOf('title="Técnicos e responsáveis"'))
 })
 
-test('services are managed with company data instead of agenda settings', () => {
+test('company data, service catalog and material catalog are separate settings surfaces', () => {
   const settings = read('src/features/more/OperationalSettingsPages.tsx')
-  const companyStart = settings.indexOf('export function CompanySettingsPage')
-  const agendaStart = settings.indexOf('export function AgendaSettingsPage')
-  const servicesStart = settings.indexOf('function ServicesSettings')
-  assert.ok(companyStart >= 0 && servicesStart > companyStart)
-  assert.match(settings,/title="Serviços oferecidos"/)
-  assert.match(settings,/A duração de cada atendimento continua sendo definida em Dados da empresa/)
-  assert.doesNotMatch(settings.slice(agendaStart, settings.indexOf('function ServiceEditor')),/useCreateService|Novo serviço/)
+  const catalogs = read('src/features/more/CatalogSettingsPages.tsx')
+  const router = read('src/app/router.tsx')
+  assert.match(settings,/title="Dados da empresa"/)
+  assert.match(settings,/Responsável pela empresa/)
+  assert.match(settings,/Endereço de saída da equipe/)
+  assert.doesNotMatch(settings,/useCreateService|Novo serviço|Catálogo operacional/)
+  assert.match(catalogs,/export function ServiceCatalogPage/)
+  assert.match(catalogs,/title="Catálogo de serviços"/)
+  assert.match(catalogs,/Preço/)
+  assert.match(catalogs,/export function MaterialCatalogPage/)
+  assert.match(catalogs,/Somente materiais e equipamentos|somente materiais e equipamentos/i)
+  assert.match(router,/mais\/servicos/)
+  assert.match(router,/mais\/catalogo/)
 })
 
 test('real agenda converts company-local schedules to an absolute instant', () => {
@@ -213,4 +226,25 @@ test('routes are lazy-loaded so the initial shell does not bundle every feature 
   assert.match(router,/lazy\(async/)
   assert.match(router,/Suspense/)
   assert.doesNotMatch(router,/import \{ DashboardPage \}/)
+})
+
+
+test('paid accounts are locked into the seven-step onboarding until completion is persisted', () => {
+  const shell = read('src/app/AppShell.tsx')
+  const onboarding = read('src/features/onboarding/OnboardingPage.tsx')
+  assert.match(shell,/onboardingRequired/)
+  assert.match(shell,/!setup\.data\.onboarding_completed/)
+  assert.match(shell,/Navigate to="\/app\/onboarding"/)
+  assert.match(onboarding,/As funcionalidades da sua conta estão liberadas/)
+  for (const label of ['Dados da empresa','Técnico responsável','Horários de funcionamento','Catálogo de serviços','Materiais e equipamentos','Agenda e disponibilidade','Conectar WhatsApp']) {
+    assert.match(onboarding,new RegExp(label))
+  }
+  assert.match(onboarding,/Você pode alterar qualquer uma dessas informações depois/)
+})
+
+test('technician settings no longer require service assignments', () => {
+  const settings = read('src/features/more/OperationalSettingsPages.tsx')
+  assert.doesNotMatch(settings,/Serviços atendidos/)
+  assert.doesNotMatch(settings,/useUpdateEmployeeServices/)
+  assert.match(settings,/todos os técnicos ativos/)
 })
