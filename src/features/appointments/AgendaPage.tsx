@@ -308,8 +308,8 @@ function RealAgenda({selectedDate,setSelectedDate,canMutate,initialView,setOuter
         mode={calendarMode}
         selectedDate={selectedDate}
         onMode={setCalendar}
-        onPrevious={()=>setSelectedDate(value=>calendarMode==='month'?moveMonth(value,-1):moveDate(value,-7))}
-        onNext={()=>setSelectedDate(value=>calendarMode==='month'?moveMonth(value,1):moveDate(value,7))}
+        onPrevious={()=>setSelectedDate(calendarMode==='month'?moveMonth(selectedDate,-1):moveDate(selectedDate,-7))}
+        onNext={()=>setSelectedDate(calendarMode==='month'?moveMonth(selectedDate,1):moveDate(selectedDate,7))}
         onToday={()=>setSelectedDate(new Date().toISOString().slice(0,10))}
       />
       {(business.isPending||calendarAppointments.isPending)&&<LoadingState/>}
