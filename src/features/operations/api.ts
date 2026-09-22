@@ -3,7 +3,7 @@ import { queryClient } from '../../app/queryClient'
 import { api } from '../../lib/api'
 import { useAuth } from '../auth/useAuth'
 import { entitlementsFor, requirePaidAccess } from '../access/entitlements'
-import type { Appointment, AppointmentInput, AssistantExclusion, AutomationSettings, Business, ConversationDetail, ConversationList, ConversationMessage, Customer, DashboardToday, Employee, OperationalRole, Service, SetupStatus, WorkingHours } from './types'
+import type { Appointment, AppointmentInput, AssistantExclusion, AutomationSettings, Business, CatalogItem, ConversationDetail, ConversationList, ConversationMessage, Customer, DashboardToday, Employee, OperationalRole, Service, SetupStatus, SetupStep, WorkingHours } from './types'
 
 const root = (businessId?:string) => ['operations',businessId] as const
 const json = (value:object) => JSON.stringify(value)
@@ -88,7 +88,7 @@ export function useBusiness() {
 }
 export function useUpdateBusiness() {
   const context=usePaidContext()
-  return useMutation({mutationFn:(values:Partial<Pick<Business,'name'|'timezone'|'slot_interval_minutes'|'service_origin_address'|'default_travel_minutes'|'travel_fallback_allowed'|'travel_before_buffer_minutes'|'travel_after_buffer_minutes'>>)=>paidMutation(context,()=>api.request<Business>('/business',{method:'PATCH',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'business','setup')})
+  return useMutation({mutationFn:(values:Partial<Pick<Business,'name'|'responsible_name'|'timezone'|'slot_interval_minutes'|'service_origin_address'|'default_travel_minutes'|'travel_fallback_allowed'|'travel_before_buffer_minutes'|'travel_after_buffer_minutes'|'default_service_gap_minutes'|'default_preparation_minutes'|'default_completion_minutes'|'minimum_booking_notice_minutes'>>)=>paidMutation(context,()=>api.request<Business>('/business',{method:'PATCH',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'business','setup')})
 }
 export function useAssistantExclusions() {
   const context=usePaidContext()
@@ -152,9 +152,33 @@ export function useServices() {
 }
 export function useCreateService() {
   const context=usePaidContext()
-  return useMutation({mutationFn:(values:Pick<Service,'name'|'duration_minutes'>)=>paidMutation(context,()=>api.request<Service>('/services',{method:'POST',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'services','setup')})
+  return useMutation({mutationFn:(values:Pick<Service,'name'|'duration_minutes'|'price'>)=>paidMutation(context,()=>api.request<Service>('/services',{method:'POST',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'services','setup')})
 }
 export function useUpdateService() {
   const context=usePaidContext()
-  return useMutation({mutationFn:({id,values}:{id:string;values:Partial<Pick<Service,'name'|'duration_minutes'|'active'>>})=>paidMutation(context,()=>api.request<Service>(`/services/${id}`,{method:'PATCH',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'services','employees','setup')})
+  return useMutation({mutationFn:({id,values}:{id:string;values:Partial<Pick<Service,'name'|'duration_minutes'|'price'|'active'|'interpretation_examples'|'service_gap_minutes'|'preparation_minutes'|'completion_minutes'|'minimum_booking_notice_minutes'>>})=>paidMutation(context,()=>api.request<Service>(`/services/${id}`,{method:'PATCH',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'services','employees','setup')})
+}
+export function useCatalogItems() {
+  const context=usePaidContext()
+  return useQuery({queryKey:[...root(context.businessId),'catalog-items'],queryFn:({signal})=>api.request<{items:CatalogItem[]}>('/catalog-items',{signal}),enabled:context.enabled,retry:false})
+}
+export function useCreateCatalogItem() {
+  const context=usePaidContext()
+  return useMutation({mutationFn:(values:{name:string;description:string|null;price:number;unit:'unit'|'meter';active:boolean})=>paidMutation(context,()=>api.request<CatalogItem>('/catalog-items',{method:'POST',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'catalog-items','setup')})
+}
+export function useUpdateCatalogItem() {
+  const context=usePaidContext()
+  return useMutation({mutationFn:({id,values}:{id:string;values:Partial<Pick<CatalogItem,'name'|'description'|'price'|'unit'|'active'>>})=>paidMutation(context,()=>api.request<CatalogItem>(`/catalog-items/${id}`,{method:'PATCH',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'catalog-items','setup')})
+}
+export function useDeleteCatalogItem() {
+  const context=usePaidContext()
+  return useMutation({mutationFn:(id:string)=>paidMutation(context,()=>api.request<void>(`/catalog-items/${id}`,{method:'DELETE'})),onSuccess:()=>invalidate(context.businessId,'catalog-items','setup')})
+}
+export function useCompleteOnboardingStep() {
+  const context=usePaidContext()
+  return useMutation({mutationFn:(step:Extract<SetupStep,'materials'|'agenda'>)=>paidMutation(context,()=>api.request<SetupStatus>('/onboarding/steps/complete',{method:'POST',body:json({step})})),onSuccess:()=>invalidate(context.businessId,'setup','business','catalog-items')})
+}
+export function useFinalizeOnboarding() {
+  const context=usePaidContext()
+  return useMutation({mutationFn:()=>paidMutation(context,()=>api.request<{completed:boolean;completed_at:string}>('/onboarding/finalize',{method:'POST',body:'{}'})),onSuccess:()=>invalidate(context.businessId,'setup','business')})
 }

@@ -1,4 +1,4 @@
-import { BotOff, CalendarCog, Clock3, Plus, Save, Trash2, UsersRound } from 'lucide-react'
+import { BotOff, Clock3, Plus, Save, Trash2, UsersRound } from 'lucide-react'
 import { useState } from 'react'
 import { ErrorState } from '../../components/ErrorState'
 import { InfoHelp } from '../../components/InfoHelp'
@@ -6,8 +6,8 @@ import { LoadingState } from '../../components/LoadingState'
 import { StatusBadge } from '../../components/StatusBadge'
 import { canConfigureWhatsApp } from '../auth/types'
 import { useAuth } from '../auth/useAuth'
-import { useAddAssistantExclusion, useAssistantExclusions, useAutomationSettings, useBusiness, useCreateEmployee, useCreateService, useCreateWorkingHours, useCustomers, useDeleteWorkingHours, useEmployees, useRemoveAssistantExclusion, useServices, useUpdateAutomation, useUpdateBusiness, useUpdateEmployee, useUpdateEmployeeServices, useUpdateService, useWorkingHours } from '../operations/api'
-import type { AssistantExclusion, AutomationSettings, Business, Customer, Employee, OperationalRole, Service } from '../operations/types'
+import { useAddAssistantExclusion, useAssistantExclusions, useAutomationSettings, useBusiness, useCreateEmployee, useCreateWorkingHours, useCustomers, useDeleteWorkingHours, useEmployees, useRemoveAssistantExclusion, useUpdateAutomation, useUpdateBusiness, useUpdateEmployee, useWorkingHours } from '../operations/api'
+import type { AssistantExclusion, AutomationSettings, Business, Customer, Employee, OperationalRole } from '../operations/types'
 
 const weekdays=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo']
 const windowOptions=[5,10,20,30,60,120,240,360,720,1440,2160]
@@ -17,21 +17,28 @@ function useCanConfigure() {return canConfigureWhatsApp(useAuth().membership?.ro
 function PageHeading({eyebrow,title,help}:{eyebrow:string;title:string;help:string}) {return <section className="operational-heading"><div><span className="eyebrow">{eyebrow}</span><h1>{title}</h1></div><InfoHelp title={title}>{help}</InfoHelp></section>}
 
 export function CompanySettingsPage() {
-  const query=useBusiness(),services=useServices(),canEdit=useCanConfigure()
-  const pending=query.isPending||services.isPending,error=query.isError||services.isError
-  if(pending)return <SettingsShell><LoadingState/></SettingsShell>
-  if(error)return <SettingsShell><ErrorState onRetry={()=>{void query.refetch();void services.refetch()}}/></SettingsShell>
-  return <SettingsShell><PageHeading eyebrow="Empresa" title="Dados da empresa" help="Dados operacionais e serviços pertencem somente à empresa ativa."/>{query.data&&<CompanyForm business={query.data} canEdit={canEdit} key={`${query.data.id}:${query.data.name}:${query.data.timezone}`}/>} {services.data&&<ServicesSettings services={services.data.items} canEdit={canEdit}/>}</SettingsShell>
+  const query=useBusiness(),canEdit=useCanConfigure()
+  if(query.isPending)return <SettingsShell><LoadingState/></SettingsShell>
+  if(query.isError)return <SettingsShell><ErrorState onRetry={()=>void query.refetch()}/></SettingsShell>
+  return <SettingsShell><PageHeading eyebrow="Empresa" title="Dados da empresa" help="Mantenha somente os dados da própria empresa: identificação, responsável, endereço de saída e fuso horário."/>{query.data&&<CompanyForm business={query.data} canEdit={canEdit} key={JSON.stringify(query.data)}/>}</SettingsShell>
 }
 
-function CompanyForm({business,canEdit}:{business:{name:string;timezone:string};canEdit:boolean}) {
-  const update=useUpdateBusiness(),[name,setName]=useState(business.name),[timezone,setTimezone]=useState(business.timezone),[saved,setSaved]=useState(false)
-  return <form className="settings-form" onSubmit={event=>{event.preventDefault();setSaved(false);update.mutate({name,timezone},{onSuccess:()=>setSaved(true)})}}><label>Nome<input required minLength={2} maxLength={255} value={name} disabled={!canEdit} onChange={event=>setName(event.target.value)}/></label><label>Fuso horário<input required value={timezone} disabled={!canEdit} onChange={event=>setTimezone(event.target.value)}/></label>{update.isError&&<MutationError/>}{saved&&<p className="form-success">Dados salvos.</p>}{canEdit&&<button className="primary-button" disabled={update.isPending}><Save size={18}/>Salvar</button>}</form>
-}
-
-function ServicesSettings({services,canEdit}:{services:Service[];canEdit:boolean}) {
-  const create=useCreateService(),[name,setName]=useState(''),[duration,setDuration]=useState(60)
-  return <section aria-labelledby="company-services-title"><div className="section-title-row"><div><span className="eyebrow">Catálogo operacional</span><h2 id="company-services-title">Serviços oferecidos</h2></div><InfoHelp title="Serviços oferecidos">Estes serviços alimentam a agenda, a disponibilidade dos técnicos e o atendimento do Assistente Virtual.</InfoHelp></div>{canEdit&&<form className="settings-form settings-form--inline" onSubmit={event=>{event.preventDefault();create.mutate({name,duration_minutes:duration},{onSuccess:()=>setName('')})}}><label>Novo serviço<input required minLength={2} value={name} onChange={event=>setName(event.target.value)}/></label><label>Duração padrão (min)<input required type="number" min={1} max={1440} value={duration} onChange={event=>setDuration(Number(event.target.value))}/></label>{create.isError&&<MutationError/>}<button className="primary-button" disabled={create.isPending}><Plus size={18}/>Adicionar serviço</button></form>}<div className="settings-list">{services.map(item=><ServiceEditor service={item} canEdit={canEdit} key={`${item.id}:${item.name}:${item.duration_minutes}:${item.active}`}/>)}{!services.length&&<p className="settings-empty">Nenhum serviço cadastrado.</p>}</div></section>
+function CompanyForm({business,canEdit}:{business:Business;canEdit:boolean}) {
+  const update=useUpdateBusiness()
+  const [name,setName]=useState(business.name)
+  const [responsible,setResponsible]=useState(business.responsible_name??'')
+  const [address,setAddress]=useState(business.service_origin_configured?business.service_origin_address:'')
+  const [timezone,setTimezone]=useState(business.timezone)
+  const [saved,setSaved]=useState(false)
+  const submit=()=>update.mutate({name,responsible_name:responsible,service_origin_address:address,timezone},{onSuccess:()=>setSaved(true)})
+  return <form className="settings-form" onSubmit={event=>{event.preventDefault();setSaved(false);submit()}}>
+    <label>Nome da empresa<input required minLength={2} maxLength={255} value={name} disabled={!canEdit} onChange={event=>setName(event.target.value)}/></label>
+    <label>Responsável pela empresa<input required minLength={2} maxLength={255} value={responsible} disabled={!canEdit} onChange={event=>setResponsible(event.target.value)}/></label>
+    <label>Endereço de saída da equipe<input required minLength={5} maxLength={500} value={address} disabled={!canEdit} onChange={event=>setAddress(event.target.value)} placeholder="Rua, número, bairro, cidade - UF"/><small className="settings-field-help">Usado como origem do primeiro deslocamento do técnico no dia.</small></label>
+    <label>Fuso horário<input required value={timezone} disabled={!canEdit} onChange={event=>setTimezone(event.target.value)}/></label>
+    {update.isError&&<MutationError/>}{saved&&<p className="form-success">Dados salvos.</p>}
+    {canEdit&&<button className="primary-button" disabled={update.isPending}><Save size={18}/>{update.isPending?'Salvando…':'Salvar'}</button>}
+  </form>
 }
 
 export function WorkingHoursSettingsPage() {
@@ -102,22 +109,22 @@ function AssistantExclusions({customers,exclusions,canEdit}:{customers:Customer[
 }
 
 export function TeamSettingsPage() {
-  const employees=useEmployees(),services=useServices(),create=useCreateEmployee(),canEdit=useCanConfigure()
+  const employees=useEmployees(),create=useCreateEmployee(),canEdit=useCanConfigure()
   const [name,setName]=useState(''),[role,setRole]=useState<OperationalRole>('technician')
-  return <SettingsShell><PageHeading eyebrow="Empresa" title="Técnicos e responsáveis" help="A função operacional organiza a equipe, mas não concede acesso ao sistema. Profissionais desativados permanecem no histórico."/>{(employees.isPending||services.isPending)&&<LoadingState/>}{(employees.isError||services.isError)&&<ErrorState onRetry={()=>{void employees.refetch();void services.refetch()}}/>}{employees.data&&services.data&&<>{canEdit&&<form className="settings-form settings-form--inline" onSubmit={event=>{event.preventDefault();create.mutate({name,operational_role:role},{onSuccess:()=>{setName('');setRole('technician')}})}}><label>Novo profissional<input required minLength={2} value={name} onChange={event=>setName(event.target.value)}/></label><label>Função<select value={role} onChange={event=>setRole(event.target.value as OperationalRole)}>{Object.entries(operationalRoles).map(([value,label])=><option value={value} key={value}>{label}</option>)}</select></label>{create.isError&&<MutationError/>}<button className="primary-button" disabled={create.isPending}><Plus size={18}/>Adicionar</button></form>}<div className="settings-list">{employees.data.items.map(item=><EmployeeEditor employee={item} services={services.data.items} canEdit={canEdit} key={`${item.id}:${item.name}:${item.operational_role}:${item.active}:${item.service_ids.join(',')}`}/>)}{!employees.data.items.length&&<p className="settings-empty">Nenhum profissional cadastrado.</p>}</div></>}</SettingsShell>
+  return <SettingsShell><PageHeading eyebrow="Empresa" title="Técnicos e responsáveis" help="Qualquer técnico ativo pode ser alocado a um agendamento. Não é necessário vincular profissionais a serviços específicos."/>{employees.isPending&&<LoadingState/>}{employees.isError&&<ErrorState onRetry={()=>void employees.refetch()}/>} {employees.data&&<>{canEdit&&<form className="settings-form settings-form--inline" onSubmit={event=>{event.preventDefault();create.mutate({name,operational_role:role},{onSuccess:()=>{setName('');setRole('technician')}})}}><label>Novo profissional<input required minLength={2} value={name} onChange={event=>setName(event.target.value)}/></label><label>Função<select value={role} onChange={event=>setRole(event.target.value as OperationalRole)}>{Object.entries(operationalRoles).map(([value,label])=><option value={value} key={value}>{label}</option>)}</select></label>{create.isError&&<MutationError/>}<button className="primary-button" disabled={create.isPending}><Plus size={18}/>{create.isPending?'Adicionando…':'Adicionar'}</button></form>}<div className="settings-list">{employees.data.items.map(item=><EmployeeEditor employee={item} canEdit={canEdit} key={`${item.id}:${item.name}:${item.operational_role}:${item.active}`}/>)}{!employees.data.items.length&&<p className="settings-empty">Nenhum profissional cadastrado.</p>}</div></>}</SettingsShell>
 }
 
-function EmployeeEditor({employee,services,canEdit}:{employee:Employee;services:Service[];canEdit:boolean}) {
-  const update=useUpdateEmployee(),updateServices=useUpdateEmployeeServices()
-  const [name,setName]=useState(employee.name),[role,setRole]=useState<OperationalRole>(employee.operational_role),[serviceIds,setServiceIds]=useState(employee.service_ids),[failed,setFailed]=useState(false)
-  const save=async()=>{setFailed(false);try{await update.mutateAsync({id:employee.id,values:{name,operational_role:role}});await updateServices.mutateAsync({id:employee.id,service_ids:serviceIds})}catch{setFailed(true)}}
-  return <article className="settings-editor"><div className="settings-editor__heading"><UsersRound/><input aria-label="Nome do profissional" value={name} disabled={!canEdit} onChange={event=>setName(event.target.value)}/><StatusBadge tone={employee.active?'success':'neutral'}>{employee.active?'Ativo':'Inativo'}</StatusBadge></div><label>Função operacional<select aria-label="Função operacional" value={role} disabled={!canEdit} onChange={event=>setRole(event.target.value as OperationalRole)}>{Object.entries(operationalRoles).map(([value,label])=><option value={value} key={value}>{label}</option>)}</select></label><fieldset disabled={!canEdit}><legend>Serviços atendidos</legend>{services.filter(item=>item.active).map(service=><label className="check-row" key={service.id}><input type="checkbox" checked={serviceIds.includes(service.id)} onChange={event=>setServiceIds(current=>event.target.checked?[...current,service.id]:current.filter(id=>id!==service.id))}/>{service.name}</label>)}</fieldset>{(failed||update.isError||updateServices.isError)&&<MutationError/>}{canEdit&&<div className="settings-editor__actions"><button className="danger-button" type="button" onClick={()=>update.mutate({id:employee.id,values:{active:!employee.active}})}>{employee.active?'Desativar':'Ativar'}</button><button className="compact-button" type="button" disabled={update.isPending||updateServices.isPending} onClick={()=>void save()}><Save size={16}/>Salvar</button></div>}</article>
+function EmployeeEditor({employee,canEdit}:{employee:Employee;canEdit:boolean}) {
+  const update=useUpdateEmployee()
+  const [name,setName]=useState(employee.name),[role,setRole]=useState<OperationalRole>(employee.operational_role),[saved,setSaved]=useState(false)
+  const save=()=>{setSaved(false);update.mutate({id:employee.id,values:{name,operational_role:role}},{onSuccess:()=>setSaved(true)})}
+  return <article className="settings-editor"><div className="settings-editor__heading"><UsersRound/><input aria-label="Nome do profissional" value={name} disabled={!canEdit} onChange={event=>setName(event.target.value)}/><StatusBadge tone={employee.active?'success':'neutral'}>{employee.active?'Ativo':'Inativo'}</StatusBadge></div><label>Função operacional<select aria-label="Função operacional" value={role} disabled={!canEdit} onChange={event=>setRole(event.target.value as OperationalRole)}>{Object.entries(operationalRoles).map(([value,label])=><option value={value} key={value}>{label}</option>)}</select></label><p className="settings-note">O ALOVIA considera todos os técnicos ativos ao procurar disponibilidade para qualquer serviço.</p>{update.isError&&<MutationError/>}{saved&&<p className="form-success">Profissional salvo.</p>}{canEdit&&<div className="settings-editor__actions"><button className="danger-button" type="button" disabled={update.isPending} onClick={()=>update.mutate({id:employee.id,values:{active:!employee.active}})}>{employee.active?'Desativar':'Ativar'}</button><button className="compact-button" type="button" disabled={update.isPending} onClick={save}><Save size={16}/>{update.isPending?'Salvando…':'Salvar'}</button></div>}</article>
 }
 
 export function AgendaSettingsPage() {
   const business=useBusiness(),canEdit=useCanConfigure()
   return <SettingsShell>
-    <PageHeading eyebrow="Agenda" title="Agenda e disponibilidade" help="Defina como os horários são oferecidos, de onde o técnico parte e quanto tempo deve ser reservado para deslocamento entre atendimentos."/>
+    <PageHeading eyebrow="Agenda" title="Agenda e disponibilidade" help="Defina apenas o que quiser controlar manualmente. Campos vazios ficam em Automático pelo ALOVIA."/>
     {business.isPending&&<LoadingState/>}
     {business.isError&&<ErrorState onRetry={()=>void business.refetch()}/>}
     {business.data&&<AgendaAvailabilityForm business={business.data} canEdit={canEdit} key={JSON.stringify(business.data)}/>}
@@ -126,57 +133,34 @@ export function AgendaSettingsPage() {
 
 function AgendaAvailabilityForm({business,canEdit}:{business:Business;canEdit:boolean}) {
   const update=useUpdateBusiness()
-  const [interval,setInterval]=useState(business.slot_interval_minutes)
-  const [origin,setOrigin]=useState(business.service_origin_address)
-  const [fallbackEnabled,setFallbackEnabled]=useState(business.travel_fallback_allowed)
-  const [travelMinutes,setTravelMinutes]=useState(business.default_travel_minutes??30)
-  const [beforeBuffer,setBeforeBuffer]=useState(business.travel_before_buffer_minutes)
-  const [afterBuffer,setAfterBuffer]=useState(business.travel_after_buffer_minutes)
+  const [gap,setGap]=useState(toInput(business.default_service_gap_minutes))
+  const [preparation,setPreparation]=useState(toInput(business.default_preparation_minutes))
+  const [completion,setCompletion]=useState(toInput(business.default_completion_minutes))
+  const [notice,setNotice]=useState(toInput(business.minimum_booking_notice_minutes))
   const [saved,setSaved]=useState(false)
   const submit=()=>update.mutate({
-    slot_interval_minutes:interval,
-    service_origin_address:origin,
-    travel_fallback_allowed:fallbackEnabled,
-    default_travel_minutes:fallbackEnabled?travelMinutes:business.default_travel_minutes,
-    travel_before_buffer_minutes:beforeBuffer,
-    travel_after_buffer_minutes:afterBuffer,
+    default_service_gap_minutes:toOptionalNumber(gap),
+    default_preparation_minutes:toOptionalNumber(preparation),
+    default_completion_minutes:toOptionalNumber(completion),
+    minimum_booking_notice_minutes:toOptionalNumber(notice),
   },{onSuccess:()=>setSaved(true)})
   return <form className="settings-form" onSubmit={event=>{event.preventDefault();setSaved(false);submit()}}>
-    <label>Intervalo entre horários oferecidos
-      <input type="number" min={5} max={480} value={interval} disabled={!canEdit} onChange={event=>setInterval(Number(event.target.value))}/>
-      <small className="settings-field-help">Define de quantos em quantos minutos podem começar novos atendimentos. Ex.: 30 min permite 08:00, 08:30, 09:00. Não altera a duração de cada serviço.</small>
-    </label>
-
-    <label>Local de saída dos técnicos
-      <input required minLength={3} maxLength={500} value={origin} disabled={!canEdit} onChange={event=>setOrigin(event.target.value)} placeholder="Ex.: Rua da Oficina, 100, São José dos Campos - SP"/>
-      <small className="settings-field-help">É a origem usada como referência para reservar tempo de deslocamento até o cliente.</small>
-    </label>
-
-    <label className="check-row"><input type="checkbox" checked={fallbackEnabled} disabled={!canEdit} onChange={event=>setFallbackEnabled(event.target.checked)}/>Usar tempo padrão de deslocamento quando não houver cálculo de rota disponível</label>
-
-    {fallbackEnabled&&<label>Tempo padrão de deslocamento
-      <div className="settings-number-with-unit"><input type="number" min={0} max={480} value={travelMinutes} disabled={!canEdit} onChange={event=>setTravelMinutes(Number(event.target.value))}/><span>min</span></div>
-      <small className="settings-field-help">Esse tempo é reservado antes e depois do serviço para evitar agendamentos que se sobreponham ao deslocamento.</small>
-    </label>}
-
-    <div className="form-grid">
-      <label>Margem antes do serviço
-        <div className="settings-number-with-unit"><input type="number" min={0} max={240} value={beforeBuffer} disabled={!canEdit} onChange={event=>setBeforeBuffer(Number(event.target.value))}/><span>min</span></div>
-      </label>
-      <label>Margem depois do serviço
-        <div className="settings-number-with-unit"><input type="number" min={0} max={240} value={afterBuffer} disabled={!canEdit} onChange={event=>setAfterBuffer(Number(event.target.value))}/><span>min</span></div>
-      </label>
-    </div>
-    <p className="settings-note">A duração de cada atendimento continua sendo definida em Dados da empresa → Serviços oferecidos. Para o agendamento automático funcionar, o serviço também precisa estar associado a um técnico ativo com horário de trabalho configurado.</p>
+    <OptionalSetting label="Intervalo entre um serviço e outro" value={gap} setValue={setGap} disabled={!canEdit} help="Tempo adicional entre atendimentos. Em branco, o ALOVIA decide conforme o serviço e a logística."/>
+    <OptionalSetting label="Tempo de preparação" value={preparation} setValue={setPreparation} disabled={!canEdit} help="Tempo para organizar ferramentas e materiais. Em branco, o ALOVIA calcula automaticamente."/>
+    <OptionalSetting label="Tempo após finalizar o serviço" value={completion} setValue={setCompletion} disabled={!canEdit} help="Tempo para guardar equipamentos e encerrar o atendimento. Em branco, o ALOVIA calcula automaticamente."/>
+    <OptionalSetting label="Antecedência mínima para um novo agendamento" value={notice} setValue={setNotice} disabled={!canEdit} max={10080} help="Em branco, o ALOVIA decide a antecedência adequada."/>
+    <p className="settings-note">O deslocamento não é um campo manual: no primeiro atendimento o ALOVIA parte do endereço da empresa; nos seguintes, considera a localização do atendimento anterior e a agenda do técnico.</p>
     {update.isError&&<MutationError/>}{saved&&<p className="form-success">Configuração da agenda salva.</p>}
-    {canEdit&&<button className="primary-button" disabled={update.isPending}><Save size={18}/>Salvar agenda e disponibilidade</button>}
+    {canEdit&&<button className="primary-button" disabled={update.isPending}><Save size={18}/>{update.isPending?'Salvando…':'Salvar agenda e disponibilidade'}</button>}
   </form>
 }
 
-function ServiceEditor({service,canEdit}:{service:Service;canEdit:boolean}) {
-  const update=useUpdateService();const [name,setName]=useState(service.name),[duration,setDuration]=useState(service.duration_minutes)
-  return <article className="settings-editor"><div className="settings-editor__heading"><CalendarCog/><input aria-label="Nome do serviço" value={name} disabled={!canEdit} onChange={event=>setName(event.target.value)}/><StatusBadge tone={service.active?'success':'neutral'}>{service.active?'Ativo':'Inativo'}</StatusBadge></div><label>Duração (minutos)<input type="number" min={1} max={1440} value={duration} disabled={!canEdit} onChange={event=>setDuration(Number(event.target.value))}/></label>{update.isError&&<MutationError/>}{canEdit&&<div className="settings-editor__actions"><button className="danger-button" type="button" onClick={()=>update.mutate({id:service.id,values:{active:!service.active}})}>{service.active?'Desativar':'Ativar'}</button><button className="compact-button" type="button" onClick={()=>update.mutate({id:service.id,values:{name,duration_minutes:duration}})}><Save size={16}/>Salvar</button></div>}</article>
+function OptionalSetting({label,value,setValue,help,disabled,max=50}:{label:string;value:string;setValue:(value:string)=>void;help:string;disabled:boolean;max?:number}) {
+  return <label>{label}<input type="number" min={0} max={max} value={value} disabled={disabled} onChange={event=>setValue(event.target.value)} placeholder="Automático pelo ALOVIA"/><small className="settings-field-help">{help}</small></label>
 }
+
+function toInput(value:number|null) {return value===null?'':String(value)}
+function toOptionalNumber(value:string) {return value.trim()===''?null:Number(value)}
 
 function SettingsShell({children}:{children:React.ReactNode}) {return <div className="page-stack operational-page compact-page settings-page">{children}</div>}
 function MutationError() {return <p className="form-error" role="alert">Não foi possível salvar. Tente novamente.</p>}
