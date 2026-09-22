@@ -8,6 +8,7 @@ const AgendaPage = lazy(async () => ({default:(await import('../features/appoint
 const ConversationsPage = lazy(async () => ({default:(await import('../features/conversations/ConversationsPage')).ConversationsPage}))
 const ConversationDetailPage = lazy(async () => ({default:(await import('../features/conversations/ConversationDetailPage')).ConversationDetailPage}))
 const DashboardPage = lazy(async () => ({default:(await import('../features/dashboard/DashboardPage')).DashboardPage}))
+const OnboardingPage = lazy(async () => ({default:(await import('../features/onboarding/OnboardingPage')).OnboardingPage}))
 const MorePage = lazy(async () => ({default:(await import('../features/more/MorePage')).MorePage}))
 const PlanPage = lazy(async () => ({default:(await import('../features/billing/PlanPage')).PlanPage}))
 const CheckoutPage = lazy(async () => ({default:(await import('../features/billing/CheckoutPage')).CheckoutPage}))
@@ -54,6 +55,7 @@ export function AppRouter() {
         </Route>
         <Route element={<ProtectedRoute />}>
           <Route path="/app" element={<AppShell />}>
+            <Route path="onboarding" element={<PaidOperationalGuard><OnboardingPage /></PaidOperationalGuard>} />
             <Route index element={<DashboardPage />} />
             <Route path="agenda" element={<AgendaPage />} />
             <Route path="conversas" element={<ConversationsPage />} />
