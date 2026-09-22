@@ -18,11 +18,14 @@ const UserSettingsPage = lazy(async () => ({default:(await AccountPages()).UserS
 const SecuritySettingsPage = lazy(async () => ({default:(await AccountPages()).SecuritySettingsPage}))
 const PrivacySettingsPage = lazy(async () => ({default:(await AccountPages()).PrivacySettingsPage}))
 const OperationalSettings = () => import('../features/more/OperationalSettingsPages')
+const CatalogSettings = () => import('../features/more/CatalogSettingsPages')
 const AgendaSettingsPage = lazy(async () => ({default:(await OperationalSettings()).AgendaSettingsPage}))
 const AutomationSettingsPage = lazy(async () => ({default:(await OperationalSettings()).AutomationSettingsPage}))
 const CompanySettingsPage = lazy(async () => ({default:(await OperationalSettings()).CompanySettingsPage}))
 const TeamSettingsPage = lazy(async () => ({default:(await OperationalSettings()).TeamSettingsPage}))
 const WorkingHoursSettingsPage = lazy(async () => ({default:(await OperationalSettings()).WorkingHoursSettingsPage}))
+const ServiceCatalogPage = lazy(async () => ({default:(await CatalogSettings()).ServiceCatalogPage}))
+const MaterialCatalogPage = lazy(async () => ({default:(await CatalogSettings()).MaterialCatalogPage}))
 const ApiOnlyInfoPage = lazy(async () => ({default:(await import('../features/whatsapp/ApiOnlyInfoPage')).ApiOnlyInfoPage}))
 const CoexistenceInfoPage = lazy(async () => ({default:(await import('../features/whatsapp/CoexistenceInfoPage')).CoexistenceInfoPage}))
 const WhatsAppPage = lazy(async () => ({default:(await import('../features/whatsapp/WhatsAppPage')).WhatsAppPage}))
@@ -74,6 +77,8 @@ export function AppRouter() {
             <Route path="mais/horarios" element={<PaidOperationalGuard><WorkingHoursSettingsPage /></PaidOperationalGuard>} />
             <Route path="mais/automacao" element={<PaidOperationalGuard><AutomationSettingsPage /></PaidOperationalGuard>} />
             <Route path="mais/equipe" element={<PaidOperationalGuard><TeamSettingsPage /></PaidOperationalGuard>} />
+            <Route path="mais/servicos" element={<PaidOperationalGuard><ServiceCatalogPage /></PaidOperationalGuard>} />
+            <Route path="mais/catalogo" element={<PaidOperationalGuard><MaterialCatalogPage /></PaidOperationalGuard>} />
             <Route path="mais/agenda" element={<PaidOperationalGuard><AgendaSettingsPage /></PaidOperationalGuard>} />
           </Route>
         </Route>
