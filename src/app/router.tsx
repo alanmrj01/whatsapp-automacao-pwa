@@ -1,5 +1,6 @@
 import { lazy, Suspense, type ReactNode } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
 import { useEntitlements } from '../features/access/useEntitlements'
 import { ProtectedRoute, RoleGuard } from '../features/auth/ProtectedRoute'
@@ -50,7 +51,7 @@ function OnboardingGuard({children}:{children:ReactNode}) {
   const setup=useSetupStatus()
   if(!entitlement.isPaid)return children
   if(setup.isPending)return <div className="route-loading"><LoadingState/></div>
-  if(setup.isError)return children
+  if(setup.isError)return <div className="route-loading"><ErrorState onRetry={()=>void setup.refetch()}/></div>
   return setup.data?.onboarding_completed ? children : <Navigate to="/app/onboarding" replace/>
 }
 
