@@ -28,6 +28,7 @@ export type DashboardToday = {
   metrics:{waiting_count:number;in_progress_count:number;appointments_today_count:number;completed_today_count:number}
   upcoming_appointments:Appointment[]
 }
+
 export type Conversation = {
   id:string
   customer_id:string
@@ -39,6 +40,7 @@ export type Conversation = {
   unread_count:number
   priority:boolean
   pinned:boolean
+  manual_unread:boolean
   assignee_name:string|null
 }
 export type ConversationList = {items:Conversation[];page:number;page_size:number;total:number}
@@ -50,11 +52,46 @@ export type ConversationDetail = Conversation & {
   free_form_window_open:boolean
   free_form_window_expires_at:string|null
 }
-export type SetupStatus = {company:boolean;business_hours:boolean;automation:boolean;agenda:boolean;whatsapp:boolean;completed:number;total:5;next_step:'company'|'business_hours'|'automation'|'agenda'|'whatsapp'|'complete'}
-export type Business = {id:string;name:string;timezone:string;slot_interval_minutes:number;service_origin_address:string;default_travel_minutes:number|null;travel_fallback_allowed:boolean;travel_before_buffer_minutes:number;travel_after_buffer_minutes:number}
+
+export type SetupStep = 'company'|'team'|'business_hours'|'services'|'materials'|'agenda'|'whatsapp'|'complete'
+export type SetupStatus = {
+  company:boolean
+  team:boolean
+  business_hours:boolean
+  services:boolean
+  materials:boolean
+  agenda:boolean
+  whatsapp:boolean
+  completed:number
+  total:7
+  next_step:SetupStep
+  onboarding_completed:boolean
+  onboarding_completed_at:string|null
+  onboarding_version:number
+  blocking_reasons:string[]
+}
+
+export type Business = {
+  id:string
+  name:string
+  responsible_name:string|null
+  timezone:string
+  service_origin_address:string|null
+  slot_interval_minutes:number
+  interval_between_services_minutes:number|null
+  preparation_minutes:number|null
+  finishing_minutes:number|null
+  minimum_booking_notice_minutes:number|null
+  materials_catalog_reviewed:boolean
+  agenda_preferences_reviewed:boolean
+  onboarding_completed_at:string|null
+  onboarding_version:number
+}
+
 export type OperationalRole = 'technician'|'assistant'|'administrator'
 export type Employee = {id:string;name:string;active:boolean;operational_role:OperationalRole;service_ids:string[]}
 export type WorkingHours = {id:string;employee_id:string;employee_name:string;weekday:number;start_time:string;end_time:string}
+
 export type AutomationSettings = {
   assistant_enabled:boolean
   human_control_window_minutes:number
@@ -63,6 +100,33 @@ export type AutomationSettings = {
   handoff_message:string
   supported_options:string[]
 }
+export type AssistantExclusion = {
+  id:string
+  whatsapp_id:string
+  mode:'ignore'|'human_only'
+  label:string|null
+  reason:string|null
+  active:boolean
+}
+
 export type Customer = {id:string;name:string;phone:string|null}
-export type AssistantExclusion = {id:string;customer_id:string|null;customer_name:string;customer_phone:string|null;reason:string|null;active:boolean}
-export type Service = {id:string;name:string;duration_minutes:number;active:boolean}
+
+export type Service = {
+  id:string
+  name:string
+  duration_minutes:number
+  price:number|null
+  active:boolean
+  intent_examples:string[]
+}
+
+export type CatalogItem = {
+  id:string
+  kind:'material'|'equipment'
+  name:string
+  description:string|null
+  price:number|null
+  unit_label:string|null
+  preset_key:string|null
+  active:boolean
+}
