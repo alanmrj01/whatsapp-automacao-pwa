@@ -11,7 +11,7 @@ import { demoConversations } from '../../demo/operationalDemo'
 import { DemoDataNotice } from '../access/DemoDataNotice'
 import { useEntitlements } from '../access/useEntitlements'
 import { useUpgradePrompt } from '../access/upgradePromptContext'
-import { useArchiveConversation, useBusiness, useConversations, useSetConversationPinned, useSetConversationRead } from '../operations/api'
+import { useDeleteConversation, useBusiness, useConversations, useSetConversationPinned, useSetConversationRead } from '../operations/api'
 import type { Conversation, ConversationStatus } from '../operations/types'
 
 const labels = {waiting:'Aguardando',in_progress:'Em atendimento',answered:'Respondida'} as const
@@ -100,7 +100,7 @@ function RealConversationList({items,timezone}:{items:Conversation[];timezone:st
   const [deleteTarget,setDeleteTarget]=useState<Conversation|null>(null)
   const pin=useSetConversationPinned()
   const read=useSetConversationRead()
-  const archive=useArchiveConversation()
+  const archive=useDeleteConversation()
   if(!items.length)return <EmptyState icon={MessageCircleMore} title="Nenhuma conversa" description="A fila não possui itens para este filtro."/>
   return <>
     <section className="conversation-list" aria-live="polite">
@@ -116,7 +116,7 @@ function RealConversationList({items,timezone}:{items:Conversation[];timezone:st
           <button className="conversation-menu-trigger" type="button" aria-label={`Opções de ${item.customer_name}`} aria-expanded={menuId===item.id} onClick={()=>setMenuId(value=>value===item.id?null:item.id)}><MoreVertical size={19}/></button>
           {menuId===item.id&&<div className="conversation-menu" role="menu">
             <button type="button" role="menuitem" disabled={pin.isPending} onClick={()=>{pin.mutate({id:item.id,pinned:!item.pinned});setMenuId(null)}}>{item.pinned?<PinOff size={17}/>:<Pin size={17}/>} {item.pinned?'Desafixar conversa':'Fixar conversa'}</button>
-            <button type="button" role="menuitem" disabled={read.isPending} onClick={()=>{read.mutate({id:item.id,unread:item.unread_count===0});setMenuId(null)}}><CheckCheck size={17}/> {item.unread_count>0?'Marcar como lida':'Marcar como não lida'}</button>
+            <button type="button" role="menuitem" disabled={read.isPending} onClick={()=>{read.mutate({id:item.id,read:item.unread_count>0});setMenuId(null)}}><CheckCheck size={17}/> {item.unread_count>0?'Marcar como lida':'Marcar como não lida'}</button>
             <button className="is-danger" type="button" role="menuitem" onClick={()=>{setDeleteTarget(item);setMenuId(null)}}><Trash2 size={17}/>Excluir conversa</button>
           </div>}
         </div>
