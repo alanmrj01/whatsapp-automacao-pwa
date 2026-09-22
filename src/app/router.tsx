@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { LoadingState } from '../components/LoadingState'
 import { useEntitlements } from '../features/access/useEntitlements'
 import { ProtectedRoute, RoleGuard } from '../features/auth/ProtectedRoute'
+import { useSetupStatus } from '../features/operations/api'
 
 const AgendaPage = lazy(async () => ({default:(await import('../features/appointments/AgendaPage')).AgendaPage}))
 const ConversationsPage = lazy(async () => ({default:(await import('../features/conversations/ConversationsPage')).ConversationsPage}))
@@ -16,12 +17,14 @@ const AccountPages = () => import('../features/more/AccountPages')
 const UserSettingsPage = lazy(async () => ({default:(await AccountPages()).UserSettingsPage}))
 const SecuritySettingsPage = lazy(async () => ({default:(await AccountPages()).SecuritySettingsPage}))
 const PrivacySettingsPage = lazy(async () => ({default:(await AccountPages()).PrivacySettingsPage}))
-const OperationalSettings = () => import('../features/more/OperationalSettingsPages')
-const AgendaSettingsPage = lazy(async () => ({default:(await OperationalSettings()).AgendaSettingsPage}))
-const AutomationSettingsPage = lazy(async () => ({default:(await OperationalSettings()).AutomationSettingsPage}))
-const CompanySettingsPage = lazy(async () => ({default:(await OperationalSettings()).CompanySettingsPage}))
-const TeamSettingsPage = lazy(async () => ({default:(await OperationalSettings()).TeamSettingsPage}))
-const WorkingHoursSettingsPage = lazy(async () => ({default:(await OperationalSettings()).WorkingHoursSettingsPage}))
+const AgendaSettingsPage = lazy(async () => ({default:(await import('../features/more/AgendaSettingsPage')).AgendaSettingsPage}))
+const AutomationSettingsPage = lazy(async () => ({default:(await import('../features/more/AutomationSettingsPage')).AutomationSettingsPage}))
+const CompanySettingsPage = lazy(async () => ({default:(await import('../features/more/CompanySettingsPage')).CompanySettingsPage}))
+const ServiceCatalogPage = lazy(async () => ({default:(await import('../features/more/ServiceCatalogPage')).ServiceCatalogPage}))
+const MaterialsCatalogPage = lazy(async () => ({default:(await import('../features/more/MaterialsCatalogPage')).MaterialsCatalogPage}))
+const TeamSettingsPage = lazy(async () => ({default:(await import('../features/more/TeamSettingsPage')).TeamSettingsPage}))
+const WorkingHoursSettingsPage = lazy(async () => ({default:(await import('../features/more/WorkingHoursSettingsPage')).WorkingHoursSettingsPage}))
+const OnboardingPage = lazy(async () => ({default:(await import('../features/onboarding/OnboardingPage')).OnboardingPage}))
 const ApiOnlyInfoPage = lazy(async () => ({default:(await import('../features/whatsapp/ApiOnlyInfoPage')).ApiOnlyInfoPage}))
 const CoexistenceInfoPage = lazy(async () => ({default:(await import('../features/whatsapp/CoexistenceInfoPage')).CoexistenceInfoPage}))
 const WhatsAppPage = lazy(async () => ({default:(await import('../features/whatsapp/WhatsAppPage')).WhatsAppPage}))
@@ -41,6 +44,16 @@ function PaidOperationalGuard({children}:{children:ReactNode}) {
   return entitlement.isPaid ? children : <Navigate to="/app/mais" replace/>
 }
 
+
+function OnboardingGuard({children}:{children:ReactNode}) {
+  const entitlement=useEntitlements()
+  const setup=useSetupStatus()
+  if(!entitlement.isPaid)return children
+  if(setup.isPending)return <div className="route-loading"><LoadingState/></div>
+  if(setup.isError)return children
+  return setup.data?.onboarding_completed ? children : <Navigate to="/app/onboarding" replace/>
+}
+
 export function AppRouter() {
   return (
     <Deferred>
@@ -53,7 +66,8 @@ export function AppRouter() {
           <Route path="/admin/preview" element={<PlatformPreviewPage />} />
         </Route>
         <Route element={<ProtectedRoute />}>
-          <Route path="/app" element={<AppShell />}>
+          <Route path="/app/onboarding" element={<PaidOperationalGuard><OnboardingPage /></PaidOperationalGuard>} />
+          <Route path="/app" element={<OnboardingGuard><AppShell /></OnboardingGuard>}>
             <Route index element={<DashboardPage />} />
             <Route path="agenda" element={<AgendaPage />} />
             <Route path="conversas" element={<ConversationsPage />} />
@@ -69,6 +83,8 @@ export function AppRouter() {
             <Route path="mais/seguranca" element={<SecuritySettingsPage />} />
             <Route path="mais/privacidade" element={<PrivacySettingsPage />} />
             <Route path="mais/empresa" element={<PaidOperationalGuard><CompanySettingsPage /></PaidOperationalGuard>} />
+            <Route path="mais/servicos" element={<PaidOperationalGuard><ServiceCatalogPage /></PaidOperationalGuard>} />
+            <Route path="mais/catalogo" element={<PaidOperationalGuard><MaterialsCatalogPage /></PaidOperationalGuard>} />
             <Route path="mais/horarios" element={<PaidOperationalGuard><WorkingHoursSettingsPage /></PaidOperationalGuard>} />
             <Route path="mais/automacao" element={<PaidOperationalGuard><AutomationSettingsPage /></PaidOperationalGuard>} />
             <Route path="mais/equipe" element={<PaidOperationalGuard><TeamSettingsPage /></PaidOperationalGuard>} />
