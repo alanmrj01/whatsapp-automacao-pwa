@@ -1,9 +1,11 @@
-import { Outlet, useLocation } from 'react-router-dom'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { AppHeader } from '../components/AppHeader'
 import { BottomNavigation } from '../components/BottomNavigation'
 import { DesktopSidebar } from '../components/DesktopSidebar'
 import { BusinessSelector } from '../features/auth/BusinessSelector'
 import { UpgradePromptProvider } from '../features/access/UpgradePrompt'
+import { useEntitlements } from '../features/access/useEntitlements'
+import { useSetupStatus } from '../features/operations/api'
 
 const titles: Record<string, string> = {
   '/app': 'Início',
@@ -20,11 +22,27 @@ const titles: Record<string, string> = {
 
 export function AppShell() {
   const { pathname } = useLocation()
+  const entitlement = useEntitlements()
+  const setup = useSetupStatus()
+  const isOnboarding = pathname === '/app/onboarding'
+  const onboardingRequired = entitlement.isPaid && setup.data && !setup.data.onboarding_completed
   const isConversationDetail = /^\/app\/conversas\/[^/]+$/.test(pathname)
   const isWhatsAppDetail = pathname.startsWith('/app/whatsapp/')
   const isSettingsDetail = pathname.startsWith('/app/mais/')
   const isDetail = isWhatsAppDetail||isSettingsDetail
   const title = titles[pathname] ?? 'Conectar WhatsApp'
+
+  if (onboardingRequired && !isOnboarding) {
+    return <Navigate to="/app/onboarding" replace />
+  }
+
+  if (isOnboarding) {
+    return (
+      <UpgradePromptProvider>
+        <Outlet />
+      </UpgradePromptProvider>
+    )
+  }
 
   if (isConversationDetail) {
     return (
