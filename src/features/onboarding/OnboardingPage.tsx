@@ -1,5 +1,6 @@
 import { CheckCircle2, ChevronLeft, ChevronRight, LoaderCircle, MessageCircleMore, Plus, Snowflake } from 'lucide-react'
-import { FormEvent, useState } from 'react'
+import { useState } from 'react'
+import type { FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ErrorState } from '../../components/ErrorState'
 import { LoadingState } from '../../components/LoadingState'
