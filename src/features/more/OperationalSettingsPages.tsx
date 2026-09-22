@@ -145,18 +145,18 @@ function AgendaAvailabilityForm({business,canEdit}:{business:Business;canEdit:bo
     minimum_booking_notice_minutes:toOptionalNumber(notice),
   },{onSuccess:()=>setSaved(true)})
   return <form className="settings-form" onSubmit={event=>{event.preventDefault();setSaved(false);submit()}}>
-    <OptionalSetting label="Intervalo entre um serviço e outro" value={gap} setValue={setGap} help="Tempo adicional entre atendimentos. Em branco, o ALOVIA decide conforme o serviço e a logística."/>
-    <OptionalSetting label="Tempo de preparação" value={preparation} setValue={setPreparation} help="Tempo para organizar ferramentas e materiais. Em branco, o ALOVIA calcula automaticamente."/>
-    <OptionalSetting label="Tempo após finalizar o serviço" value={completion} setValue={setCompletion} help="Tempo para guardar equipamentos e encerrar o atendimento. Em branco, o ALOVIA calcula automaticamente."/>
-    <OptionalSetting label="Antecedência mínima para um novo agendamento" value={notice} setValue={setNotice} max={10080} help="Em branco, o ALOVIA decide a antecedência adequada."/>
+    <OptionalSetting label="Intervalo entre um serviço e outro" value={gap} setValue={setGap} disabled={!canEdit} help="Tempo adicional entre atendimentos. Em branco, o ALOVIA decide conforme o serviço e a logística."/>
+    <OptionalSetting label="Tempo de preparação" value={preparation} setValue={setPreparation} disabled={!canEdit} help="Tempo para organizar ferramentas e materiais. Em branco, o ALOVIA calcula automaticamente."/>
+    <OptionalSetting label="Tempo após finalizar o serviço" value={completion} setValue={setCompletion} disabled={!canEdit} help="Tempo para guardar equipamentos e encerrar o atendimento. Em branco, o ALOVIA calcula automaticamente."/>
+    <OptionalSetting label="Antecedência mínima para um novo agendamento" value={notice} setValue={setNotice} disabled={!canEdit} max={10080} help="Em branco, o ALOVIA decide a antecedência adequada."/>
     <p className="settings-note">O deslocamento não é um campo manual: no primeiro atendimento o ALOVIA parte do endereço da empresa; nos seguintes, considera a localização do atendimento anterior e a agenda do técnico.</p>
     {update.isError&&<MutationError/>}{saved&&<p className="form-success">Configuração da agenda salva.</p>}
     {canEdit&&<button className="primary-button" disabled={update.isPending}><Save size={18}/>{update.isPending?'Salvando…':'Salvar agenda e disponibilidade'}</button>}
   </form>
 }
 
-function OptionalSetting({label,value,setValue,help,max=50}:{label:string;value:string;setValue:(value:string)=>void;help:string;max?:number}) {
-  return <label>{label}<input type="number" min={0} max={max} value={value} disabled={false} onChange={event=>setValue(event.target.value)} placeholder="Automático pelo ALOVIA"/><small className="settings-field-help">{help}</small></label>
+function OptionalSetting({label,value,setValue,help,disabled,max=50}:{label:string;value:string;setValue:(value:string)=>void;help:string;disabled:boolean;max?:number}) {
+  return <label>{label}<input type="number" min={0} max={max} value={value} disabled={disabled} onChange={event=>setValue(event.target.value)} placeholder="Automático pelo ALOVIA"/><small className="settings-field-help">{help}</small></label>
 }
 
 function toInput(value:number|null) {return value===null?'':String(value)}
