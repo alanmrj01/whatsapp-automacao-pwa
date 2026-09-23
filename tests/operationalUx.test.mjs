@@ -55,12 +55,35 @@ test('paid accounts are guided through seven persisted onboarding steps before n
   assert.match(router,/setup\.data\?\.onboarding_completed \? children : <Navigate to="\/app\/onboarding" replace\/>/)
 })
 
+test('company hours are configured independently from technicians and support weekdays plus weekends', () => {
+  const onboarding = read('src/features/onboarding/OnboardingPage.tsx')
+  const settings = read('src/features/more/WorkingHoursSettingsPage.tsx')
+  const operations = read('src/features/operations/api.ts')
+  assert.match(onboarding,/Dias da semana/)
+  assert.match(onboarding,/Selecionar segunda a sexta/)
+  assert.doesNotMatch(onboarding,/label>Técnico<select/)
+  assert.match(onboarding,/finais de semana e feriados nacionais/i)
+  assert.match(settings,/useBusinessHours/)
+  assert.match(operations,/\/business-hours/)
+})
+
+test('paid WhatsApp connection supports explicit disconnect without keeping marketing content', () => {
+  const whatsapp = read('src/features/whatsapp/WhatsAppPage.tsx')
+  const connection = read('src/features/whatsapp/useConnection.ts')
+  assert.match(whatsapp,/Desconectar WhatsApp/)
+  assert.match(whatsapp,/Confirmar desconexão/)
+  assert.match(connection,/\/whatsapp\/disconnect/)
+  const paidSection = whatsapp.slice(whatsapp.indexOf("if (connection.isPending)"))
+  assert.doesNotMatch(paidSection,/O diferencial da Alovia/)
+})
+
 test('materials onboarding supports an explicit no-separate-charge decision and simple units', () => {
   const onboarding = read('src/features/onboarding/OnboardingPage.tsx')
   const materials = read('src/features/more/MaterialsCatalogPage.tsx')
   const operations = read('src/features/operations/api.ts')
   assert.match(onboarding,/Minha empresa não cobra materiais adicionais separadamente/)
-  assert.match(onboarding,/materials_catalog_reviewed:checked/)
+  assert.match(onboarding,/materials_catalog_reviewed:true/)
+  assert.match(onboarding,/remove\.mutateAsync\(item\.id\)/)
   assert.match(materials,/Minha empresa não cobra materiais adicionais separadamente/)
   for (const unit of ['metro','unidade','kit','valor fixo']) assert.match(materials,new RegExp(`value:'${unit}'`))
   assert.match(materials,/unit_label:unit/)
