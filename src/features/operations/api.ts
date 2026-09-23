@@ -19,6 +19,7 @@ import type {
   Employee,
   OperationalRole,
   OperationalNotification,
+  PostalAddressLookup,
   Service,
   SetupStatus,
   WorkingHours,
@@ -132,6 +133,10 @@ export function useBusiness() {
   const context=usePaidContext()
   return useQuery({queryKey:[...root(context.businessId),'business'],queryFn:({signal})=>api.request<Business>('/business',{signal}),enabled:context.enabled,retry:false})
 }
+export function lookupPostalCode(postalCode:string) {
+  const digits=postalCode.replace(/\D/g,'')
+  return api.request<PostalAddressLookup>(`/address/cep/${digits}`)
+}
 export function useUpdateBusiness() {
   const context=usePaidContext()
   return useMutation({mutationFn:(values:Partial<Pick<Business,
@@ -181,6 +186,10 @@ export function useCreateEmployee() {
 export function useUpdateEmployee() {
   const context=usePaidContext()
   return useMutation({mutationFn:({id,values}:{id:string;values:Partial<Pick<Employee,'name'|'active'|'operational_role'>>})=>paidMutation(context,()=>api.request<Employee>(`/employees/${id}`,{method:'PATCH',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'employees','setup')})
+}
+export function useDeleteEmployee() {
+  const context=usePaidContext()
+  return useMutation({mutationFn:(id:string)=>paidMutation(context,()=>api.request<void>(`/employees/${id}`,{method:'DELETE'})),onSuccess:()=>invalidate(context.businessId,'employees','setup','working-hours')})
 }
 export function useUpdateEmployeeServices() {
   const context=usePaidContext()
