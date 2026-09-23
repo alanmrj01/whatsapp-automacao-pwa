@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Check, MapPin, MessageCircleMore, Plus, Save, Trash2, Wrench } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, MapPin, MessageCircleMore, Pencil, Plus, Save, Trash2, Wrench } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { ErrorState } from '../../components/ErrorState'
@@ -16,13 +16,16 @@ import {
   useCreateEmployee,
   useCreateService,
   useDeleteCatalogItem,
+  useDeleteEmployee,
   useDeleteService,
   useEmployees,
+  lookupPostalCode,
   useServices,
   useSetupStatus,
   useUpdateBusiness,
   useUpdateBusinessHours,
   useUpdateCatalogItem,
+  useUpdateEmployee,
   useUpdateService,
 } from '../operations/api'
 import type { CatalogItem } from '../operations/types'
@@ -105,56 +108,168 @@ function CompanyStep({onNext}:{onNext:()=>void}){
   const data=business.data
   const [name,setName]=useState('')
   const [responsible,setResponsible]=useState('')
-  const [address,setAddress]=useState('')
+  const [postalCode,setPostalCode]=useState('')
+  const [street,setStreet]=useState('')
+  const [neighborhood,setNeighborhood]=useState('')
+  const [number,setNumber]=useState('')
+  const [city,setCity]=useState('')
+  const [state,setState]=useState('')
   const [timezone,setTimezone]=useState('America/Sao_Paulo')
+  const [validatedPostalCode,setValidatedPostalCode]=useState('')
+  const [postalStatus,setPostalStatus]=useState<'idle'|'loading'|'valid'|'invalid'>('idle')
+  const [postalMessage,setPostalMessage]=useState('')
+  const [attempted,setAttempted]=useState(false)
 
   useEffect(()=>{
     if(!data)return
     setName(data.name)
     setResponsible(data.responsible_name??'')
-    setAddress(data.service_origin_address??'')
+    setPostalCode(data.service_origin_postal_code??'')
+    setStreet(data.service_origin_street??'')
+    setNeighborhood(data.service_origin_neighborhood??'')
+    setNumber(data.service_origin_number??'')
+    setCity(data.service_origin_city??'')
+    setState(data.service_origin_state??'')
     setTimezone(data.timezone)
+    if(data.service_origin_postal_code&&data.service_origin_validated_at){
+      setValidatedPostalCode(data.service_origin_postal_code)
+      setPostalStatus('valid')
+    }
   },[data])
 
   if(business.isPending)return <LoadingState/>
   if(business.isError||!data)return <ErrorState onRetry={()=>void business.refetch()}/>
-  const valid=name.trim().length>=2&&responsible.trim().length>=2&&address.trim().length>=5
+
+  const postalDigits=postalCode.replace(/\D/g,'')
+  const missing={
+    name:name.trim().length<2,
+    responsible:responsible.trim().length<2,
+    postal:postalDigits.length!==8||validatedPostalCode!==postalDigits||postalStatus!=='valid',
+    street:street.trim().length<2,
+    neighborhood:neighborhood.trim().length<2,
+    number:number.trim().length<1,
+    city:city.trim().length<2,
+  }
+
+  const resolvePostalCode=async()=>{
+    const digits=postalCode.replace(/\D/g,'')
+    if(digits.length!==8){
+      setPostalStatus('invalid')
+      setValidatedPostalCode('')
+      setPostalMessage('Informe um CEP com 8 números.')
+      return null
+    }
+    setPostalStatus('loading')
+    setPostalMessage('Validando CEP…')
+    try{
+      const address=await lookupPostalCode(digits)
+      setPostalCode(formatPostalCode(address.postal_code))
+      if(address.street)setStreet(address.street)
+      if(address.neighborhood)setNeighborhood(address.neighborhood)
+      setCity(address.city)
+      setState(address.state)
+      setValidatedPostalCode(address.postal_code)
+      setPostalStatus('valid')
+      setPostalMessage('CEP validado. Confira o número antes de continuar.')
+      return address
+    }catch{
+      setPostalStatus('invalid')
+      setValidatedPostalCode('')
+      setPostalMessage('CEP não encontrado ou indisponível para validação.')
+      return null
+    }
+  }
+
   return <StepCard number={1} title="Dados da empresa" description="Preencha as informações básicas que o ALOVIA usa para identificar sua operação e calcular o primeiro deslocamento do dia.">
-    <form className="onboarding-form" onSubmit={async event=>{
+    <form className="onboarding-form" noValidate onSubmit={async event=>{
       event.preventDefault()
-      if(!valid)return
-      await update.mutateAsync({name:name.trim(),responsible_name:responsible.trim(),service_origin_address:address.trim(),timezone})
+      setAttempted(true)
+      const lookup=validatedPostalCode===postalDigits&&postalStatus==='valid'?null:await resolvePostalCode()
+      const finalPostal=lookup?.postal_code??postalDigits
+      const finalStreet=(lookup?.street||street).trim()
+      const finalNeighborhood=(lookup?.neighborhood||neighborhood).trim()
+      const finalCity=(lookup?.city||city).trim()
+      const finalState=(lookup?.state||state).trim().toUpperCase()
+      if(name.trim().length<2||responsible.trim().length<2||finalPostal.length!==8||finalStreet.length<2||finalNeighborhood.length<2||!number.trim()||finalCity.length<2||finalState.length!==2)return
+      await update.mutateAsync({
+        name:name.trim(),
+        responsible_name:responsible.trim(),
+        service_origin_postal_code:finalPostal,
+        service_origin_street:finalStreet,
+        service_origin_neighborhood:finalNeighborhood,
+        service_origin_number:number.trim(),
+        service_origin_city:finalCity,
+        service_origin_state:finalState,
+        timezone,
+      })
       await setup.refetch()
       onNext()
     }}>
-      <label>Nome da empresa<input required value={name} onChange={event=>setName(event.target.value)}/></label>
-      <label>Responsável pela empresa<input required value={responsible} onChange={event=>setResponsible(event.target.value)}/></label>
-      <label>Endereço de saída para o primeiro atendimento<div className="field-with-icon"><MapPin size={18}/><input required value={address} onChange={event=>setAddress(event.target.value)} placeholder="Rua, número, bairro, cidade - UF"/></div></label>
-      <label>Fuso horário<input required value={timezone} onChange={event=>setTimezone(event.target.value)}/></label>
+      <label><RequiredLabel>Nome da empresa</RequiredLabel><input className={attempted&&missing.name?'field-invalid':''} aria-invalid={attempted&&missing.name} value={name} onChange={event=>setName(event.target.value)}/>{attempted&&missing.name&&<FieldError>Informe o nome da empresa.</FieldError>}</label>
+      <label><RequiredLabel>Responsável pela empresa</RequiredLabel><input className={attempted&&missing.responsible?'field-invalid':''} aria-invalid={attempted&&missing.responsible} value={responsible} onChange={event=>setResponsible(event.target.value)}/>{attempted&&missing.responsible&&<FieldError>Informe o responsável pela empresa.</FieldError>}</label>
+
+      <section className="company-address-section">
+        <div className="company-address-heading"><MapPin size={19}/><div><strong>Endereço da Empresa</strong><span>Endereço de saída dos técnicos</span></div></div>
+        <label><RequiredLabel>CEP</RequiredLabel><input inputMode="numeric" maxLength={9} className={attempted&&missing.postal?'field-invalid':''} aria-invalid={attempted&&missing.postal} value={postalCode} onChange={event=>{setPostalCode(formatPostalCode(event.target.value));setPostalStatus('idle');setValidatedPostalCode('');setPostalMessage('')}} onBlur={()=>void resolvePostalCode()} placeholder="00000-000"/>{postalMessage&&<small className={postalStatus==='invalid'?'field-error':'field-help'}>{postalMessage}</small>}</label>
+        <div className="address-grid">
+          <label><RequiredLabel>Rua</RequiredLabel><input className={attempted&&missing.street?'field-invalid':''} aria-invalid={attempted&&missing.street} value={street} onChange={event=>setStreet(event.target.value)}/>{attempted&&missing.street&&<FieldError>Informe a rua.</FieldError>}</label>
+          <label><RequiredLabel>Bairro</RequiredLabel><input className={attempted&&missing.neighborhood?'field-invalid':''} aria-invalid={attempted&&missing.neighborhood} value={neighborhood} onChange={event=>setNeighborhood(event.target.value)}/>{attempted&&missing.neighborhood&&<FieldError>Informe o bairro.</FieldError>}</label>
+          <label><RequiredLabel>Número</RequiredLabel><input className={attempted&&missing.number?'field-invalid':''} aria-invalid={attempted&&missing.number} value={number} onChange={event=>setNumber(event.target.value)} placeholder="Ex.: 160"/>{attempted&&missing.number&&<FieldError>Informe o número.</FieldError>}</label>
+          <label><RequiredLabel>Cidade</RequiredLabel><input className={attempted&&missing.city?'field-invalid':''} aria-invalid={attempted&&missing.city} value={city} onChange={event=>setCity(event.target.value)}/>{attempted&&missing.city&&<FieldError>Informe a cidade.</FieldError>}</label>
+        </div>
+        {state&&<small className="field-help">UF identificada pelo CEP: <strong>{state}</strong></small>}
+        <div className="onboarding-info onboarding-info--important"><strong>Validação do endereço</strong><span>O CEP é validado antes do salvamento e os campos de rua, bairro, cidade e UF precisam permanecer coerentes com ele. O número também é obrigatório para reduzir erros no cálculo de deslocamento.</span></div>
+      </section>
+
+      <label><RequiredLabel>Fuso horário</RequiredLabel><input value={timezone} readOnly aria-readonly="true"/></label>
       {update.isError&&<MutationError/>}
-      <StepActions nextLabel={update.isPending?'Salvando…':'Salvar e ir para a próxima etapa'} nextDisabled={!valid||update.isPending}/>
+      <StepActions nextLabel={update.isPending?'Salvando…':'Salvar e ir para a próxima etapa'} nextDisabled={update.isPending||postalStatus==='loading'}/>
     </form>
   </StepCard>
 }
 
 function TeamStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
-  const employees=useEmployees(),create=useCreateEmployee(),setup=useSetupStatus()
+  const employees=useEmployees(),create=useCreateEmployee(),update=useUpdateEmployee(),remove=useDeleteEmployee(),setup=useSetupStatus()
   const [name,setName]=useState('')
+  const [editingId,setEditingId]=useState<string|null>(null)
+  const [editingName,setEditingName]=useState('')
+  const [attempted,setAttempted]=useState(false)
   const technicians=employees.data?.items.filter(item=>item.active&&item.operational_role==='technician')??[]
   if(employees.isPending)return <LoadingState/>
   if(employees.isError||!employees.data)return <ErrorState onRetry={()=>void employees.refetch()}/>
+
   const add=async()=>{
-    if(!name.trim())return
+    setAttempted(true)
+    if(name.trim().length<2)return
     await create.mutateAsync({name:name.trim(),operational_role:'technician'})
     setName('')
+    setAttempted(false)
     await setup.refetch()
   }
+  const saveEdit=async(id:string)=>{
+    if(editingName.trim().length<2)return
+    await update.mutateAsync({id,values:{name:editingName.trim()}})
+    setEditingId(null);setEditingName('')
+  }
+  const deleteTechnician=async(id:string)=>{
+    await remove.mutateAsync(id)
+    if(editingId===id){setEditingId(null);setEditingName('')}
+    await setup.refetch()
+  }
+
   return <StepCard number={2} title="Técnico responsável" description="Cadastre pelo menos um técnico. Ele poderá ser alocado a qualquer serviço; não é necessário vincular serviços ao profissional.">
     <div className="onboarding-form">
-      <label>Nome do técnico<div className="inline-create"><input value={name} onChange={event=>setName(event.target.value)} placeholder="Nome do profissional"/><button className="compact-button" type="button" disabled={!name.trim()||create.isPending} onClick={()=>void add()}><Plus size={16}/>Adicionar</button></div></label>
-      {technicians.length>0&&<div className="onboarding-check-list">{technicians.map(item=><span key={item.id}><Check size={16}/>{item.name}</span>)}</div>}
-      {create.isError&&<MutationError/>}
-      <StepActions onBack={onBack} onNext={onNext} nextDisabled={!technicians.length} nextLabel="Próxima etapa"/>
+      <label><RequiredLabel>Nome do técnico</RequiredLabel><div className="inline-create"><input className={attempted&&name.trim().length<2?'field-invalid':''} aria-invalid={attempted&&name.trim().length<2} value={name} onChange={event=>setName(event.target.value)} placeholder="Nome do profissional"/><button className="compact-button" type="button" disabled={create.isPending} onClick={()=>void add()}><Plus size={16}/>Adicionar</button></div>{attempted&&name.trim().length<2&&<FieldError>Informe o nome do técnico.</FieldError>}</label>
+      {technicians.length>0&&<div className="technician-list">{technicians.map(item=><div className="technician-row" key={item.id}>
+        {editingId===item.id?<input className={editingName.trim().length<2?'field-invalid':''} value={editingName} onChange={event=>setEditingName(event.target.value)} autoFocus/>:<span><Check size={16}/><strong>{item.name}</strong></span>}
+        <div className="row-icon-actions">
+          {editingId===item.id?<button className="icon-edit-button" type="button" aria-label={`Salvar nome de ${item.name}`} disabled={update.isPending||editingName.trim().length<2} onClick={()=>void saveEdit(item.id)}><Check size={17}/></button>:<button className="icon-edit-button" type="button" aria-label={`Editar ${item.name}`} onClick={()=>{setEditingId(item.id);setEditingName(item.name)}}><Pencil size={17}/></button>}
+          <button className="icon-danger-button" type="button" aria-label={`Excluir ${item.name}`} disabled={remove.isPending} onClick={()=>void deleteTechnician(item.id)}><Trash2 size={17}/></button>
+        </div>
+      </div>)}</div>}
+      {attempted&&!technicians.length&&<p className="form-error" role="alert">Adicione pelo menos um técnico para continuar.</p>}
+      {(create.isError||update.isError||remove.isError)&&<MutationError/>}
+      <StepActions onBack={onBack} onNext={()=>{setAttempted(true);if(technicians.length)onNext()}} nextDisabled={create.isPending||update.isPending||remove.isPending} nextLabel="Próxima etapa"/>
     </div>
   </StepCard>
 }
@@ -167,6 +282,7 @@ function HoursStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
   const [weekendEnabled,setWeekendEnabled]=useState(false)
   const [weekendStart,setWeekendStart]=useState('08:00')
   const [weekendEnd,setWeekendEnd]=useState('12:00')
+  const [attempted,setAttempted]=useState(false)
 
   useEffect(()=>{
     if(!hours.data)return
@@ -182,8 +298,9 @@ function HoursStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
   if(hours.isError)return <ErrorState onRetry={()=>void hours.refetch()}/>
 
   const toggleDay=(day:number)=>setSelectedDays(current=>current.includes(day)?current.filter(item=>item!==day):[...current,day].sort())
-  const valid=selectedDays.length>0&&end>start&&(!weekendEnabled||weekendEnd>weekendStart)
+  const valid=selectedDays.length>0&&!!start&&!!end&&end>start&&(!weekendEnabled||!!weekendStart&&!!weekendEnd&&weekendEnd>weekendStart)
   const save=async()=>{
+    setAttempted(true)
     if(!valid)return
     await update.mutateAsync({
       weekdays:selectedDays,
@@ -199,24 +316,27 @@ function HoursStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
 
   return <StepCard number={3} title="Horários de funcionamento" description="Defina quando a empresa atende. Esta etapa representa o horário da operação — não a escala individual de cada técnico.">
     <div className="onboarding-form">
-      <fieldset className="onboarding-fieldset">
-        <legend>Dias da semana</legend>
+      <fieldset className={attempted&&!selectedDays.length?'onboarding-fieldset fieldset-invalid':'onboarding-fieldset'}>
+        <legend><RequiredLabel>Dias da semana</RequiredLabel></legend>
         <div className="weekday-selector">
           {regularWeekdays.map((label,index)=><label className={selectedDays.includes(index)?'weekday-chip is-selected':'weekday-chip'} key={label}><input type="checkbox" checked={selectedDays.includes(index)} onChange={()=>toggleDay(index)}/><span>{label}</span></label>)}
         </div>
         <button className="text-button" type="button" onClick={()=>setSelectedDays([0,1,2,3,4])}>Selecionar segunda a sexta</button>
+        {attempted&&!selectedDays.length&&<FieldError>Selecione pelo menos um dia.</FieldError>}
       </fieldset>
-      <div className="form-grid"><label>Início do atendimento<input type="time" value={start} onChange={event=>setStart(event.target.value)}/></label><label>Fim do atendimento<input type="time" value={end} onChange={event=>setEnd(event.target.value)}/></label></div>
+      <div className="form-grid"><label><RequiredLabel>Início do atendimento</RequiredLabel><input className={attempted&&!start?'field-invalid':''} type="time" value={start} onChange={event=>setStart(event.target.value)}/></label><label><RequiredLabel>Fim do atendimento</RequiredLabel><input className={attempted&&(!end||end<=start)?'field-invalid':''} type="time" value={end} onChange={event=>setEnd(event.target.value)}/>{attempted&&end<=start&&<FieldError>O fim precisa ser depois do início.</FieldError>}</label></div>
       <label className="onboarding-choice">
         <input type="checkbox" checked={weekendEnabled} onChange={event=>setWeekendEnabled(event.target.checked)}/>
         <span><strong>Também atendemos em finais de semana e feriados nacionais</strong><small>Use um horário específico para sábados, domingos e feriados nacionais reconhecidos pelo ALOVIA.</small></span>
       </label>
-      {weekendEnabled&&<div className="form-grid"><label>Início — finais de semana/feriados<input type="time" value={weekendStart} onChange={event=>setWeekendStart(event.target.value)}/></label><label>Fim — finais de semana/feriados<input type="time" value={weekendEnd} onChange={event=>setWeekendEnd(event.target.value)}/></label></div>}
+      {weekendEnabled&&<div className="form-grid"><label><RequiredLabel>Início — finais de semana/feriados</RequiredLabel><input className={attempted&&!weekendStart?'field-invalid':''} type="time" value={weekendStart} onChange={event=>setWeekendStart(event.target.value)}/></label><label><RequiredLabel>Fim — finais de semana/feriados</RequiredLabel><input className={attempted&&(!weekendEnd||weekendEnd<=weekendStart)?'field-invalid':''} type="time" value={weekendEnd} onChange={event=>setWeekendEnd(event.target.value)}/>{attempted&&weekendEnd<=weekendStart&&<FieldError>O fim precisa ser depois do início.</FieldError>}</label></div>}
       {update.isError&&<MutationError/>}
-      <StepActions onBack={onBack} onNext={save} nextDisabled={!valid||update.isPending} nextLabel={update.isPending?'Salvando…':'Salvar e continuar'}/>
+      <StepActions onBack={onBack} onNext={save} nextDisabled={update.isPending} nextLabel={update.isPending?'Salvando…':'Salvar e continuar'}/>
     </div>
   </StepCard>
 }
+
+type ServiceDraft
 
 type ServiceDraft={name:string;duration:string;price:string}
 function ServicesStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
