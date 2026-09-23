@@ -9,6 +9,7 @@ import type {
   AssistantExclusion,
   AutomationSettings,
   Business,
+  BusinessHours,
   CatalogItem,
   ConversationDetail,
   ConversationList,
@@ -140,6 +141,18 @@ export function useUpdateBusiness() {
   >>)=>paidMutation(context,()=>api.request<Business>('/business',{method:'PATCH',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'business','setup')})
 }
 
+export function useBusinessHours() {
+  const context=usePaidContext()
+  return useQuery({queryKey:[...root(context.businessId),'business-hours'],queryFn:({signal})=>api.request<BusinessHours>('/business-hours',{signal}),enabled:context.enabled,retry:false})
+}
+export function useUpdateBusinessHours() {
+  const context=usePaidContext()
+  return useMutation({
+    mutationFn:(values:BusinessHours)=>paidMutation(context,()=>api.request<BusinessHours>('/business-hours',{method:'PUT',body:json(values)})),
+    onSuccess:()=>invalidate(context.businessId,'business-hours','setup','appointments','appointments-range'),
+  })
+}
+
 export function useAssistantExclusions() {
   const context=usePaidContext()
   return useQuery({queryKey:[...root(context.businessId),'assistant-exclusions'],queryFn:({signal})=>api.request<{items:AssistantExclusion[]}>('/automation/exclusions',{signal}),enabled:context.enabled,retry:false})
@@ -216,6 +229,11 @@ export function useCreateService() {
 export function useUpdateService() {
   const context=usePaidContext()
   return useMutation({mutationFn:({id,values}:{id:string;values:Partial<Pick<Service,'name'|'duration_minutes'|'price'|'active'|'intent_examples'>>})=>paidMutation(context,()=>api.request<Service>(`/services/${id}`,{method:'PATCH',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'services','setup')})
+}
+
+export function useDeleteService() {
+  const context=usePaidContext()
+  return useMutation({mutationFn:(id:string)=>paidMutation(context,()=>api.request<void>(`/services/${id}`,{method:'DELETE'})),onSuccess:()=>invalidate(context.businessId,'services','setup')})
 }
 
 export function useCatalogItems() {
