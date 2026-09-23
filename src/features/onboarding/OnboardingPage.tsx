@@ -1,5 +1,5 @@
-import { ArrowLeft, ArrowRight, Check, MapPin, MessageCircleMore, Plus, Save, Wrench } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { ArrowLeft, ArrowRight, Check, MapPin, MessageCircleMore, Plus, Save, Trash2, Wrench } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { ErrorState } from '../../components/ErrorState'
 import { LoadingState } from '../../components/LoadingState'
@@ -9,17 +9,21 @@ import { SessionActions } from '../auth/SessionActions'
 import { useAuth } from '../auth/useAuth'
 import {
   useBusiness,
+  useBusinessHours,
   useCatalogItems,
   useCompleteOnboarding,
+  useCreateCatalogItem,
   useCreateEmployee,
-  useCreateWorkingHours,
+  useCreateService,
+  useDeleteCatalogItem,
+  useDeleteService,
   useEmployees,
   useServices,
   useSetupStatus,
   useUpdateBusiness,
+  useUpdateBusinessHours,
   useUpdateCatalogItem,
   useUpdateService,
-  useWorkingHours,
 } from '../operations/api'
 import type { CatalogItem, Service } from '../operations/types'
 import { ConnectWhatsAppSheet } from '../whatsapp/ConnectWhatsAppSheet'
@@ -29,7 +33,14 @@ import './onboarding.css'
 
 const TOTAL_STEPS=7
 const weekdays=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo']
+const regularWeekdays=weekdays.slice(0,5)
 const stepNumber={company:1,team:2,business_hours:3,services:4,materials:5,agenda:6,whatsapp:7,complete:7} as const
+const unitOptions=[
+  {value:'metro',label:'Por metro'},
+  {value:'unidade',label:'Por unidade'},
+  {value:'kit',label:'Por kit'},
+  {value:'valor fixo',label:'Valor fixo'},
+] as const
 
 export function OnboardingPage(){
   const auth=useAuth()
@@ -41,9 +52,7 @@ export function OnboardingPage(){
   const navigate=useNavigate()
 
   useEffect(()=>{
-    if(setup.data&&!setup.data.onboarding_completed){
-      setStep(stepNumber[setup.data.next_step])
-    }
+    if(setup.data&&!setup.data.onboarding_completed)setStep(stepNumber[setup.data.next_step])
   },[setup.data])
 
   if(setup.isPending)return <OnboardingShell><LoadingState/></OnboardingShell>
@@ -151,94 +160,207 @@ function TeamStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
 }
 
 function HoursStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
-  const employees=useEmployees(),hours=useWorkingHours(),create=useCreateWorkingHours(),setup=useSetupStatus()
-  const technicians=employees.data?.items.filter(item=>item.active&&item.operational_role==='technician')??[]
-  const [employeeId,setEmployeeId]=useState('')
-  const [weekday,setWeekday]=useState(0)
+  const hours=useBusinessHours(),update=useUpdateBusinessHours(),setup=useSetupStatus()
+  const [selectedDays,setSelectedDays]=useState<number[]>([0,1,2,3,4])
   const [start,setStart]=useState('08:00')
   const [end,setEnd]=useState('18:00')
-  const ready=!!setup.data?.business_hours
-  if(employees.isPending||hours.isPending)return <LoadingState/>
-  const add=async()=>{
-    if(!employeeId)return
-    await create.mutateAsync({employee_id:employeeId,weekday,start_time:start,end_time:end})
+  const [weekendEnabled,setWeekendEnabled]=useState(false)
+  const [weekendStart,setWeekendStart]=useState('08:00')
+  const [weekendEnd,setWeekendEnd]=useState('12:00')
+
+  useEffect(()=>{
+    if(!hours.data)return
+    if(hours.data.weekdays.length)setSelectedDays(hours.data.weekdays)
+    if(hours.data.weekday_start_time)setStart(hours.data.weekday_start_time.slice(0,5))
+    if(hours.data.weekday_end_time)setEnd(hours.data.weekday_end_time.slice(0,5))
+    setWeekendEnabled(hours.data.weekend_holiday_enabled)
+    if(hours.data.weekend_holiday_start_time)setWeekendStart(hours.data.weekend_holiday_start_time.slice(0,5))
+    if(hours.data.weekend_holiday_end_time)setWeekendEnd(hours.data.weekend_holiday_end_time.slice(0,5))
+  },[hours.data])
+
+  if(hours.isPending)return <LoadingState/>
+  if(hours.isError)return <ErrorState onRetry={()=>void hours.refetch()}/>
+
+  const toggleDay=(day:number)=>setSelectedDays(current=>current.includes(day)?current.filter(item=>item!==day):[...current,day].sort())
+  const valid=selectedDays.length>0&&end>start&&(!weekendEnabled||weekendEnd>weekendStart)
+  const save=async()=>{
+    if(!valid)return
+    await update.mutateAsync({
+      weekdays:selectedDays,
+      weekday_start_time:start,
+      weekday_end_time:end,
+      weekend_holiday_enabled:weekendEnabled,
+      weekend_holiday_start_time:weekendEnabled?weekendStart:null,
+      weekend_holiday_end_time:weekendEnabled?weekendEnd:null,
+    })
     await setup.refetch()
+    onNext()
   }
-  return <StepCard number={3} title="Horários de funcionamento" description="Informe pelo menos uma faixa de trabalho. O ALOVIA só oferece horários em que existe um técnico trabalhando.">
+
+  return <StepCard number={3} title="Horários de funcionamento" description="Defina quando a empresa atende. Esta etapa representa o horário da operação — não a escala individual de cada técnico.">
     <div className="onboarding-form">
-      <label>Técnico<select value={employeeId} onChange={event=>setEmployeeId(event.target.value)}><option value="">Selecione</option>{technicians.map(item=><option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
-      <label>Dia<select value={weekday} onChange={event=>setWeekday(Number(event.target.value))}>{weekdays.map((label,index)=><option value={index} key={label}>{label}</option>)}</select></label>
-      <div className="form-grid"><label>Início<input type="time" value={start} onChange={event=>setStart(event.target.value)}/></label><label>Fim<input type="time" value={end} onChange={event=>setEnd(event.target.value)}/></label></div>
-      <button className="compact-button" type="button" disabled={!employeeId||create.isPending} onClick={()=>void add()}><Plus size={16}/>{create.isPending?'Adicionando…':'Adicionar horário'}</button>
-      {hours.data&&hours.data.items.length>0&&<div className="onboarding-check-list">{hours.data.items.map(item=><span key={item.id}><Check size={16}/>{weekdays[item.weekday]} · {item.start_time.slice(0,5)}–{item.end_time.slice(0,5)} · {item.employee_name}</span>)}</div>}
-      {create.isError&&<MutationError/>}
-      <StepActions onBack={onBack} onNext={onNext} nextDisabled={!ready}/>
+      <fieldset className="onboarding-fieldset">
+        <legend>Dias da semana</legend>
+        <div className="weekday-selector">
+          {regularWeekdays.map((label,index)=><label className={selectedDays.includes(index)?'weekday-chip is-selected':'weekday-chip'} key={label}><input type="checkbox" checked={selectedDays.includes(index)} onChange={()=>toggleDay(index)}/><span>{label}</span></label>)}
+        </div>
+        <button className="text-button" type="button" onClick={()=>setSelectedDays([0,1,2,3,4])}>Selecionar segunda a sexta</button>
+      </fieldset>
+      <div className="form-grid"><label>Início do atendimento<input type="time" value={start} onChange={event=>setStart(event.target.value)}/></label><label>Fim do atendimento<input type="time" value={end} onChange={event=>setEnd(event.target.value)}/></label></div>
+      <label className="onboarding-choice">
+        <input type="checkbox" checked={weekendEnabled} onChange={event=>setWeekendEnabled(event.target.checked)}/>
+        <span><strong>Também atendemos em finais de semana e feriados nacionais</strong><small>Use um horário específico para sábados, domingos e feriados nacionais reconhecidos pelo ALOVIA.</small></span>
+      </label>
+      {weekendEnabled&&<div className="form-grid"><label>Início — finais de semana/feriados<input type="time" value={weekendStart} onChange={event=>setWeekendStart(event.target.value)}/></label><label>Fim — finais de semana/feriados<input type="time" value={weekendEnd} onChange={event=>setWeekendEnd(event.target.value)}/></label></div>}
+      {update.isError&&<MutationError/>}
+      <StepActions onBack={onBack} onNext={save} nextDisabled={!valid||update.isPending} nextLabel={update.isPending?'Salvando…':'Salvar e continuar'}/>
     </div>
   </StepCard>
 }
 
+type ServiceDraft={name:string;duration:string;price:string}
 function ServicesStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
-  const services=useServices(),setup=useSetupStatus()
+  const services=useServices(),create=useCreateService(),update=useUpdateService(),remove=useDeleteService(),setup=useSetupStatus()
+  const [drafts,setDrafts]=useState<Record<string,ServiceDraft>>({})
+  const [adding,setAdding]=useState(false)
+  const [newName,setNewName]=useState('')
+  const [newDuration,setNewDuration]=useState('60')
+  const [newPrice,setNewPrice]=useState('')
+  const activeServices=useMemo(()=>services.data?.items.filter(item=>item.active)??[],[services.data])
+
+  useEffect(()=>{
+    if(!services.data)return
+    setDrafts(Object.fromEntries(services.data.items.filter(item=>item.active).map(item=>[item.id,{name:item.name,duration:String(item.duration_minutes),price:item.price==null?'':String(item.price)}])))
+  },[services.data])
+
   if(services.isPending)return <LoadingState/>
   if(services.isError||!services.data)return <ErrorState onRetry={()=>void services.refetch()}/>
-  return <StepCard number={4} title="Catálogo de serviços" description="Revise os serviços que sua empresa oferece e informe o preço dos serviços ativos. Você pode desativar o que não utiliza.">
-    <div className="onboarding-service-list">{services.data.items.map(item=><OnboardingServiceRow service={item} key={item.id}/>)}</div>
-    <p className="settings-note">O ALOVIA gera automaticamente frases para reconhecer cada serviço durante a conversa.</p>
+
+  const add=async()=>{
+    const duration=Number(newDuration)
+    const price=parseMoney(newPrice)
+    if(!newName.trim()||!Number.isFinite(duration)||duration<=0||price===null)return
+    await create.mutateAsync({name:newName.trim(),duration_minutes:duration,price})
+    setNewName('');setNewDuration('60');setNewPrice('');setAdding(false)
+  }
+  const save=async()=>{
+    for(const service of activeServices){
+      const draft=drafts[service.id]
+      if(!draft)continue
+      const duration=Number(draft.duration),price=parseMoney(draft.price)
+      if(!draft.name.trim()||!Number.isFinite(duration)||duration<=0||price===null)continue
+      await update.mutateAsync({id:service.id,values:{name:draft.name.trim(),duration_minutes:duration,price}})
+    }
+    await setup.refetch()
+  }
+
+  return <StepCard number={4} title="Catálogo de serviços" description="Revise os serviços que sua empresa realmente oferece. Nome, preço e duração média ajudam o ALOVIA a entender o pedido e montar a agenda corretamente.">
+    <div className="catalog-toolbar"><button className="compact-button" type="button" onClick={()=>setAdding(value=>!value)}><Plus size={16}/>Adicionar serviço</button></div>
+    {adding&&<div className="catalog-add-card">
+      <label>Serviço<input value={newName} onChange={event=>setNewName(event.target.value)} placeholder="Ex.: Instalação de split"/></label>
+      <label>Duração média<div className="input-with-unit"><input type="number" min={1} value={newDuration} onChange={event=>setNewDuration(event.target.value)}/><span>min</span></div></label>
+      <label>Preço (R$)<input inputMode="decimal" value={newPrice} onChange={event=>setNewPrice(event.target.value)} placeholder="0,00"/></label>
+      <button className="primary-button" type="button" disabled={create.isPending||!newName.trim()||!newPrice.trim()} onClick={()=>void add()}>{create.isPending?'Adicionando…':'Adicionar à lista'}</button>
+    </div>}
+    <div className="onboarding-info"><strong>Reconhecimento automático</strong><span>Ao salvar, o ALOVIA gera e atualiza frases de referência para reconhecer como clientes podem pedir cada serviço.</span></div>
+    <div className="onboarding-service-list">
+      {activeServices.map(service=>{
+        const draft=drafts[service.id]??{name:service.name,duration:String(service.duration_minutes),price:service.price==null?'':String(service.price)}
+        return <article className="onboarding-item-row onboarding-item-row--editable" key={service.id}>
+          <label>Serviço<input value={draft.name} onChange={event=>setDrafts(current=>({...current,[service.id]:{...draft,name:event.target.value}}))}/></label>
+          <label>Duração média<div className="input-with-unit"><input type="number" min={1} max={1440} value={draft.duration} onChange={event=>setDrafts(current=>({...current,[service.id]:{...draft,duration:event.target.value}}))}/><span>min</span></div></label>
+          <label>Preço (R$)<input inputMode="decimal" value={draft.price} onChange={event=>setDrafts(current=>({...current,[service.id]:{...draft,price:event.target.value}}))} placeholder="0,00"/></label>
+          <button className="icon-danger-button" type="button" aria-label={`Excluir ${service.name}`} disabled={remove.isPending} onClick={()=>remove.mutate(service.id)}><Trash2 size={18}/></button>
+        </article>
+      })}
+      {!activeServices.length&&<p className="settings-empty">Adicione pelo menos um serviço oferecido pela empresa.</p>}
+    </div>
+    {(create.isError||update.isError||remove.isError)&&<MutationError/>}
+    <button className="primary-button onboarding-save-all" type="button" disabled={update.isPending||!activeServices.length} onClick={()=>void save()}><Save size={17}/>{update.isPending?'Salvando…':'Salvar serviços'}</button>
     <StepActions onBack={onBack} onNext={onNext} nextDisabled={!setup.data?.services}/>
   </StepCard>
 }
 
-function OnboardingServiceRow({service}:{service:Service}){
-  const update=useUpdateService(),setup=useSetupStatus()
-  const [price,setPrice]=useState(service.price==null?'':String(service.price))
-  const save=async()=>{
-    const parsed=Number(price.replace(',','.'))
-    if(!Number.isFinite(parsed))return
-    await update.mutateAsync({id:service.id,values:{price:parsed}})
-    await setup.refetch()
-  }
-  return <article className={service.active?'onboarding-item-row':'onboarding-item-row is-inactive'}>
-    <div><strong>{service.name}</strong><span>{service.duration_minutes} min</span></div>
-    {service.active&&<label>Preço (R$)<input inputMode="decimal" value={price} onChange={event=>setPrice(event.target.value)} placeholder="0,00"/></label>}
-    <div><button className="compact-button" type="button" disabled={update.isPending||service.active&&!price.trim()} onClick={()=>void save()}><Save size={15}/>Salvar preço</button><button className="compact-button" type="button" disabled={update.isPending} onClick={async()=>{await update.mutateAsync({id:service.id,values:{active:!service.active}});await setup.refetch()}}>{service.active?'Não ofereço':'Ativar'}</button></div>
-  </article>
-}
-
+type MaterialDraft={name:string;description:string;price:string;unit:string;kind:'material'|'equipment'}
 function MaterialsStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
-  const items=useCatalogItems(),business=useBusiness(),updateBusiness=useUpdateBusiness(),setup=useSetupStatus()
+  const items=useCatalogItems(),business=useBusiness(),create=useCreateCatalogItem(),update=useUpdateCatalogItem(),remove=useDeleteCatalogItem(),updateBusiness=useUpdateBusiness(),setup=useSetupStatus()
+  const [drafts,setDrafts]=useState<Record<string,MaterialDraft>>({})
+  const [adding,setAdding]=useState(false)
+  const [newKind,setNewKind]=useState<'material'|'equipment'>('material')
+  const [newName,setNewName]=useState('')
+  const [newDescription,setNewDescription]=useState('')
+  const [newPrice,setNewPrice]=useState('')
+  const [newUnit,setNewUnit]=useState('unidade')
+  const activeItems=useMemo(()=>items.data?.items.filter(item=>item.active)??[],[items.data])
+
+  useEffect(()=>{
+    if(!items.data)return
+    setDrafts(Object.fromEntries(items.data.items.filter(item=>item.active).map(item=>[item.id,{name:item.name,description:item.description??'',price:item.price==null?'':String(item.price),unit:item.unit_label??'unidade',kind:item.kind}])))
+  },[items.data])
+
   if(items.isPending||business.isPending)return <LoadingState/>
   if(items.isError||business.isError||!items.data||!business.data)return <ErrorState onRetry={()=>{void items.refetch();void business.refetch()}}/>
-  const hasActiveItems=items.data.items.some(item=>item.active)
-  const optedOut=business.data.materials_catalog_reviewed&&!hasActiveItems
-  const updateOptOut=async(checked:boolean)=>{
-    await updateBusiness.mutateAsync({materials_catalog_reviewed:checked})
+  const optedOut=business.data.materials_catalog_reviewed&&!activeItems.length
+
+  const toggleOptOut=async(checked:boolean)=>{
+    if(checked){
+      for(const item of activeItems)await remove.mutateAsync(item.id)
+      await updateBusiness.mutateAsync({materials_catalog_reviewed:true})
+    }else{
+      await updateBusiness.mutateAsync({materials_catalog_reviewed:false})
+    }
+    await items.refetch();await setup.refetch()
+  }
+  const add=async()=>{
+    const price=parseMoney(newPrice)
+    if(!newName.trim()||price===null)return
+    await create.mutateAsync({kind:newKind,name:newName.trim(),description:newDescription.trim()||null,price,unit_label:newUnit})
+    setNewName('');setNewDescription('');setNewPrice('');setNewUnit('unidade');setAdding(false)
     await setup.refetch()
   }
-  return <StepCard number={5} title="Materiais e equipamentos" description="Ative somente os itens que sua empresa cobra à parte e informe o preço. Se não houver cobrança separada, registre essa decisão abaixo.">
+  const save=async()=>{
+    for(const item of activeItems){
+      const draft=drafts[item.id]
+      if(!draft)continue
+      const price=parseMoney(draft.price)
+      if(!draft.name.trim()||price===null)continue
+      await update.mutateAsync({id:item.id,values:{kind:draft.kind,name:draft.name.trim(),description:draft.description.trim()||null,price,unit_label:draft.unit}})
+    }
+    await updateBusiness.mutateAsync({materials_catalog_reviewed:true})
+    await setup.refetch()
+  }
+
+  return <StepCard number={5} title="Materiais e equipamentos" description="Mantenha aqui somente o que sua empresa cobra separadamente. Você pode editar os itens sugeridos, excluir o que não usa e criar novos itens.">
     <label className="onboarding-choice">
-      <input type="checkbox" checked={optedOut} disabled={updateBusiness.isPending||hasActiveItems} onChange={event=>void updateOptOut(event.target.checked)}/>
-      <span><strong>Minha empresa não cobra materiais adicionais separadamente</strong><small>{hasActiveItems?'Desative os itens em uso antes de escolher esta opção.':'Esta decisão fica salva na configuração da empresa.'}</small></span>
+      <input type="checkbox" checked={optedOut} disabled={updateBusiness.isPending||remove.isPending} onChange={event=>void toggleOptOut(event.target.checked)}/>
+      <span><strong>Minha empresa não cobra materiais adicionais separadamente</strong><small>Ao selecionar, a lista fica vazia. A opção de adicionar materiais e equipamentos continuará disponível depois.</small></span>
     </label>
-    <div className="onboarding-service-list">{items.data.items.map(item=><OnboardingMaterialRow item={item} key={item.id}/>)}</div>
-    {updateBusiness.isError&&<MutationError/>}
+    <div className="catalog-toolbar"><button className="compact-button" type="button" onClick={()=>setAdding(value=>!value)}><Plus size={16}/>Adicionar material ou equipamento</button></div>
+    {adding&&<div className="catalog-add-card">
+      <label>Tipo<select value={newKind} onChange={event=>setNewKind(event.target.value as 'material'|'equipment')}><option value="material">Material</option><option value="equipment">Equipamento</option></select></label>
+      <label>Nome<input value={newName} onChange={event=>setNewName(event.target.value)} placeholder="Ex.: Tubulação adicional"/></label>
+      <label>Descrição<input value={newDescription} onChange={event=>setNewDescription(event.target.value)} placeholder="Quando é usado ou cobrado"/></label>
+      <label>Preço (R$)<input inputMode="decimal" value={newPrice} onChange={event=>setNewPrice(event.target.value)} placeholder="0,00"/></label>
+      <label>Unidade<select value={newUnit} onChange={event=>setNewUnit(event.target.value)}>{unitOptions.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+      <button className="primary-button" type="button" disabled={create.isPending||!newName.trim()||!newPrice.trim()} onClick={()=>void add()}>{create.isPending?'Adicionando…':'Adicionar à lista'}</button>
+    </div>}
+    <div className="onboarding-service-list">
+      {activeItems.map(item=>{
+        const draft=drafts[item.id]??materialDraft(item)
+        return <article className="onboarding-item-row onboarding-item-row--material" key={item.id}>
+          <label>Item<input value={draft.name} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,name:event.target.value}}))}/><small>{draft.kind==='material'?'Material':'Equipamento'}</small></label>
+          <label>Descrição<input value={draft.description} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,description:event.target.value}}))}/></label>
+          <label>Preço (R$)<input inputMode="decimal" value={draft.price} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,price:event.target.value}}))} placeholder="0,00"/></label>
+          <label>Unidade<select value={draft.unit} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,unit:event.target.value}}))}>{unitOptions.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+          <button className="icon-danger-button" type="button" aria-label={`Excluir ${item.name}`} disabled={remove.isPending} onClick={()=>remove.mutate(item.id)}><Trash2 size={18}/></button>
+        </article>
+      })}
+      {!activeItems.length&&<p className="settings-empty">{optedOut?'Nenhum material é cobrado separadamente. Você ainda pode adicionar um item quando precisar.':'Nenhum material ou equipamento na lista.'}</p>}
+    </div>
+    {(create.isError||update.isError||remove.isError||updateBusiness.isError)&&<MutationError/>}
+    {!!activeItems.length&&<button className="primary-button onboarding-save-all" type="button" disabled={update.isPending} onClick={()=>void save()}><Save size={17}/>{update.isPending?'Salvando…':'Salvar itens'}</button>}
     <StepActions onBack={onBack} onNext={onNext} nextDisabled={!setup.data?.materials}/>
   </StepCard>
-}
-
-function OnboardingMaterialRow({item}:{item:CatalogItem}){
-  const update=useUpdateCatalogItem(),setup=useSetupStatus()
-  const [price,setPrice]=useState(item.price==null?'':String(item.price))
-  const activate=async()=>{
-    const parsed=Number(price.replace(',','.'))
-    if(!Number.isFinite(parsed))return
-    await update.mutateAsync({id:item.id,values:{price:parsed,active:true}})
-    await setup.refetch()
-  }
-  return <article className={item.active?'onboarding-item-row':'onboarding-item-row is-inactive'}>
-    <div><strong>{item.name}</strong><span>{item.description??'Sem descrição'}{item.unit_label?' · por '+item.unit_label:''}</span></div>
-    <label>Preço (R$)<input inputMode="decimal" value={price} onChange={event=>setPrice(event.target.value)} placeholder="0,00"/></label>
-    <div>{!item.active?<button className="compact-button" type="button" disabled={!price.trim()||update.isPending} onClick={()=>void activate()}>Usar item</button>:<><button className="compact-button" type="button" disabled={!price.trim()||update.isPending} onClick={()=>void activate()}><Save size={15}/>Salvar</button><button className="compact-button" type="button" disabled={update.isPending} onClick={async()=>{await update.mutateAsync({id:item.id,values:{active:false}});await setup.refetch()}}>Não uso</button></>}</div>
-  </article>
 }
 
 function AgendaStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
@@ -246,32 +368,33 @@ function AgendaStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
   const [interval,setInterval]=useState('')
   const [preparation,setPreparation]=useState('')
   const [finishing,setFinishing]=useState('')
-  const [notice,setNotice]=useState('')
+  const [noticeHours,setNoticeHours]=useState('')
   useEffect(()=>{
     if(!business.data)return
     setInterval(numberOrBlank(business.data.interval_between_services_minutes))
     setPreparation(numberOrBlank(business.data.preparation_minutes))
     setFinishing(numberOrBlank(business.data.finishing_minutes))
-    setNotice(numberOrBlank(business.data.minimum_booking_notice_minutes))
+    setNoticeHours(business.data.minimum_booking_notice_minutes==null?'':String(business.data.minimum_booking_notice_minutes/60))
   },[business.data])
   if(business.isPending)return <LoadingState/>
-  return <StepCard number={6} title="Agenda e disponibilidade" description="Você pode deixar tudo em branco. Nesse caso, o ALOVIA toma a melhor decisão com base no serviço e na logística.">
+  return <StepCard number={6} title="Agenda e disponibilidade" description="Você pode deixar estes campos em branco. Nesse caso, o ALOVIA calcula automaticamente margens operacionais com base no serviço e na logística.">
     <form className="onboarding-form" onSubmit={async event=>{
       event.preventDefault()
+      const hours=optionalNumber(noticeHours)
       await update.mutateAsync({
         interval_between_services_minutes:optionalNumber(interval),
         preparation_minutes:optionalNumber(preparation),
         finishing_minutes:optionalNumber(finishing),
-        minimum_booking_notice_minutes:optionalNumber(notice),
+        minimum_booking_notice_minutes:hours==null?null:Math.round(hours*60),
         agenda_preferences_reviewed:true,
       })
       onNext()
     }}>
-      <AutoInput label="Intervalo entre um serviço e outro" value={interval} setValue={setInterval}/>
-      <AutoInput label="Tempo de preparação" value={preparation} setValue={setPreparation}/>
-      <AutoInput label="Tempo após finalizar o serviço" value={finishing} setValue={setFinishing}/>
-      <AutoInput label="Antecedência mínima para agendamento" value={notice} setValue={setNotice}/>
-      <p className="settings-note">Em branco = Automático pelo ALOVIA. Deslocamento é calculado separadamente e não entra no limite dos tempos operacionais automáticos.</p>
+      <AutoInput label="Intervalo entre um serviço e outro" value={interval} setValue={setInterval} unit="minutos"/>
+      <AutoInput label="Tempo de preparação" value={preparation} setValue={setPreparation} unit="minutos"/>
+      <AutoInput label="Tempo após finalizar o serviço" value={finishing} setValue={setFinishing} unit="minutos"/>
+      <AutoInput label="Antecedência mínima para agendamento" value={noticeHours} setValue={setNoticeHours} unit="horas" step="0.5"/>
+      <div className="onboarding-info"><strong>Automático pelo ALOVIA</strong><span>Campo em branco = cálculo automático. O deslocamento é calculado separadamente e não entra no limite dos tempos operacionais automáticos.</span></div>
       <StepActions onBack={onBack} nextDisabled={update.isPending} nextLabel={update.isPending?'Salvando…':'Salvar e continuar'}/>
     </form>
   </StepCard>
@@ -284,7 +407,8 @@ function WhatsAppStep({onBack,onFinished}:{onBack:()=>void;onFinished:()=>void})
   const [open,setOpen]=useState(false)
   const connected=connection.data?.status==='connected'||setup.data?.whatsapp===true
   const displayedStatus=connected?'connected':connection.data?.status??'disconnected'
-  return <StepCard number={7} title="Conectar WhatsApp" description="Última etapa. Conecte o WhatsApp Business oficial para o ALOVIA receber as conversas e criar agendamentos automaticamente.">
+  return <StepCard number={7} title="Conectar WhatsApp" description="Última etapa. Conecte o número que será usado pelo ALOVIA para receber conversas e criar agendamentos.">
+    <div className="onboarding-info onboarding-info--important"><strong>Se você quer continuar usando o mesmo número no celular</strong><span>Esse número precisa estar ativo no aplicativo WhatsApp Business para usar o modo de coexistência. Se for um número novo ou exclusivo para automação, escolha o caminho exclusivo durante a conexão.</span></div>
     {connection.isPending&&!connected&&<LoadingState/>}
     {connection.isError&&!connected&&<ErrorState onRetry={()=>void connection.refetch()}/>}
     {(connection.data||connected)&&<div className="onboarding-whatsapp">
@@ -305,18 +429,20 @@ function WhatsAppStep({onBack,onFinished}:{onBack:()=>void;onFinished:()=>void})
 }
 
 function StepCard({number,title,description,children}:{number:number;title:string;description:string;children:React.ReactNode}){
-  return <main className="onboarding-card"><span className="eyebrow">Etapa {number}</span><h1>{title}</h1><p className="onboarding-description">{description}</p>{children}</main>
+  return <main className="onboarding-card"><span className="eyebrow">Etapa {number}</span><h1>{title}</h1><div className="onboarding-description">{description}</div>{children}</main>
 }
 
 function StepActions({onBack,onNext,nextDisabled=false,nextLabel='Próxima etapa'}:{onBack?:()=>void;onNext?:()=>void|Promise<void>;nextDisabled?:boolean;nextLabel?:string}){
   return <div className="onboarding-actions">{onBack&&<button className="compact-button" type="button" onClick={onBack}><ArrowLeft size={17}/>Voltar</button>}<button className="primary-button" type={onNext?'button':'submit'} disabled={nextDisabled} onClick={onNext?()=>void onNext():undefined}>{nextLabel}<ArrowRight size={17}/></button></div>
 }
 
-function AutoInput({label,value,setValue}:{label:string;value:string;setValue:(value:string)=>void}){
-  return <label>{label}<input type="number" min={0} value={value} onChange={event=>setValue(event.target.value)} placeholder="Automático pelo ALOVIA"/><small className="settings-field-help">{value.trim()===''?'Automático pelo ALOVIA. ':''}Você pode definir manualmente se preferir.</small></label>
+function AutoInput({label,value,setValue,unit,step='1'}:{label:string;value:string;setValue:(value:string)=>void;unit:string;step?:string}){
+  return <label>{label}<div className="input-with-unit"><input type="number" min={0} step={step} value={value} onChange={event=>setValue(event.target.value)} placeholder="Automático"/><span>{unit}</span></div><small className="settings-field-help">{value.trim()===''?'Automático pelo ALOVIA. ':''}Você pode definir manualmente se preferir.</small></label>
 }
 
-function OnboardingShell({children}:{children:React.ReactNode}){return <div className="onboarding-shell"><div className="onboarding-brand"><span><Wrench size={20}/><strong>ALOVIA</strong></span><SessionActions/></div>{children}</div>}
-function MutationError(){return <p className="form-error" role="alert">Não foi possível concluir esta ação. Revise os dados e tente novamente.</p>}
-function optionalNumber(value:string){return value.trim()===''?null:Number(value)}
+function materialDraft(item:CatalogItem):MaterialDraft{return {name:item.name,description:item.description??'',price:item.price==null?'':String(item.price),unit:item.unit_label??'unidade',kind:item.kind}}
+function parseMoney(value:string){if(!value.trim())return null;const parsed=Number(value.replace(',','.'));return Number.isFinite(parsed)&&parsed>=0?parsed:null}
+function optionalNumber(value:string){if(value.trim()==='')return null;const parsed=Number(value);return Number.isFinite(parsed)&&parsed>=0?parsed:null}
 function numberOrBlank(value:number|null){return value==null?'':String(value)}
+function MutationError(){return <p className="form-error" role="alert">Não foi possível concluir esta ação. Revise os dados e tente novamente.</p>}
+function OnboardingShell({children}:{children:React.ReactNode}){return <div className="onboarding-shell"><div className="onboarding-brand"><span><Wrench size={20}/><strong>ALOVIA</strong></span><SessionActions/></div>{children}</div>}
