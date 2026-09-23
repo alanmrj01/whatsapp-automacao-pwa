@@ -74,7 +74,7 @@ test('never-activated free WhatsApp CTA routes to upgrade without starting the M
   const whatsapp = read('src/features/whatsapp/WhatsAppPage.tsx')
   const dashboard = read('src/features/dashboard/DashboardPage.tsx')
   assert.match(whatsapp, /if \(demo\)/)
-  assert.match(whatsapp, /conexão oficial com o WhatsApp Business está disponível com assinatura/i)
+  assert.match(whatsapp, /conexão oficial está disponível com assinatura/i)
   assert.match(whatsapp, /openUpgrade\('Conectar o WhatsApp'\)/)
   assert.match(whatsapp, /Conectar WhatsApp/)
   assert.match(dashboard, /Modo demonstração/)
