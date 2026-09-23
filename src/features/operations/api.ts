@@ -140,7 +140,9 @@ export function lookupPostalCode(postalCode:string) {
 export function useUpdateBusiness() {
   const context=usePaidContext()
   return useMutation({mutationFn:(values:Partial<Pick<Business,
-    'name'|'responsible_name'|'timezone'|'service_origin_address'|'slot_interval_minutes'|
+    'name'|'responsible_name'|'timezone'|'service_origin_address'|
+    'service_origin_postal_code'|'service_origin_street'|'service_origin_neighborhood'|
+    'service_origin_number'|'service_origin_city'|'service_origin_state'|'slot_interval_minutes'|
     'interval_between_services_minutes'|'preparation_minutes'|'finishing_minutes'|
     'minimum_booking_notice_minutes'|'materials_catalog_reviewed'|'agenda_preferences_reviewed'
   >>)=>paidMutation(context,()=>api.request<Business>('/business',{method:'PATCH',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'business','setup')})
