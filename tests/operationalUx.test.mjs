@@ -86,7 +86,8 @@ test('materials onboarding supports an explicit no-separate-charge decision and 
   assert.match(onboarding,/remove\.mutateAsync\(item\.id\)/)
   assert.match(materials,/Minha empresa não cobra materiais adicionais separadamente/)
   for (const unit of ['metro','unidade','kit','valor fixo']) assert.match(materials,new RegExp(`value:'${unit}'`))
-  assert.match(materials,/unit_label:unit/)
+  assert.match(materials,/unit_label:newUnit/)
+  assert.match(materials,/unit_label:draft\.unit/)
   assert.match(operations,/'materials_catalog_reviewed'/)
 })
 
