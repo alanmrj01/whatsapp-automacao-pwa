@@ -82,12 +82,27 @@ export type SetupStatus = {
   blocking_reasons:string[]
 }
 
+export type PostalAddressLookup = {
+  postal_code:string
+  street:string
+  neighborhood:string
+  city:string
+  state:string
+}
+
 export type Business = {
   id:string
   name:string
   responsible_name:string|null
   timezone:string
   service_origin_address:string|null
+  service_origin_postal_code:string|null
+  service_origin_street:string|null
+  service_origin_neighborhood:string|null
+  service_origin_number:string|null
+  service_origin_city:string|null
+  service_origin_state:string|null
+  service_origin_validated_at:string|null
   slot_interval_minutes:number
   interval_between_services_minutes:number|null
   preparation_minutes:number|null
