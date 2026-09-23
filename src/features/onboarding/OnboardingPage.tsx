@@ -336,8 +336,6 @@ function HoursStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
   </StepCard>
 }
 
-type ServiceDraft
-
 type ServiceDraft={name:string;duration:string;price:string}
 function ServicesStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
   const services=useServices(),create=useCreateService(),update=useUpdateService(),remove=useDeleteService(),setup=useSetupStatus()
@@ -346,6 +344,8 @@ function ServicesStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
   const [newName,setNewName]=useState('')
   const [newDuration,setNewDuration]=useState('60')
   const [newPrice,setNewPrice]=useState('')
+  const [addAttempted,setAddAttempted]=useState(false)
+  const [saveAttempted,setSaveAttempted]=useState(false)
   const activeServices=useMemo(()=>services.data?.items.filter(item=>item.active)??[],[services.data])
 
   useEffect(()=>{
@@ -356,45 +356,60 @@ function ServicesStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
   if(services.isPending)return <LoadingState/>
   if(services.isError||!services.data)return <ErrorState onRetry={()=>void services.refetch()}/>
 
+  const newDurationNumber=Number(newDuration)
+  const newPriceNumber=parseMoney(newPrice)
+  const newInvalid={name:newName.trim().length<2,duration:!Number.isFinite(newDurationNumber)||newDurationNumber<=0,price:newPriceNumber===null}
+
   const add=async()=>{
-    const duration=Number(newDuration)
-    const price=parseMoney(newPrice)
-    if(!newName.trim()||!Number.isFinite(duration)||duration<=0||price===null)return
-    await create.mutateAsync({name:newName.trim(),duration_minutes:duration,price})
-    setNewName('');setNewDuration('60');setNewPrice('');setAdding(false)
+    setAddAttempted(true)
+    if(newInvalid.name||newInvalid.duration||newInvalid.price)return
+    await create.mutateAsync({name:newName.trim(),duration_minutes:newDurationNumber,price:newPriceNumber})
+    setNewName('');setNewDuration('60');setNewPrice('');setAdding(false);setAddAttempted(false)
+    await setup.refetch()
   }
   const save=async()=>{
+    setSaveAttempted(true)
+    const invalid=activeServices.some(service=>{
+      const draft=drafts[service.id]
+      if(!draft)return true
+      const duration=Number(draft.duration),price=parseMoney(draft.price)
+      return draft.name.trim().length<2||!Number.isFinite(duration)||duration<=0||price===null
+    })
+    if(invalid)return
     for(const service of activeServices){
       const draft=drafts[service.id]
-      if(!draft)continue
       const duration=Number(draft.duration),price=parseMoney(draft.price)
-      if(!draft.name.trim()||!Number.isFinite(duration)||duration<=0||price===null)continue
-      await update.mutateAsync({id:service.id,values:{name:draft.name.trim(),duration_minutes:duration,price}})
+      await update.mutateAsync({id:service.id,values:{name:draft.name.trim(),duration_minutes:duration,price:price!}})
     }
     await setup.refetch()
+    setSaveAttempted(false)
   }
 
   return <StepCard number={4} title="Catálogo de serviços" description="Revise os serviços que sua empresa realmente oferece. Nome, preço e duração média ajudam o ALOVIA a entender o pedido e montar a agenda corretamente.">
-    <div className="catalog-toolbar"><button className="compact-button" type="button" onClick={()=>setAdding(value=>!value)}><Plus size={16}/>Adicionar serviço</button></div>
+    <div className="catalog-toolbar"><button className="compact-button" type="button" onClick={()=>{setAdding(value=>!value);setAddAttempted(false)}}><Plus size={16}/>Adicionar serviço</button></div>
     {adding&&<div className="catalog-add-card">
-      <label>Serviço<input value={newName} onChange={event=>setNewName(event.target.value)} placeholder="Ex.: Instalação de split"/></label>
-      <label>Duração média<div className="input-with-unit"><input type="number" min={1} value={newDuration} onChange={event=>setNewDuration(event.target.value)}/><span>min</span></div></label>
-      <label>Preço (R$)<input inputMode="decimal" value={newPrice} onChange={event=>setNewPrice(event.target.value)} placeholder="0,00"/></label>
-      <button className="primary-button" type="button" disabled={create.isPending||!newName.trim()||!newPrice.trim()} onClick={()=>void add()}>{create.isPending?'Adicionando…':'Adicionar à lista'}</button>
+      <label><RequiredLabel>Serviço</RequiredLabel><input className={addAttempted&&newInvalid.name?'field-invalid':''} value={newName} onChange={event=>setNewName(event.target.value)} placeholder="Ex.: Instalação de split"/>{addAttempted&&newInvalid.name&&<FieldError>Informe o nome do serviço.</FieldError>}</label>
+      <label><RequiredLabel>Duração média</RequiredLabel><div className={addAttempted&&newInvalid.duration?'input-with-unit field-invalid-wrapper':'input-with-unit'}><input type="number" min={1} value={newDuration} onChange={event=>setNewDuration(event.target.value)}/><span>min</span></div>{addAttempted&&newInvalid.duration&&<FieldError>Informe uma duração válida.</FieldError>}</label>
+      <label><RequiredLabel>Preço (R$)</RequiredLabel><input className={addAttempted&&newInvalid.price?'field-invalid':''} inputMode="decimal" value={newPrice} onChange={event=>setNewPrice(event.target.value)} placeholder="0,00"/>{addAttempted&&newInvalid.price&&<FieldError>Informe o preço do serviço.</FieldError>}</label>
+      <button className="primary-button" type="button" disabled={create.isPending} onClick={()=>void add()}>{create.isPending?'Adicionando…':'Adicionar à lista'}</button>
     </div>}
     <div className="onboarding-info"><strong>Reconhecimento automático</strong><span>Ao salvar, o ALOVIA gera e atualiza frases de referência para reconhecer como clientes podem pedir cada serviço.</span></div>
     <div className="onboarding-service-list">
       {activeServices.map(service=>{
         const draft=drafts[service.id]??{name:service.name,duration:String(service.duration_minutes),price:service.price==null?'':String(service.price)}
+        const invalidName=draft.name.trim().length<2
+        const duration=Number(draft.duration),invalidDuration=!Number.isFinite(duration)||duration<=0
+        const invalidPrice=parseMoney(draft.price)===null
         return <article className="onboarding-item-row onboarding-item-row--editable" key={service.id}>
-          <label>Serviço<input value={draft.name} onChange={event=>setDrafts(current=>({...current,[service.id]:{...draft,name:event.target.value}}))}/></label>
-          <label>Duração média<div className="input-with-unit"><input type="number" min={1} max={1440} value={draft.duration} onChange={event=>setDrafts(current=>({...current,[service.id]:{...draft,duration:event.target.value}}))}/><span>min</span></div></label>
-          <label>Preço (R$)<input inputMode="decimal" value={draft.price} onChange={event=>setDrafts(current=>({...current,[service.id]:{...draft,price:event.target.value}}))} placeholder="0,00"/></label>
+          <label><RequiredLabel>Serviço</RequiredLabel><input className={saveAttempted&&invalidName?'field-invalid':''} value={draft.name} onChange={event=>setDrafts(current=>({...current,[service.id]:{...draft,name:event.target.value}}))}/>{saveAttempted&&invalidName&&<FieldError>Campo obrigatório.</FieldError>}</label>
+          <label><RequiredLabel>Duração média</RequiredLabel><div className={saveAttempted&&invalidDuration?'input-with-unit field-invalid-wrapper':'input-with-unit'}><input type="number" min={1} max={1440} value={draft.duration} onChange={event=>setDrafts(current=>({...current,[service.id]:{...draft,duration:event.target.value}}))}/><span>min</span></div>{saveAttempted&&invalidDuration&&<FieldError>Informe a duração.</FieldError>}</label>
+          <label><RequiredLabel>Preço (R$)</RequiredLabel><input className={saveAttempted&&invalidPrice?'field-invalid':''} inputMode="decimal" value={draft.price} onChange={event=>setDrafts(current=>({...current,[service.id]:{...draft,price:event.target.value}}))} placeholder="0,00"/>{saveAttempted&&invalidPrice&&<FieldError>Informe o preço.</FieldError>}</label>
           <button className="icon-danger-button" type="button" aria-label={`Excluir ${service.name}`} disabled={remove.isPending} onClick={()=>remove.mutate(service.id)}><Trash2 size={18}/></button>
         </article>
       })}
       {!activeServices.length&&<p className="settings-empty">Adicione pelo menos um serviço oferecido pela empresa.</p>}
     </div>
+    {saveAttempted&&activeServices.some(service=>{const d=drafts[service.id];return !d||d.name.trim().length<2||Number(d.duration)<=0||parseMoney(d.price)===null})&&<p className="form-error" role="alert">Revise os campos obrigatórios destacados antes de salvar os serviços.</p>}
     {(create.isError||update.isError||remove.isError)&&<MutationError/>}
     <button className="primary-button onboarding-save-all" type="button" disabled={update.isPending||!activeServices.length} onClick={()=>void save()}><Save size={17}/>{update.isPending?'Salvando…':'Salvar serviços'}</button>
     <StepActions onBack={onBack} onNext={onNext} nextDisabled={!setup.data?.services}/>
@@ -411,6 +426,8 @@ function MaterialsStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
   const [newDescription,setNewDescription]=useState('')
   const [newPrice,setNewPrice]=useState('')
   const [newUnit,setNewUnit]=useState('unidade')
+  const [addAttempted,setAddAttempted]=useState(false)
+  const [saveAttempted,setSaveAttempted]=useState(false)
   const activeItems=useMemo(()=>items.data?.items.filter(item=>item.active)??[],[items.data])
 
   useEffect(()=>{
@@ -429,25 +446,32 @@ function MaterialsStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
     }else{
       await updateBusiness.mutateAsync({materials_catalog_reviewed:false})
     }
+    setSaveAttempted(false)
     await items.refetch();await setup.refetch()
   }
   const add=async()=>{
+    setAddAttempted(true)
     const price=parseMoney(newPrice)
-    if(!newName.trim()||price===null)return
+    if(newName.trim().length<2||price===null||!newUnit)return
     await create.mutateAsync({kind:newKind,name:newName.trim(),description:newDescription.trim()||null,price,unit_label:newUnit})
-    setNewName('');setNewDescription('');setNewPrice('');setNewUnit('unidade');setAdding(false)
+    setNewName('');setNewDescription('');setNewPrice('');setNewUnit('unidade');setAdding(false);setAddAttempted(false)
     await setup.refetch()
   }
   const save=async()=>{
+    setSaveAttempted(true)
+    const invalid=activeItems.some(item=>{
+      const draft=drafts[item.id]
+      return !draft||draft.name.trim().length<2||parseMoney(draft.price)===null||!draft.unit
+    })
+    if(invalid)return
     for(const item of activeItems){
       const draft=drafts[item.id]
-      if(!draft)continue
       const price=parseMoney(draft.price)
-      if(!draft.name.trim()||price===null)continue
-      await update.mutateAsync({id:item.id,values:{kind:draft.kind,name:draft.name.trim(),description:draft.description.trim()||null,price,unit_label:draft.unit}})
+      await update.mutateAsync({id:item.id,values:{kind:draft.kind,name:draft.name.trim(),description:draft.description.trim()||null,price:price!,unit_label:draft.unit}})
     }
     await updateBusiness.mutateAsync({materials_catalog_reviewed:true})
     await setup.refetch()
+    setSaveAttempted(false)
   }
 
   return <StepCard number={5} title="Materiais e equipamentos" description="Mantenha aqui somente o que sua empresa cobra separadamente. Você pode editar os itens sugeridos, excluir o que não usa e criar novos itens.">
@@ -455,28 +479,30 @@ function MaterialsStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
       <input type="checkbox" checked={optedOut} disabled={updateBusiness.isPending||remove.isPending} onChange={event=>void toggleOptOut(event.target.checked)}/>
       <span><strong>Minha empresa não cobra materiais adicionais separadamente</strong><small>Ao selecionar, a lista fica vazia. A opção de adicionar materiais e equipamentos continuará disponível depois.</small></span>
     </label>
-    <div className="catalog-toolbar"><button className="compact-button" type="button" onClick={()=>setAdding(value=>!value)}><Plus size={16}/>Adicionar material ou equipamento</button></div>
+    <div className="catalog-toolbar"><button className="compact-button" type="button" onClick={()=>{setAdding(value=>!value);setAddAttempted(false)}}><Plus size={16}/>Adicionar material ou equipamento</button></div>
     {adding&&<div className="catalog-add-card">
-      <label>Tipo<select value={newKind} onChange={event=>setNewKind(event.target.value as 'material'|'equipment')}><option value="material">Material</option><option value="equipment">Equipamento</option></select></label>
-      <label>Nome<input value={newName} onChange={event=>setNewName(event.target.value)} placeholder="Ex.: Tubulação adicional"/></label>
-      <label>Descrição<input value={newDescription} onChange={event=>setNewDescription(event.target.value)} placeholder="Quando é usado ou cobrado"/></label>
-      <label>Preço (R$)<input inputMode="decimal" value={newPrice} onChange={event=>setNewPrice(event.target.value)} placeholder="0,00"/></label>
-      <label>Unidade<select value={newUnit} onChange={event=>setNewUnit(event.target.value)}>{unitOptions.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
-      <button className="primary-button" type="button" disabled={create.isPending||!newName.trim()||!newPrice.trim()} onClick={()=>void add()}>{create.isPending?'Adicionando…':'Adicionar à lista'}</button>
+      <label><RequiredLabel>Tipo</RequiredLabel><select value={newKind} onChange={event=>setNewKind(event.target.value as 'material'|'equipment')}><option value="material">Material</option><option value="equipment">Equipamento</option></select></label>
+      <label><RequiredLabel>Nome</RequiredLabel><input className={addAttempted&&newName.trim().length<2?'field-invalid':''} value={newName} onChange={event=>setNewName(event.target.value)} placeholder="Ex.: Tubulação adicional"/>{addAttempted&&newName.trim().length<2&&<FieldError>Informe o nome do item.</FieldError>}</label>
+      <label>Descrição <span className="optional-label">Opcional</span><input value={newDescription} onChange={event=>setNewDescription(event.target.value)} placeholder="Quando é usado ou cobrado"/></label>
+      <label><RequiredLabel>Preço (R$)</RequiredLabel><input className={addAttempted&&parseMoney(newPrice)===null?'field-invalid':''} inputMode="decimal" value={newPrice} onChange={event=>setNewPrice(event.target.value)} placeholder="0,00"/>{addAttempted&&parseMoney(newPrice)===null&&<FieldError>Informe o preço.</FieldError>}</label>
+      <label><RequiredLabel>Unidade</RequiredLabel><select value={newUnit} onChange={event=>setNewUnit(event.target.value)}>{unitOptions.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+      <button className="primary-button" type="button" disabled={create.isPending} onClick={()=>void add()}>{create.isPending?'Adicionando…':'Adicionar à lista'}</button>
     </div>}
-    <div className="onboarding-service-list">
+    <div className="onboarding-service-list onboarding-material-list">
       {activeItems.map(item=>{
         const draft=drafts[item.id]??materialDraft(item)
+        const invalidName=draft.name.trim().length<2,invalidPrice=parseMoney(draft.price)===null
         return <article className="onboarding-item-row onboarding-item-row--material" key={item.id}>
-          <label>Item<input value={draft.name} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,name:event.target.value}}))}/><small>{draft.kind==='material'?'Material':'Equipamento'}</small></label>
-          <label>Descrição<input value={draft.description} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,description:event.target.value}}))}/></label>
-          <label>Preço (R$)<input inputMode="decimal" value={draft.price} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,price:event.target.value}}))} placeholder="0,00"/></label>
-          <label>Unidade<select value={draft.unit} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,unit:event.target.value}}))}>{unitOptions.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+          <label><RequiredLabel>Item</RequiredLabel><input className={saveAttempted&&invalidName?'field-invalid':''} value={draft.name} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,name:event.target.value}}))}/><small>{draft.kind==='material'?'Material':'Equipamento'}</small>{saveAttempted&&invalidName&&<FieldError>Campo obrigatório.</FieldError>}</label>
+          <label>Descrição <span className="optional-label">Opcional</span><input value={draft.description} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,description:event.target.value}}))}/></label>
+          <label><RequiredLabel>Preço (R$)</RequiredLabel><input className={saveAttempted&&invalidPrice?'field-invalid':''} inputMode="decimal" value={draft.price} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,price:event.target.value}}))} placeholder="0,00"/>{saveAttempted&&invalidPrice&&<FieldError>Informe o preço.</FieldError>}</label>
+          <label><RequiredLabel>Unidade</RequiredLabel><select value={draft.unit} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,unit:event.target.value}}))}>{unitOptions.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
           <button className="icon-danger-button" type="button" aria-label={`Excluir ${item.name}`} disabled={remove.isPending} onClick={()=>remove.mutate(item.id)}><Trash2 size={18}/></button>
         </article>
       })}
       {!activeItems.length&&<p className="settings-empty">{optedOut?'Nenhum material é cobrado separadamente. Você ainda pode adicionar um item quando precisar.':'Nenhum material ou equipamento na lista.'}</p>}
     </div>
+    {saveAttempted&&activeItems.some(item=>{const d=drafts[item.id];return !d||d.name.trim().length<2||parseMoney(d.price)===null||!d.unit})&&<p className="form-error" role="alert">Revise os campos obrigatórios destacados antes de salvar os itens.</p>}
     {(create.isError||update.isError||remove.isError||updateBusiness.isError)&&<MutationError/>}
     {!!activeItems.length&&<button className="primary-button onboarding-save-all" type="button" disabled={update.isPending} onClick={()=>void save()}><Save size={17}/>{update.isPending?'Salvando…':'Salvar itens'}</button>}
     <StepActions onBack={onBack} onNext={onNext} nextDisabled={!setup.data?.materials}/>
@@ -514,7 +540,7 @@ function AgendaStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
       <AutoInput label="Tempo de preparação" value={preparation} setValue={setPreparation} unit="minutos"/>
       <AutoInput label="Tempo após finalizar o serviço" value={finishing} setValue={setFinishing} unit="minutos"/>
       <AutoInput label="Antecedência mínima para agendamento" value={noticeHours} setValue={setNoticeHours} unit="horas" step="0.5"/>
-      <div className="onboarding-info"><strong>Automático pelo ALOVIA</strong><span>Campo em branco = cálculo automático. O deslocamento é calculado separadamente e não entra no limite dos tempos operacionais automáticos.</span></div>
+      <div className="onboarding-info onboarding-info--important"><strong>Automático pelo ALOVIA</strong><span>Campo em branco = cálculo automático. O deslocamento é calculado separadamente e não entra no limite dos tempos operacionais automáticos.</span></div>
       <StepActions onBack={onBack} nextDisabled={update.isPending} nextLabel={update.isPending?'Salvando…':'Salvar e continuar'}/>
     </form>
   </StepCard>
@@ -547,6 +573,10 @@ function WhatsAppStep({onBack,onFinished}:{onBack:()=>void;onFinished:()=>void})
     <ConnectWhatsAppSheet open={open} onClose={()=>{setOpen(false);void connection.refetch()}}/>
   </StepCard>
 }
+
+function RequiredLabel({children}:{children:React.ReactNode}){return <span className="field-label-text">{children}<span className="required-indicator">Obrigatório</span></span>}
+function FieldError({children}:{children:React.ReactNode}){return <small className="field-error" role="alert">{children}</small>}
+function formatPostalCode(value:string){const digits=value.replace(/\D/g,'').slice(0,8);return digits.length>5?`${digits.slice(0,5)}-${digits.slice(5)}`:digits}
 
 function StepCard({number,title,description,children}:{number:number;title:string;description:string;children:React.ReactNode}){
   return <main className="onboarding-card"><span className="eyebrow">Etapa {number}</span><h1>{title}</h1><div className="onboarding-description">{description}</div>{children}</main>
