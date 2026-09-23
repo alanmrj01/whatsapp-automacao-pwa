@@ -93,11 +93,15 @@ test('agenda defaults to calendar navigation with month, week and day detail', (
   assert.match(css,/\.agenda-calendar__grid/)
 })
 
-test('assistant exclusions use existing customers and human-only operational API', () => {
+test('assistant exclusions accept existing customers or a normalized manual number', () => {
   const settings = read('src/features/more/AutomationSettingsPage.tsx')
   const api = read('src/features/operations/api.ts')
 
   assert.match(settings,/Contatos sem resposta automática/)
   assert.match(settings,/mode:'human_only'/)
+  assert.match(settings,/Adicionar por número/)
+  assert.match(settings,/manualPhone\.replace\(\/\\D\/g,''\)/)
+  assert.match(settings,/\^\[1-9\]\\d\{6,14\}\$/)
+  assert.match(settings,/Este número já está na lista/)
   assert.match(api,/\/automation\/exclusions/)
 })

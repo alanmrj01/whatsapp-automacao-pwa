@@ -79,22 +79,35 @@ function RecognitionEditor({service,canEdit}:{service:Service;canEdit:boolean}){
 
 function Exclusions({customers,exclusions,canEdit}:{customers:Customer[];exclusions:AssistantExclusion[];canEdit:boolean}){
   const add=useAddAssistantExclusion(),remove=useRemoveAssistantExclusion()
+  const [source,setSource]=useState<'customer'|'manual'>('customer')
   const [customerId,setCustomerId]=useState('')
+  const [manualPhone,setManualPhone]=useState('')
+  const [manualLabel,setManualLabel]=useState('')
   const [reason,setReason]=useState('')
   const selected=customers.find(item=>item.id===customerId)
   const excluded=new Set(exclusions.map(item=>item.whatsapp_id))
   const available=customers.filter(item=>item.phone&&!excluded.has(item.phone.replace(/\D/g,'')))
+  const normalizedManualPhone=manualPhone.replace(/\D/g,'')
+  const manualValid=/^[1-9]\d{6,14}$/.test(normalizedManualPhone)&&!excluded.has(normalizedManualPhone)
   const submit=()=>{
-    if(!selected?.phone)return
-    add.mutate({whatsapp_id:selected.phone.replace(/\D/g,''),label:selected.name,reason:reason.trim()||null,mode:'human_only'},{onSuccess:()=>{setCustomerId('');setReason('')}})
+    const whatsappId=source==='customer'?selected?.phone?.replace(/\D/g,''):normalizedManualPhone
+    if(!whatsappId)return
+    const label=source==='customer'?selected?.name:manualLabel.trim()||null
+    add.mutate({whatsapp_id:whatsappId,label,reason:reason.trim()||null,mode:'human_only'},{onSuccess:()=>{setCustomerId('');setManualPhone('');setManualLabel('');setReason('')}})
   }
   return <section aria-labelledby="exclusions-title">
     <div className="section-title-row"><div><span className="eyebrow">Exceções permanentes</span><h2 id="exclusions-title">Contatos sem resposta automática</h2></div><InfoHelp title="Contatos sem resposta automática">As mensagens continuam aparecendo normalmente, mas o Assistente Virtual não responde sozinho.</InfoHelp></div>
     {canEdit&&<form className="settings-form settings-form--inline" onSubmit={event=>{event.preventDefault();submit()}}>
-      <label>Contato<select required value={customerId} onChange={event=>setCustomerId(event.target.value)}><option value="">Selecione</option>{available.map(item=><option value={item.id} key={item.id}>{item.name}{item.phone?' · '+item.phone:''}</option>)}</select></label>
+      <label>Como adicionar<select value={source} onChange={event=>setSource(event.target.value as 'customer'|'manual')}><option value="customer">Selecionar contato existente</option><option value="manual">Adicionar por número</option></select></label>
+      {source==='customer'&&<label>Contato<select required value={customerId} onChange={event=>setCustomerId(event.target.value)}><option value="">Selecione</option>{available.map(item=><option value={item.id} key={item.id}>{item.name}{item.phone?' · '+item.phone:''}</option>)}</select></label>}
+      {source==='manual'&&<>
+        <label>Telefone<input required inputMode="tel" autoComplete="tel" value={manualPhone} onChange={event=>setManualPhone(event.target.value)} placeholder="Ex.: 5511999999999"/><small>Informe país e DDD. O número é normalizado antes de salvar.</small></label>
+        <label>Nome ou rótulo <span className="optional-label">opcional</span><input maxLength={255} value={manualLabel} onChange={event=>setManualLabel(event.target.value)} placeholder="Ex.: Fornecedor"/></label>
+      </>}
       <label>Motivo <span className="optional-label">opcional</span><input maxLength={2000} value={reason} onChange={event=>setReason(event.target.value)} placeholder="Ex.: fornecedor, cliente que prefere atendimento humano"/></label>
       {add.isError&&<MutationError/>}
-      <button className="primary-button" disabled={add.isPending||!selected?.phone}><BotOff size={18}/>{add.isPending?'Salvando…':'Nunca responder automaticamente'}</button>
+      {source==='manual'&&normalizedManualPhone&&excluded.has(normalizedManualPhone)&&<p className="settings-warning">Este número já está na lista.</p>}
+      <button className="primary-button" disabled={add.isPending||(source==='customer'?!selected?.phone:!manualValid)}><BotOff size={18}/>{add.isPending?'Salvando…':'Nunca responder automaticamente'}</button>
     </form>}
     <div className="settings-list">{exclusions.map(item=><article className="settings-row" key={item.id}><BotOff/><div><strong>{item.label??item.whatsapp_id}</strong><span>+{item.whatsapp_id}{item.reason?' · '+item.reason:''}</span></div>{canEdit&&<button className="danger-button" type="button" disabled={remove.isPending} onClick={()=>remove.mutate(item.id)}><Trash2 size={16}/>Remover</button>}</article>)}{!exclusions.length&&<p className="settings-empty">Nenhum contato nesta lista.</p>}</div>
   </section>

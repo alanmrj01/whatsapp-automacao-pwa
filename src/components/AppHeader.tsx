@@ -1,4 +1,5 @@
 import { ArrowLeft } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BrandMark } from './BrandMark'
 
@@ -6,9 +7,10 @@ type AppHeaderProps = {
   title: string
   showBack?: boolean
   backTo?: string
+  actions?: ReactNode
 }
 
-export function AppHeader({ title, showBack = false, backTo = '/app/whatsapp' }: AppHeaderProps) {
+export function AppHeader({ title, showBack = false, backTo = '/app/whatsapp', actions }: AppHeaderProps) {
   const navigate = useNavigate()
 
   return (
@@ -28,7 +30,7 @@ export function AppHeader({ title, showBack = false, backTo = '/app/whatsapp' }:
         )}
         <span className="app-header__title">{title}</span>
       </div>
-      {!showBack && <span className="app-header__brand-name">Alovia</span>}
+      <div className="app-header__actions">{!showBack && <span className="app-header__brand-name">Alovia</span>}{actions}</div>
     </header>
   )
 }

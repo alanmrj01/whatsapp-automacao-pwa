@@ -29,6 +29,17 @@ export type DashboardToday = {
   upcoming_appointments:Appointment[]
 }
 
+export type OperationalNotification = {
+  id:string
+  appointment_id:string
+  event_type:'automatic_booking_confirmed'
+  title:string
+  body:string
+  target_path:string
+  read:boolean
+  created_at:string
+}
+
 export type Conversation = {
   id:string
   customer_id:string
@@ -115,7 +126,7 @@ export type Service = {
   id:string
   name:string
   duration_minutes:number
-  price:number|null
+  price:number|string|null
   active:boolean
   intent_examples:string[]
 }
@@ -125,7 +136,7 @@ export type CatalogItem = {
   kind:'material'|'equipment'
   name:string
   description:string|null
-  price:number|null
+  price:number|string|null
   unit_label:string|null
   preset_key:string|null
   active:boolean

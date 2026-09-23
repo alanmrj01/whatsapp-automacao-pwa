@@ -1,10 +1,11 @@
 import { ArrowLeft, ArrowRight, Check, MapPin, MessageCircleMore, Plus, Save, Wrench } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { ErrorState } from '../../components/ErrorState'
 import { LoadingState } from '../../components/LoadingState'
 import { PrimaryButton } from '../../components/PrimaryButton'
 import { canConfigureWhatsApp } from '../auth/types'
+import { SessionActions } from '../auth/SessionActions'
 import { useAuth } from '../auth/useAuth'
 import {
   useBusiness,
@@ -47,10 +48,7 @@ export function OnboardingPage(){
 
   if(setup.isPending)return <OnboardingShell><LoadingState/></OnboardingShell>
   if(setup.isError||!setup.data)return <OnboardingShell><ErrorState onRetry={()=>void setup.refetch()}/></OnboardingShell>
-  if(setup.data.onboarding_completed&&!finished){
-    navigate('/app',{replace:true})
-    return null
-  }
+  if(setup.data.onboarding_completed&&!finished)return <Navigate to="/app" replace/>
   if(!canConfigure)return <OnboardingShell><div className="onboarding-message"><h1>Configuração pendente</h1><p>Um proprietário ou administrador da empresa precisa concluir a configuração inicial antes de liberar a operação.</p></div></OnboardingShell>
 
   if(!started&&!finished)return <OnboardingShell>
@@ -59,7 +57,7 @@ export function OnboardingPage(){
       <span className="eyebrow">Conta liberada</span>
       <h1>As funcionalidades da sua conta estão liberadas.</h1>
       <p>Complete suas informações para usar o ALOVIA com segurança no atendimento e nos agendamentos.</p>
-      <strong>7 etapas · você não precisa procurar configurações pelo aplicativo</strong>
+      <strong>7 etapas · leva poucos minutos</strong>
       <PrimaryButton fullWidth icon={<ArrowRight size={19}/>} onClick={()=>setStarted(true)}>Continuar</PrimaryButton>
     </div>
   </OnboardingShell>
@@ -69,7 +67,7 @@ export function OnboardingPage(){
       <span className="onboarding-mark"><Check/></span>
       <span className="eyebrow">Configuração concluída</span>
       <h1>Tudo pronto para usar o ALOVIA.</h1>
-      <p>Você pode alterar qualquer uma dessas informações depois em <strong>Mais</strong>.</p>
+      <p>Sua configuração inicial foi concluída. Você pode alterar qualquer uma dessas informações depois em <strong>Mais</strong>.</p>
       <PrimaryButton fullWidth onClick={()=>navigate('/app',{replace:true})}>Entrar no ALOVIA</PrimaryButton>
     </div>
   </OnboardingShell>
@@ -207,11 +205,22 @@ function OnboardingServiceRow({service}:{service:Service}){
 }
 
 function MaterialsStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
-  const items=useCatalogItems(),setup=useSetupStatus()
-  if(items.isPending)return <LoadingState/>
-  if(items.isError||!items.data)return <ErrorState onRetry={()=>void items.refetch()}/>
-  return <StepCard number={5} title="Materiais e equipamentos" description="Ative pelo menos um item que sua empresa cobra à parte e informe o preço. Sugestões comuns do setor já estão prontas para você revisar.">
+  const items=useCatalogItems(),business=useBusiness(),updateBusiness=useUpdateBusiness(),setup=useSetupStatus()
+  if(items.isPending||business.isPending)return <LoadingState/>
+  if(items.isError||business.isError||!items.data||!business.data)return <ErrorState onRetry={()=>{void items.refetch();void business.refetch()}}/>
+  const hasActiveItems=items.data.items.some(item=>item.active)
+  const optedOut=business.data.materials_catalog_reviewed&&!hasActiveItems
+  const updateOptOut=async(checked:boolean)=>{
+    await updateBusiness.mutateAsync({materials_catalog_reviewed:checked})
+    await setup.refetch()
+  }
+  return <StepCard number={5} title="Materiais e equipamentos" description="Ative somente os itens que sua empresa cobra à parte e informe o preço. Se não houver cobrança separada, registre essa decisão abaixo.">
+    <label className="onboarding-choice">
+      <input type="checkbox" checked={optedOut} disabled={updateBusiness.isPending||hasActiveItems} onChange={event=>void updateOptOut(event.target.checked)}/>
+      <span><strong>Minha empresa não cobra materiais adicionais separadamente</strong><small>{hasActiveItems?'Desative os itens em uso antes de escolher esta opção.':'Esta decisão fica salva na configuração da empresa.'}</small></span>
+    </label>
     <div className="onboarding-service-list">{items.data.items.map(item=><OnboardingMaterialRow item={item} key={item.id}/>)}</div>
+    {updateBusiness.isError&&<MutationError/>}
     <StepActions onBack={onBack} onNext={onNext} nextDisabled={!setup.data?.materials}/>
   </StepCard>
 }
@@ -270,22 +279,25 @@ function AgendaStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
 
 function WhatsAppStep({onBack,onFinished}:{onBack:()=>void;onFinished:()=>void}){
   const connection=useConnection()
+  const setup=useSetupStatus()
   const complete=useCompleteOnboarding()
   const [open,setOpen]=useState(false)
-  const connected=connection.data?.status==='connected'
+  const connected=connection.data?.status==='connected'||setup.data?.whatsapp===true
+  const displayedStatus=connected?'connected':connection.data?.status??'disconnected'
   return <StepCard number={7} title="Conectar WhatsApp" description="Última etapa. Conecte o WhatsApp Business oficial para o ALOVIA receber as conversas e criar agendamentos automaticamente.">
-    {connection.isPending&&<LoadingState/>}
-    {connection.isError&&<ErrorState onRetry={()=>void connection.refetch()}/>}
-    {connection.data&&<div className="onboarding-whatsapp">
+    {connection.isPending&&!connected&&<LoadingState/>}
+    {connection.isError&&!connected&&<ErrorState onRetry={()=>void connection.refetch()}/>}
+    {(connection.data||connected)&&<div className="onboarding-whatsapp">
       <MessageCircleMore size={34}/>
-      <ConnectionStatusBadge status={connection.data.status}/>
-      {connection.data.display_phone_number&&<strong>{connection.data.display_phone_number}</strong>}
+      <ConnectionStatusBadge status={displayedStatus}/>
+      {connection.data?.display_phone_number&&<strong>{connection.data.display_phone_number}</strong>}
       {!connected&&<PrimaryButton fullWidth icon={<ArrowRight size={18}/>} onClick={()=>setOpen(true)}>Conectar WhatsApp</PrimaryButton>}
       {connected&&<p className="form-success">WhatsApp conectado. Sua configuração inicial está pronta para ser finalizada.</p>}
     </div>}
     {complete.isError&&<MutationError/>}
     <StepActions onBack={onBack} onNext={async()=>{
-      await complete.mutateAsync()
+      const result=await complete.mutateAsync()
+      if(!result.onboarding_completed||!result.onboarding_completed_at)throw new Error('Onboarding was not persisted')
       onFinished()
     }} nextDisabled={!connected||complete.isPending} nextLabel={complete.isPending?'Finalizando…':'Finalizar configuração'}/>
     <ConnectWhatsAppSheet open={open} onClose={()=>{setOpen(false);void connection.refetch()}}/>
@@ -304,7 +316,7 @@ function AutoInput({label,value,setValue}:{label:string;value:string;setValue:(v
   return <label>{label}<input type="number" min={0} value={value} onChange={event=>setValue(event.target.value)} placeholder="Automático pelo ALOVIA"/><small className="settings-field-help">{value.trim()===''?'Automático pelo ALOVIA. ':''}Você pode definir manualmente se preferir.</small></label>
 }
 
-function OnboardingShell({children}:{children:React.ReactNode}){return <div className="onboarding-shell"><div className="onboarding-brand"><Wrench size={20}/><strong>ALOVIA</strong></div>{children}</div>}
+function OnboardingShell({children}:{children:React.ReactNode}){return <div className="onboarding-shell"><div className="onboarding-brand"><span><Wrench size={20}/><strong>ALOVIA</strong></span><SessionActions/></div>{children}</div>}
 function MutationError(){return <p className="form-error" role="alert">Não foi possível concluir esta ação. Revise os dados e tente novamente.</p>}
 function optionalNumber(value:string){return value.trim()===''?null:Number(value)}
 function numberOrBlank(value:number|null){return value==null?'':String(value)}

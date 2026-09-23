@@ -12,6 +12,7 @@ export function MorePage(){
   const entitlement=useEntitlements()
   const {openUpgrade}=useUpgradePrompt()
   const paid=entitlement.isPaid
+  const needsReview=paid&&setup.data?.onboarding_completed===true&&setup.data.blocking_reasons.length>0
   const whatsappReady=connection.data?.status==='connected'||setup.data?.whatsapp||state==='ACTIVE'
   const connectionLabel=state==='FREE_DEMO'?'Disponível com assinatura':connection.isPending?'Consultando':connection.isError||connection.data?.status==='error'?'Atenção necessária':connection.data?.status==='pending'?'Conectando':whatsappReady?'Conectado':'Não conectado'
   const planLabel=paid?'Acesso liberado':entitlement.isReadOnlyRetained?'Acesso pausado':'Gratuito'
@@ -20,7 +21,7 @@ export function MorePage(){
   return <div className="page-stack operational-page compact-page">
     <section className="operational-heading"><div><span className="eyebrow">{membership?.business_name??'Sua empresa'}</span><h1>Mais</h1></div></section>
 
-    {paid&&setup.data?.onboarding_completed&&<section className="setup-callout setup-callout--complete"><div><strong>Configuração inicial concluída</strong><span>Você pode alterar os dados da operação a qualquer momento nas opções abaixo.</span></div></section>}
+    {needsReview?<section className="setup-callout setup-callout--warning" role="status"><div><strong>Revise sua configuração</strong><span>{setup.data?.blocking_reasons.join(' ')}</span></div></section>:paid&&setup.data?.onboarding_completed&&<section className="setup-callout setup-callout--complete"><div><strong>Configuração inicial concluída</strong><span>Você pode alterar os dados da operação a qualquer momento nas opções abaixo.</span></div></section>}
 
     <Section title="WhatsApp">
       <div className="list-surface"><ListRow icon={MessageCircleMore} title="Conexão do WhatsApp" subtitle={connectionLabel} to="/app/whatsapp" trailing={<StatusBadge tone={whatsappReady?'success':connection.isError||connection.data?.status==='error'?'danger':'info'}>{connectionLabel}</StatusBadge>}/></div>

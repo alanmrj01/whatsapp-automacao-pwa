@@ -47,6 +47,51 @@ test('paid accounts are guided through seven persisted onboarding steps before n
   assert.match(onboarding,/Etapa \{step\} de \{TOTAL_STEPS\}/)
   assert.match(onboarding,/const TOTAL_STEPS=7/)
   assert.match(onboarding,/As funcionalidades da sua conta estão liberadas/)
+  assert.match(onboarding,/7 etapas · leva poucos minutos/)
+  assert.match(onboarding,/<SessionActions\/>/)
+  assert.match(onboarding,/<Navigate to="\/app" replace\/>/)
+  assert.match(onboarding,/!result\.onboarding_completed\|\|!result\.onboarding_completed_at/)
+  assert.match(onboarding,/connection\.data\?\.status==='connected'\|\|setup\.data\?\.whatsapp===true/)
+  assert.match(router,/setup\.data\?\.onboarding_completed \? children : <Navigate to="\/app\/onboarding" replace\/>/)
+})
+
+test('materials onboarding supports an explicit no-separate-charge decision and simple units', () => {
+  const onboarding = read('src/features/onboarding/OnboardingPage.tsx')
+  const materials = read('src/features/more/MaterialsCatalogPage.tsx')
+  const operations = read('src/features/operations/api.ts')
+  assert.match(onboarding,/Minha empresa não cobra materiais adicionais separadamente/)
+  assert.match(onboarding,/materials_catalog_reviewed:checked/)
+  assert.match(materials,/Minha empresa não cobra materiais adicionais separadamente/)
+  for (const unit of ['metro','unidade','kit','valor fixo']) assert.match(materials,new RegExp(`value:'${unit}'`))
+  assert.match(materials,/unit_label:unit/)
+  assert.match(operations,/'materials_catalog_reviewed'/)
+})
+
+test('completed onboarding stays unlocked and exposes configuration warnings without reblocking', () => {
+  const dashboard = read('src/features/dashboard/DashboardPage.tsx')
+  const more = read('src/features/more/MorePage.tsx')
+  const router = read('src/app/router.tsx')
+  for (const source of [dashboard,more]) {
+    assert.match(source,/blocking_reasons/)
+    assert.match(source,/Revise sua configuração/)
+  }
+  assert.match(dashboard,/Corrigir configuração/)
+  assert.match(router,/setup\.data\?\.onboarding_completed \? children/)
+})
+
+test('automatic booking notifications use authenticated polling and honest browser-local alerts', () => {
+  const operations = read('src/features/operations/api.ts')
+  const center = read('src/features/notifications/NotificationCenter.tsx')
+  const shell = read('src/app/AppShell.tsx')
+  assert.match(operations,/\/notifications\?unread_only=/)
+  assert.match(operations,/\/notifications\/\$\{id\}\/read/)
+  assert.match(operations,/refetchInterval:30_000/)
+  assert.match(center,/Notification\.requestPermission\(\)/)
+  assert.match(center,/permission==='granted'/)
+  assert.match(center,/Alertas em segundo plano exigem infraestrutura Web Push/)
+  assert.match(center,/safeTarget/)
+  assert.match(shell,/<NotificationCenter\/>/)
+  assert.match(shell,/<NotificationCenter backgroundOnly \/>/)
 })
 
 test('mutations invalidate only tenant operational resources that changed', () => {

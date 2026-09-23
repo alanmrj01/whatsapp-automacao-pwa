@@ -17,6 +17,7 @@ import type {
   DashboardToday,
   Employee,
   OperationalRole,
+  OperationalNotification,
   Service,
   SetupStatus,
   WorkingHours,
@@ -53,6 +54,24 @@ export function useCompleteOnboarding() {
 export function useDashboardToday() {
   const context=usePaidContext()
   return useQuery({queryKey:[...root(context.businessId),'dashboard'],queryFn:({signal})=>api.request<DashboardToday>('/dashboard/today',{signal}),enabled:context.enabled,retry:false})
+}
+export function useNotifications(unreadOnly=true) {
+  const context=usePaidContext()
+  return useQuery({
+    queryKey:[...root(context.businessId),'notifications',unreadOnly],
+    queryFn:({signal})=>api.request<{items:OperationalNotification[]}>(`/notifications?unread_only=${String(unreadOnly)}`,{signal}),
+    enabled:context.enabled,
+    retry:false,
+    refetchInterval:30_000,
+    refetchIntervalInBackground:false,
+  })
+}
+export function useMarkNotificationRead() {
+  const context=usePaidContext()
+  return useMutation({
+    mutationFn:(id:string)=>paidMutation(context,()=>api.request<OperationalNotification>(`/notifications/${id}/read`,{method:'PATCH',body:'{}'})),
+    onSuccess:()=>invalidate(context.businessId,'notifications'),
+  })
 }
 export function useAppointments(date:string) {
   const context=usePaidContext()
