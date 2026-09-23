@@ -520,3 +520,64 @@
 .disconnect-confirm>strong{font-size:.82rem}
 .disconnect-confirm>p{margin:0;color:var(--color-text-soft);font-size:.76rem;line-height:1.45}
 .disconnect-confirm>div{display:flex;justify-content:flex-end;gap:8px}
+
+
+/* Shared settings refinements */
+.catalog-toolbar{display:flex;justify-content:flex-end;margin-bottom:10px}
+.settings-fieldset{margin:0;padding:0;border:0;display:grid;gap:10px}
+.settings-fieldset legend{margin-bottom:7px;font-size:.78rem;font-weight:800}
+.settings-weekday-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.settings-day-chip{
+  min-height:46px;
+  display:grid;
+  place-items:center;
+  border:1px solid var(--color-border-strong);
+  border-radius:12px;
+  color:var(--color-text-soft);
+  background:#fff;
+  cursor:pointer;
+}
+.settings-day-chip input{position:absolute;opacity:0;pointer-events:none}
+.settings-day-chip span{font-size:.72rem;font-weight:750}
+.settings-day-chip.is-selected{
+  border-color:#9fc4f5;
+  color:var(--color-primary-700);
+  background:var(--color-primary-50);
+  box-shadow:inset 0 0 0 1px #c9def9;
+}
+.settings-checkbox>span{display:grid;gap:3px}
+.settings-checkbox small{color:var(--color-text-muted);font-size:.69rem;font-weight:500;line-height:1.4}
+.text-button{
+  width:max-content;
+  padding:4px 0;
+  border:0;
+  color:var(--color-primary-700);
+  background:transparent;
+  font:inherit;
+  font-size:.74rem;
+  font-weight:750;
+  cursor:pointer;
+}
+.catalog-table-row--service{grid-template-columns:minmax(180px,1.2fr) minmax(130px,.7fr) minmax(130px,.7fr) 44px}
+.catalog-table-row--material{grid-template-columns:minmax(180px,1.15fr) minmax(180px,1fr) minmax(140px,.7fr) 44px}
+.catalog-table-row label{display:grid;gap:5px;color:var(--color-text);font-size:.7rem;font-weight:700}
+.catalog-icon-danger{
+  width:42px;
+  height:42px;
+  display:grid;
+  place-items:center;
+  align-self:center;
+  border:1px solid #f0caca;
+  border-radius:12px;
+  color:var(--color-danger);
+  background:#fff7f7;
+  cursor:pointer;
+}
+.catalog-icon-danger:hover{background:#fff0f0}
+.catalog-icon-danger:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:700px){
+  .settings-weekday-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .settings-day-chip:last-child{grid-column:1/-1}
+  .catalog-table-row--service,.catalog-table-row--material{grid-template-columns:1fr}
+  .catalog-icon-danger{justify-self:end}
+}
