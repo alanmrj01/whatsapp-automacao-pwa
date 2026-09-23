@@ -25,7 +25,7 @@ import {
   useUpdateCatalogItem,
   useUpdateService,
 } from '../operations/api'
-import type { CatalogItem, Service } from '../operations/types'
+import type { CatalogItem } from '../operations/types'
 import { ConnectWhatsAppSheet } from '../whatsapp/ConnectWhatsAppSheet'
 import { ConnectionStatusBadge } from '../whatsapp/ConnectionStatusBadge'
 import { useConnection } from '../whatsapp/useConnection'
