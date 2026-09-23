@@ -101,6 +101,14 @@ export type Business = {
 
 export type OperationalRole = 'technician'|'assistant'|'administrator'
 export type Employee = {id:string;name:string;active:boolean;operational_role:OperationalRole;service_ids:string[]}
+export type BusinessHours = {
+  weekdays:number[]
+  weekday_start_time:string|null
+  weekday_end_time:string|null
+  weekend_holiday_enabled:boolean
+  weekend_holiday_start_time:string|null
+  weekend_holiday_end_time:string|null
+}
 export type WorkingHours = {id:string;employee_id:string;employee_name:string;weekday:number;start_time:string;end_time:string}
 
 export type AutomationSettings = {
