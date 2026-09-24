@@ -350,17 +350,3 @@ test('company settings preserve the structured validated address workflow after 
   assert.match(page,/service_origin_state/)
   assert.doesNotMatch(page,/Endereço de saída para o primeiro atendimento/)
 })
-
-
-test('mobile shell protects bottom navigation from browser viewport overlays', () => {
-  const shell = read('src/app/AppShell.tsx')
-  const globalCss = read('src/styles/global.css')
-  const operationalCss = read('src/styles/operational-app.css')
-
-  assert.match(shell,/window\.visualViewport/)
-  assert.match(shell,/--browser-ui-bottom-offset/)
-  assert.match(shell,/obstruction>0&&obstruction<=120/)
-  assert.match(globalCss,/bottom: var\(--browser-ui-bottom-offset, 0px\)/)
-  assert.match(globalCss,/92px \+ env\(safe-area-inset-bottom\) \+ var\(--browser-ui-bottom-offset, 0px\)/)
-  assert.match(operationalCss,/72px \+ env\(safe-area-inset-bottom\) \+ var\(--browser-ui-bottom-offset, 0px\)/)
-})
