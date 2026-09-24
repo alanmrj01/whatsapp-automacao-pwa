@@ -331,3 +331,22 @@ test('WhatsApp is the only onboarding step that can be deferred and remains visi
   assert.match(dashboard,/nonWhatsAppBlockingReasons/)
   assert.match(more,/whatsappPending/)
 })
+
+
+test('company settings preserve the structured validated address workflow after onboarding', () => {
+  const page = read('src/features/more/CompanySettingsPage.tsx')
+
+  assert.match(page,/lookupPostalCode/)
+  assert.match(page,/<RequiredLabel>CEP<\/RequiredLabel>/)
+  assert.match(page,/<RequiredLabel>Rua<\/RequiredLabel>/)
+  assert.match(page,/<RequiredLabel>Bairro<\/RequiredLabel>/)
+  assert.match(page,/<RequiredLabel>Número<\/RequiredLabel>/)
+  assert.match(page,/<RequiredLabel>Cidade<\/RequiredLabel>/)
+  assert.match(page,/service_origin_postal_code/)
+  assert.match(page,/service_origin_street/)
+  assert.match(page,/service_origin_neighborhood/)
+  assert.match(page,/service_origin_number/)
+  assert.match(page,/service_origin_city/)
+  assert.match(page,/service_origin_state/)
+  assert.doesNotMatch(page,/Endereço de saída para o primeiro atendimento/)
+})
