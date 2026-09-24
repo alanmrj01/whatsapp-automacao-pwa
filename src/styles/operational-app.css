@@ -581,3 +581,100 @@
   .catalog-table-row--service,.catalog-table-row--material{grid-template-columns:1fr}
   .catalog-icon-danger{justify-self:end}
 }
+
+
+/* Shared required-field marker: compact, conventional and reusable across the app. */
+.required-field-label{
+  display:inline;
+  min-width:0;
+}
+.required-field-star{
+  margin-left:3px;
+  color:#d12f2f;
+  font-weight:850;
+  line-height:1;
+}
+
+/* Form and settings responsive hardening. */
+.settings-page,
+.settings-form,
+.settings-editor,
+.settings-form>*,
+.settings-editor>*,
+.form-grid>*,
+.catalog-table-list,
+.catalog-table-row,
+.catalog-table-row>*{
+  min-width:0;
+}
+.settings-form input,
+.settings-form select,
+.settings-form textarea,
+.settings-editor input,
+.settings-editor select,
+.catalog-table-row input,
+.catalog-table-row select{
+  max-width:100%;
+  box-sizing:border-box;
+}
+.operational-heading>div{min-width:0}
+.operational-heading h1,
+.section-title-row h2,
+.settings-note,
+.settings-field-help,
+.settings-checkbox span,
+.catalog-table-row label{
+  overflow-wrap:anywhere;
+}
+.compact-button,
+.primary-button,
+.danger-button{
+  max-width:100%;
+  white-space:normal;
+}
+.catalog-table-row--material{
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px;
+  align-items:start;
+}
+.catalog-table-row--material>div:nth-child(1){grid-column:1;grid-row:1}
+.catalog-table-row--material>div:nth-child(2){grid-column:2;grid-row:1}
+.catalog-table-row--material>div:nth-child(3){grid-column:1 / span 2;grid-row:2}
+.catalog-table-row--material>.catalog-icon-danger{
+  grid-column:3;
+  grid-row:1 / span 2;
+  align-self:center;
+}
+@media(max-width:760px){
+  .catalog-table-row--service{
+    grid-template-columns:minmax(0,1fr) minmax(120px,.7fr) 44px;
+    align-items:start;
+  }
+  .catalog-table-row--service>div:nth-child(1){grid-column:1;grid-row:1}
+  .catalog-table-row--service>div:nth-child(2){grid-column:2;grid-row:1}
+  .catalog-table-row--service>div:nth-child(3){grid-column:1 / span 2;grid-row:2}
+  .catalog-table-row--service>.catalog-icon-danger{
+    grid-column:3;
+    grid-row:1 / span 2;
+    align-self:center;
+  }
+}
+@media(max-width:560px){
+  .form-grid{grid-template-columns:1fr}
+  .catalog-table-row--service,
+  .catalog-table-row--material{grid-template-columns:minmax(0,1fr) 44px}
+  .catalog-table-row--service>div:nth-child(n),
+  .catalog-table-row--material>div:nth-child(n){
+    grid-column:1;
+    grid-row:auto;
+  }
+  .catalog-table-row--service>.catalog-icon-danger,
+  .catalog-table-row--material>.catalog-icon-danger{
+    grid-column:2;
+    grid-row:1 / span 3;
+    align-self:center;
+    justify-self:center;
+  }
+  .settings-editor__actions{flex-wrap:wrap}
+  .settings-editor__actions>*{flex:1 1 140px}
+  .catalog-toolbar .compact-button{width:100%}
+}
