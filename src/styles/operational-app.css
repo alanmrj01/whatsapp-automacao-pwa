@@ -719,3 +719,35 @@
 @media(max-width:560px){
   .catalog-material-fields{grid-template-columns:1fr}
 }
+
+
+/* Persistent post-onboarding warning while WhatsApp is still disconnected. */
+.app-pending-banner{
+  width:min(100%,900px);
+  margin:0 auto 14px;
+  padding:12px 14px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  border:1px solid #efd58c;
+  border-radius:14px;
+  color:#66511a;
+  background:#fff8df;
+}
+.app-pending-banner>div{
+  min-width:0;
+  display:grid;
+  gap:3px;
+}
+.app-pending-banner strong{font-size:.82rem}
+.app-pending-banner span{
+  font-size:.74rem;
+  line-height:1.45;
+  overflow-wrap:anywhere;
+}
+.app-pending-banner .compact-button{flex:0 0 auto}
+@media(max-width:600px){
+  .app-pending-banner{align-items:stretch;flex-direction:column}
+  .app-pending-banner .compact-button{width:100%}
+}
