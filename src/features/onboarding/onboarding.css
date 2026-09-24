@@ -647,3 +647,29 @@
     align-items:start;
   }
 }
+
+
+/* Align required/optional labels on the same baseline. */
+.field-label-row{
+  min-height:18px;
+  display:flex;
+  align-items:baseline;
+  gap:6px;
+  min-width:0;
+}
+.field-label-row .optional-label{
+  margin-left:auto;
+  white-space:nowrap;
+}
+.onboarding-item-row--material>label,
+.catalog-add-card>label{
+  align-content:start;
+}
+.onboarding-item-row--material>label>.required-field-label,
+.onboarding-item-row--material>label>.field-label-row{
+  min-height:18px;
+}
+.onboarding-item-row--material input,
+.onboarding-item-row--material select{
+  min-height:46px;
+}
