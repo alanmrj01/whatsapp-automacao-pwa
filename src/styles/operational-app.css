@@ -255,7 +255,7 @@
 .conversation-bubble p { margin:0; white-space:pre-wrap; }
 .conversation-bubble footer { margin-top:5px; display:flex; justify-content:flex-end; align-items:center; gap:7px; color:var(--color-text-muted); font-size:.66rem; }
 .conversation-bubble footer button { width:32px; height:32px; display:grid; place-items:center; border:0; color:inherit; background:transparent; }
-.conversation-composer { position:fixed; right:0; bottom:calc(72px + env(safe-area-inset-bottom)); left:0; z-index:5; padding:8px 12px; border-top:1px solid var(--color-border); background:rgba(255,255,255,.98); }
+.conversation-composer { position:fixed; right:0; bottom:calc(72px + env(safe-area-inset-bottom) + var(--browser-ui-bottom-offset, 0px)); left:0; z-index:5; padding:8px 12px; border-top:1px solid var(--color-border); background:rgba(255,255,255,.98); }
 .conversation-composer__row { max-width:900px; margin:auto; display:grid; grid-template-columns:minmax(0,1fr) 48px; align-items:end; gap:8px; }
 .conversation-composer label { min-width:0; }
 .conversation-composer textarea { width:100%; max-height:130px; min-height:48px; padding:12px 14px; resize:vertical; border:1px solid var(--color-border-strong); border-radius:18px; font:inherit; font-size:16px; }
