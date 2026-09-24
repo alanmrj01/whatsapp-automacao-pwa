@@ -53,6 +53,7 @@ export function OnboardingPage(){
   const [started,setStarted]=useState(false)
   const [step,setStep]=useState(1)
   const [finished,setFinished]=useState(false)
+  const [whatsappDeferred,setWhatsappDeferred]=useState(false)
   const navigate=useNavigate()
 
   useEffect(()=>{
@@ -79,8 +80,10 @@ export function OnboardingPage(){
     <div className="onboarding-welcome">
       <span className="onboarding-mark"><Check/></span>
       <span className="eyebrow">Configuração concluída</span>
-      <h1>Tudo pronto para usar o ALOVIA.</h1>
-      <p>Sua configuração inicial foi concluída. Você pode alterar qualquer uma dessas informações depois em <strong>Mais</strong>.</p>
+      <h1>{whatsappDeferred?'Você já pode visualizar o ALOVIA.':'Tudo pronto para usar o ALOVIA.'}</h1>
+      <p>{whatsappDeferred
+        ? <>As etapas obrigatórias foram concluídas. A conexão com o WhatsApp ficou pendente e continuará destacada no app até você conectar um número.</>
+        : <>Sua configuração inicial foi concluída. Você pode alterar qualquer uma dessas informações depois em <strong>Mais</strong>.</>}</p>
       <PrimaryButton fullWidth onClick={()=>navigate('/app',{replace:true})}>Entrar no ALOVIA</PrimaryButton>
     </div>
   </OnboardingShell>
@@ -93,7 +96,7 @@ export function OnboardingPage(){
     {step===4&&<ServicesStep onBack={()=>setStep(3)} onNext={()=>setStep(5)}/>}
     {step===5&&<MaterialsStep onBack={()=>setStep(4)} onNext={()=>setStep(6)}/>}
     {step===6&&<AgendaStep onBack={()=>setStep(5)} onNext={()=>setStep(7)}/>}
-    {step===7&&<WhatsAppStep onBack={()=>setStep(6)} onFinished={()=>setFinished(true)}/>}
+    {step===7&&<WhatsAppStep onBack={()=>setStep(6)} onFinished={deferred=>{setWhatsappDeferred(deferred);setFinished(true)}}/>}
   </OnboardingShell>
 }
 
@@ -573,13 +576,20 @@ function AgendaStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
   </StepCard>
 }
 
-function WhatsAppStep({onBack,onFinished}:{onBack:()=>void;onFinished:()=>void}){
+function WhatsAppStep({onBack,onFinished}:{onBack:()=>void;onFinished:(deferred:boolean)=>void}){
   const connection=useConnection()
   const setup=useSetupStatus()
   const complete=useCompleteOnboarding()
   const [open,setOpen]=useState(false)
   const connected=connection.data?.status==='connected'||setup.data?.whatsapp===true
   const displayedStatus=connected?'connected':connection.data?.status??'disconnected'
+
+  const finalize=async(deferred:boolean)=>{
+    const result=await complete.mutateAsync()
+    if(!result.onboarding_completed||!result.onboarding_completed_at)throw new Error('Onboarding was not persisted')
+    onFinished(deferred)
+  }
+
   return <StepCard number={7} title="Conectar WhatsApp" description="Última etapa. Conecte o número que será usado pelo ALOVIA para receber conversas e criar agendamentos.">
     <div className="onboarding-info onboarding-info--important"><strong>Se você quer continuar usando o mesmo número no celular</strong><span>Esse número precisa estar ativo no aplicativo WhatsApp Business para usar o modo de coexistência. Se for um número novo ou exclusivo para automação, escolha o caminho exclusivo durante a conexão.</span></div>
     {connection.isPending&&!connected&&<LoadingState/>}
@@ -591,16 +601,20 @@ function WhatsAppStep({onBack,onFinished}:{onBack:()=>void;onFinished:()=>void})
       {!connected&&<PrimaryButton fullWidth icon={<ArrowRight size={18}/>} onClick={()=>setOpen(true)}>Conectar WhatsApp</PrimaryButton>}
       {connected&&<p className="form-success">WhatsApp conectado. Sua configuração inicial está pronta para ser finalizada.</p>}
     </div>}
+    {!connected&&<div className="onboarding-whatsapp-defer">
+      <strong>Não tem um número disponível agora?</strong>
+      <span>Você pode entrar no ALOVIA e conectar o WhatsApp depois. A pendência continuará destacada no app até a conexão ser concluída.</span>
+    </div>}
     {complete.isError&&<MutationError/>}
-    <StepActions onBack={onBack} onNext={async()=>{
-      const result=await complete.mutateAsync()
-      if(!result.onboarding_completed||!result.onboarding_completed_at)throw new Error('Onboarding was not persisted')
-      onFinished()
-    }} nextDisabled={!connected||complete.isPending} nextLabel={complete.isPending?'Finalizando…':'Finalizar configuração'}/>
+    <div className="onboarding-actions onboarding-actions--whatsapp">
+      <button className="compact-button" type="button" onClick={onBack}><ArrowLeft size={17}/>Voltar</button>
+      {connected
+        ? <button className="primary-button" type="button" disabled={complete.isPending} onClick={()=>void finalize(false)}>{complete.isPending?'Finalizando…':'Finalizar configuração'}<ArrowRight size={17}/></button>
+        : <button className="defer-whatsapp-button" type="button" disabled={complete.isPending} onClick={()=>void finalize(true)}>{complete.isPending?'Finalizando…':'Conectar Whatsapp Depois'}<ArrowRight size={17}/></button>}
+    </div>
     <ConnectWhatsAppSheet open={open} onClose={()=>{setOpen(false);void connection.refetch()}}/>
   </StepCard>
 }
-
 function FieldError({children}:{children:React.ReactNode}){return <small className="field-error" role="alert">{children}</small>}
 function formatPostalCode(value:string){const digits=value.replace(/\D/g,'').slice(0,8);return digits.length>5?`${digits.slice(0,5)}-${digits.slice(5)}`:digits}
 
