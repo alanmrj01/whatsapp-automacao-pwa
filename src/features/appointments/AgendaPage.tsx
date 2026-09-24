@@ -6,6 +6,7 @@ import { EmptyState } from '../../components/EmptyState'
 import { ErrorState } from '../../components/ErrorState'
 import { InfoHelp } from '../../components/InfoHelp'
 import { LoadingState } from '../../components/LoadingState'
+import { RequiredLabel } from '../../components/RequiredLabel'
 import { StatusBadge } from '../../components/StatusBadge'
 import { demoAppointments, demoToday, type DemoAppointment, type DemoAppointmentStatus } from '../../demo/operationalDemo'
 import { DemoDataNotice } from '../access/DemoDataNotice'
@@ -334,12 +335,12 @@ function RealAgenda({selectedDate,setSelectedDate,canMutate,initialView,setOuter
         <div><dt>Observações</dt><dd>{visibleDraft.notes||'Sem observações.'}</dd></div>
       </dl>}
       {visibleDraft&&canEdit&&<form className="appointment-form" onSubmit={submit}>
-        <label>Cliente<select required value={visibleDraft.customer_id} onChange={event=>update('customer_id',event.target.value)}><option value="">Selecione</option>{customers.data?.items.map(item=><option value={item.id} key={item.id}>{item.name}{item.phone?` · ${item.phone}`:''}</option>)}<option value="new">Novo cliente</option></select></label>
-        {visibleDraft.customer_id==='new'&&<><label>Nome do cliente<input required value={visibleDraft.new_customer_name} onChange={event=>update('new_customer_name',event.target.value)}/></label><label>Telefone E.164<input required placeholder="+5512999999999" value={visibleDraft.new_customer_phone} onChange={event=>update('new_customer_phone',event.target.value)}/></label></>}
-        <div className="form-grid"><label>Data<input required type="date" value={visibleDraft.date} onChange={event=>update('date',event.target.value)}/></label><label>Início<input required type="time" value={visibleDraft.time} onChange={event=>update('time',event.target.value)}/></label></div>
-        <label>Fim<input required type="time" value={visibleDraft.end_time} onChange={event=>update('end_time',event.target.value)}/></label>
-        <label>Serviço<select required value={visibleDraft.service_id} onChange={event=>update('service_id',event.target.value)}><option value="">Selecione</option>{services.data?.items.filter(item=>item.active).map(item=><option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
-        <label>Responsável/técnico<select required value={visibleDraft.employee_id} onChange={event=>update('employee_id',event.target.value)}><option value="">Selecione</option>{employees.data?.items.filter(item=>item.active&&item.operational_role==='technician').map(item=><option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
+        <label><RequiredLabel>Cliente</RequiredLabel><select required value={visibleDraft.customer_id} onChange={event=>update('customer_id',event.target.value)}><option value="">Selecione</option>{customers.data?.items.map(item=><option value={item.id} key={item.id}>{item.name}{item.phone?` · ${item.phone}`:''}</option>)}<option value="new">Novo cliente</option></select></label>
+        {visibleDraft.customer_id==='new'&&<><label><RequiredLabel>Nome do cliente</RequiredLabel><input required value={visibleDraft.new_customer_name} onChange={event=>update('new_customer_name',event.target.value)}/></label><label><RequiredLabel>Telefone E.164</RequiredLabel><input required placeholder="+5512999999999" value={visibleDraft.new_customer_phone} onChange={event=>update('new_customer_phone',event.target.value)}/></label></>}
+        <div className="form-grid"><label><RequiredLabel>Data</RequiredLabel><input required type="date" value={visibleDraft.date} onChange={event=>update('date',event.target.value)}/></label><label><RequiredLabel>Início</RequiredLabel><input required type="time" value={visibleDraft.time} onChange={event=>update('time',event.target.value)}/></label></div>
+        <label><RequiredLabel>Fim</RequiredLabel><input required type="time" value={visibleDraft.end_time} onChange={event=>update('end_time',event.target.value)}/></label>
+        <label><RequiredLabel>Serviço</RequiredLabel><select required value={visibleDraft.service_id} onChange={event=>update('service_id',event.target.value)}><option value="">Selecione</option>{services.data?.items.filter(item=>item.active).map(item=><option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
+        <label><RequiredLabel>Responsável/técnico</RequiredLabel><select required value={visibleDraft.employee_id} onChange={event=>update('employee_id',event.target.value)}><option value="">Selecione</option>{employees.data?.items.filter(item=>item.active&&item.operational_role==='technician').map(item=><option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
         <label>Status<select value={visibleDraft.status} onChange={event=>update('status',event.target.value as AppointmentStatus)}>{Object.entries(statusLabels).map(([value,label])=><option value={value} key={value}>{label}</option>)}</select></label>
         <label>Observações<textarea rows={3} maxLength={2000} value={visibleDraft.notes} onChange={event=>update('notes',event.target.value)}/></label>
         {error&&<p className="form-error" role="alert">{error}</p>}
