@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ErrorState } from '../../components/ErrorState'
 import { InfoHelp } from '../../components/InfoHelp'
 import { LoadingState } from '../../components/LoadingState'
+import { RequiredLabel } from '../../components/RequiredLabel'
 import { canConfigureWhatsApp } from '../auth/types'
 import { useAuth } from '../auth/useAuth'
 import { useCreateService, useDeleteService, useServices, useUpdateService } from '../operations/api'
@@ -49,8 +50,8 @@ export function ServiceCatalogPage(){
     <section className="operational-heading"><div><span className="eyebrow">Empresa</span><h1>Catálogo de serviços</h1></div><InfoHelp title="Catálogo de serviços">Nome, preço e duração alimentam o Assistente Virtual e o agendamento automático. Itens excluídos deixam de ser oferecidos sem apagar o histórico de atendimentos.</InfoHelp></section>
     {canEdit&&<div className="catalog-toolbar"><button className="compact-button" type="button" onClick={()=>setAdding(value=>!value)}><Plus size={16}/>Adicionar serviço</button></div>}
     {canEdit&&adding&&<div className="settings-form settings-form--inline">
-      <label>Serviço<input value={newName} onChange={event=>setNewName(event.target.value)} placeholder="Ex.: Limpeza de ar-condicionado"/></label>
-      <div className="form-grid"><label>Duração média (minutos)<input type="number" min={1} max={1440} value={newDuration} onChange={event=>setNewDuration(event.target.value)}/></label><label>Preço (R$)<input inputMode="decimal" value={newPrice} onChange={event=>setNewPrice(event.target.value)} placeholder="0,00"/></label></div>
+      <label><RequiredLabel>Serviço</RequiredLabel><input value={newName} onChange={event=>setNewName(event.target.value)} placeholder="Ex.: Limpeza de ar-condicionado"/></label>
+      <div className="form-grid"><label><RequiredLabel>Duração média (minutos)</RequiredLabel><input type="number" min={1} max={1440} value={newDuration} onChange={event=>setNewDuration(event.target.value)}/></label><label><RequiredLabel>Preço (R$)</RequiredLabel><input inputMode="decimal" value={newPrice} onChange={event=>setNewPrice(event.target.value)} placeholder="0,00"/></label></div>
       <button className="primary-button" type="button" disabled={create.isPending||!newName.trim()||!newPrice.trim()} onClick={()=>void add()}>{create.isPending?'Adicionando…':'Adicionar à lista'}</button>
     </div>}
     <div className="catalog-table-list">
@@ -58,8 +59,8 @@ export function ServiceCatalogPage(){
         const draft=drafts[item.id]??{name:item.name,duration:String(item.duration_minutes),price:item.price==null?'':String(item.price)}
         return <article className="catalog-table-row catalog-table-row--service" key={item.id}>
           <div><span className="catalog-kind">Serviço</span><input aria-label="Nome do serviço" value={draft.name} disabled={!canEdit} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,name:event.target.value}}))}/></div>
-          <div><label>Duração média (minutos)<input type="number" min={1} max={1440} value={draft.duration} disabled={!canEdit} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,duration:event.target.value}}))}/></label></div>
-          <div><label>Preço (R$)<input inputMode="decimal" value={draft.price} disabled={!canEdit} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,price:event.target.value}}))}/></label></div>
+          <div><label><RequiredLabel>Duração média (minutos)</RequiredLabel><input type="number" min={1} max={1440} value={draft.duration} disabled={!canEdit} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,duration:event.target.value}}))}/></label></div>
+          <div><label><RequiredLabel>Preço (R$)</RequiredLabel><input inputMode="decimal" value={draft.price} disabled={!canEdit} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,price:event.target.value}}))}/></label></div>
           {canEdit&&<button className="catalog-icon-danger" type="button" aria-label={`Excluir ${item.name}`} disabled={remove.isPending} onClick={()=>remove.mutate(item.id)}><Trash2 size={17}/></button>}
         </article>
       })}
