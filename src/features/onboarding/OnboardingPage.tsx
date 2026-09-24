@@ -360,23 +360,25 @@ function ServicesStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
   const newDurationNumber=Number(newDuration)
   const newPriceNumber=parseMoney(newPrice)
   const newInvalid={name:newName.trim().length<2,duration:!Number.isFinite(newDurationNumber)||newDurationNumber<=0,price:newPriceNumber===null}
+  const serviceDraftInvalid=(serviceId:string)=>{
+    const draft=drafts[serviceId]
+    if(!draft)return true
+    const duration=Number(draft.duration),price=parseMoney(draft.price)
+    return draft.name.trim().length<2||!Number.isFinite(duration)||duration<=0||price===null
+  }
+  const catalogInvalid=!activeServices.length||activeServices.some(service=>serviceDraftInvalid(service.id))
 
   const add=async()=>{
     setAddAttempted(true)
-    if(newInvalid.name||newInvalid.duration||newInvalid.price)return
+    if(newInvalid.name||newInvalid.duration||newInvalid.price)return false
     await create.mutateAsync({name:newName.trim(),duration_minutes:newDurationNumber,price:newPriceNumber})
     setNewName('');setNewDuration('60');setNewPrice('');setAdding(false);setAddAttempted(false)
     await setup.refetch()
+    return true
   }
   const save=async()=>{
     setSaveAttempted(true)
-    const invalid=activeServices.some(service=>{
-      const draft=drafts[service.id]
-      if(!draft)return true
-      const duration=Number(draft.duration),price=parseMoney(draft.price)
-      return draft.name.trim().length<2||!Number.isFinite(duration)||duration<=0||price===null
-    })
-    if(invalid)return
+    if(catalogInvalid)return false
     for(const service of activeServices){
       const draft=drafts[service.id]
       const duration=Number(draft.duration),price=parseMoney(draft.price)
@@ -384,6 +386,14 @@ function ServicesStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
     }
     await setup.refetch()
     setSaveAttempted(false)
+    return true
+  }
+  const continueStep=async()=>{
+    if(adding){
+      setAddAttempted(true)
+      return
+    }
+    if(await save())onNext()
   }
 
   return <StepCard number={4} title="Catálogo de serviços" description="Revise os serviços que sua empresa realmente oferece. Nome, preço e duração média ajudam o ALOVIA a entender o pedido e montar a agenda corretamente.">
@@ -402,7 +412,7 @@ function ServicesStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
         const duration=Number(draft.duration),invalidDuration=!Number.isFinite(duration)||duration<=0
         const invalidPrice=parseMoney(draft.price)===null
         return <article className="onboarding-item-row onboarding-item-row--editable" key={service.id}>
-          <label><RequiredLabel>Serviço</RequiredLabel><input className={saveAttempted&&invalidName?'field-invalid':''} value={draft.name} onChange={event=>setDrafts(current=>({...current,[service.id]:{...draft,name:event.target.value}}))}/>{saveAttempted&&invalidName&&<FieldError>Campo obrigatório.</FieldError>}</label>
+          <label><RequiredLabel>Serviço</RequiredLabel><input className={saveAttempted&&invalidName?'field-invalid':''} value={draft.name} onChange={event=>setDrafts(current=>({...current,[service.id]:{...draft,name:event.target.value}}))}/>{saveAttempted&&invalidName&&<FieldError>Informe o nome do serviço.</FieldError>}</label>
           <label><RequiredLabel>Duração média</RequiredLabel><div className={saveAttempted&&invalidDuration?'input-with-unit field-invalid-wrapper':'input-with-unit'}><input type="number" min={1} max={1440} value={draft.duration} onChange={event=>setDrafts(current=>({...current,[service.id]:{...draft,duration:event.target.value}}))}/><span>min</span></div>{saveAttempted&&invalidDuration&&<FieldError>Informe a duração.</FieldError>}</label>
           <label><RequiredLabel>Preço (R$)</RequiredLabel><input className={saveAttempted&&invalidPrice?'field-invalid':''} inputMode="decimal" value={draft.price} onChange={event=>setDrafts(current=>({...current,[service.id]:{...draft,price:event.target.value}}))} placeholder="0,00"/>{saveAttempted&&invalidPrice&&<FieldError>Informe o preço.</FieldError>}</label>
           <button className="icon-danger-button" type="button" aria-label={`Excluir ${service.name}`} disabled={remove.isPending} onClick={()=>remove.mutate(service.id)}><Trash2 size={18}/></button>
@@ -410,10 +420,11 @@ function ServicesStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
       })}
       {!activeServices.length&&<p className="settings-empty">Adicione pelo menos um serviço oferecido pela empresa.</p>}
     </div>
-    {saveAttempted&&activeServices.some(service=>{const d=drafts[service.id];return !d||d.name.trim().length<2||Number(d.duration)<=0||parseMoney(d.price)===null})&&<p className="form-error" role="alert">Revise os campos obrigatórios destacados antes de salvar os serviços.</p>}
+    {saveAttempted&&catalogInvalid&&<p className="form-error" role="alert">Preencha todos os campos obrigatórios de todos os serviços antes de salvar ou continuar.</p>}
+    {addAttempted&&adding&&(newInvalid.name||newInvalid.duration||newInvalid.price)&&<p className="form-error" role="alert">Conclua o novo serviço ou feche o formulário de adição antes de continuar.</p>}
     {(create.isError||update.isError||remove.isError)&&<MutationError/>}
     <button className="primary-button onboarding-save-all" type="button" disabled={update.isPending||!activeServices.length} onClick={()=>void save()}><Save size={17}/>{update.isPending?'Salvando…':'Salvar serviços'}</button>
-    <StepActions onBack={onBack} onNext={onNext} nextDisabled={!setup.data?.services}/>
+    <StepActions onBack={onBack} onNext={()=>void continueStep()} nextDisabled={update.isPending||create.isPending||remove.isPending||!activeServices.length}/>
   </StepCard>
 }
 
@@ -439,6 +450,11 @@ function MaterialsStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
   if(items.isPending||business.isPending)return <LoadingState/>
   if(items.isError||business.isError||!items.data||!business.data)return <ErrorState onRetry={()=>{void items.refetch();void business.refetch()}}/>
   const optedOut=business.data.materials_catalog_reviewed&&!activeItems.length
+  const itemDraftInvalid=(itemId:string)=>{
+    const draft=drafts[itemId]
+    return !draft||draft.name.trim().length<2||parseMoney(draft.price)===null||!draft.unit||!draft.kind
+  }
+  const catalogInvalid=activeItems.some(item=>itemDraftInvalid(item.id))
 
   const toggleOptOut=async(checked:boolean)=>{
     if(checked){
@@ -453,18 +469,15 @@ function MaterialsStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
   const add=async()=>{
     setAddAttempted(true)
     const price=parseMoney(newPrice)
-    if(newName.trim().length<2||price===null||!newUnit)return
+    if(newName.trim().length<2||price===null||!newUnit||!newKind)return false
     await create.mutateAsync({kind:newKind,name:newName.trim(),description:newDescription.trim()||null,price,unit_label:newUnit})
-    setNewName('');setNewDescription('');setNewPrice('');setNewUnit('unidade');setAdding(false);setAddAttempted(false)
+    setNewName('');setNewDescription('');setNewPrice('');setNewUnit('unidade');setNewKind('material');setAdding(false);setAddAttempted(false)
     await setup.refetch()
+    return true
   }
   const save=async()=>{
     setSaveAttempted(true)
-    const invalid=activeItems.some(item=>{
-      const draft=drafts[item.id]
-      return !draft||draft.name.trim().length<2||parseMoney(draft.price)===null||!draft.unit
-    })
-    if(invalid)return
+    if(catalogInvalid)return false
     for(const item of activeItems){
       const draft=drafts[item.id]
       const price=parseMoney(draft.price)
@@ -473,6 +486,18 @@ function MaterialsStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
     await updateBusiness.mutateAsync({materials_catalog_reviewed:true})
     await setup.refetch()
     setSaveAttempted(false)
+    return true
+  }
+  const continueStep=async()=>{
+    if(adding){
+      setAddAttempted(true)
+      return
+    }
+    if(activeItems.length){
+      if(await save())onNext()
+      return
+    }
+    if(optedOut||business.data.materials_catalog_reviewed)onNext()
   }
 
   return <StepCard number={5} title="Materiais e equipamentos" description="Mantenha aqui somente o que sua empresa cobra separadamente. Você pode editar os itens sugeridos, excluir o que não usa e criar novos itens.">
@@ -484,7 +509,7 @@ function MaterialsStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
     {adding&&<div className="catalog-add-card">
       <label><RequiredLabel>Tipo</RequiredLabel><select value={newKind} onChange={event=>setNewKind(event.target.value as 'material'|'equipment')}><option value="material">Material</option><option value="equipment">Equipamento</option></select></label>
       <label><RequiredLabel>Nome</RequiredLabel><input className={addAttempted&&newName.trim().length<2?'field-invalid':''} value={newName} onChange={event=>setNewName(event.target.value)} placeholder="Ex.: Tubulação adicional"/>{addAttempted&&newName.trim().length<2&&<FieldError>Informe o nome do item.</FieldError>}</label>
-      <label>Descrição <span className="optional-label">Opcional</span><input value={newDescription} onChange={event=>setNewDescription(event.target.value)} placeholder="Quando é usado ou cobrado"/></label>
+      <label><span className="field-label-row"><span>Descrição</span><span className="optional-label">Opcional</span></span><input value={newDescription} onChange={event=>setNewDescription(event.target.value)} placeholder="Quando é usado ou cobrado"/></label>
       <label><RequiredLabel>Preço (R$)</RequiredLabel><input className={addAttempted&&parseMoney(newPrice)===null?'field-invalid':''} inputMode="decimal" value={newPrice} onChange={event=>setNewPrice(event.target.value)} placeholder="0,00"/>{addAttempted&&parseMoney(newPrice)===null&&<FieldError>Informe o preço.</FieldError>}</label>
       <label><RequiredLabel>Unidade</RequiredLabel><select value={newUnit} onChange={event=>setNewUnit(event.target.value)}>{unitOptions.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
       <button className="primary-button" type="button" disabled={create.isPending} onClick={()=>void add()}>{create.isPending?'Adicionando…':'Adicionar à lista'}</button>
@@ -492,21 +517,22 @@ function MaterialsStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
     <div className="onboarding-service-list onboarding-material-list">
       {activeItems.map(item=>{
         const draft=drafts[item.id]??materialDraft(item)
-        const invalidName=draft.name.trim().length<2,invalidPrice=parseMoney(draft.price)===null
+        const invalidName=draft.name.trim().length<2,invalidPrice=parseMoney(draft.price)===null,invalidUnit=!draft.unit
         return <article className="onboarding-item-row onboarding-item-row--material" key={item.id}>
-          <label><RequiredLabel>Item</RequiredLabel><input className={saveAttempted&&invalidName?'field-invalid':''} value={draft.name} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,name:event.target.value}}))}/><small>{draft.kind==='material'?'Material':'Equipamento'}</small>{saveAttempted&&invalidName&&<FieldError>Campo obrigatório.</FieldError>}</label>
-          <label>Descrição <span className="optional-label">Opcional</span><input value={draft.description} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,description:event.target.value}}))}/></label>
+          <label><RequiredLabel>Item</RequiredLabel><input className={saveAttempted&&invalidName?'field-invalid':''} value={draft.name} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,name:event.target.value}}))}/><small>{draft.kind==='material'?'Material':'Equipamento'}</small>{saveAttempted&&invalidName&&<FieldError>Informe o nome do item.</FieldError>}</label>
+          <label><span className="field-label-row"><span>Descrição</span><span className="optional-label">Opcional</span></span><input value={draft.description} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,description:event.target.value}}))}/></label>
           <label><RequiredLabel>Preço (R$)</RequiredLabel><input className={saveAttempted&&invalidPrice?'field-invalid':''} inputMode="decimal" value={draft.price} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,price:event.target.value}}))} placeholder="0,00"/>{saveAttempted&&invalidPrice&&<FieldError>Informe o preço.</FieldError>}</label>
-          <label><RequiredLabel>Unidade</RequiredLabel><select value={draft.unit} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,unit:event.target.value}}))}>{unitOptions.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+          <label><RequiredLabel>Unidade</RequiredLabel><select className={saveAttempted&&invalidUnit?'field-invalid':''} value={draft.unit} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,unit:event.target.value}}))}>{unitOptions.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select>{saveAttempted&&invalidUnit&&<FieldError>Selecione a unidade.</FieldError>}</label>
           <button className="icon-danger-button" type="button" aria-label={`Excluir ${item.name}`} disabled={remove.isPending} onClick={()=>remove.mutate(item.id)}><Trash2 size={18}/></button>
         </article>
       })}
       {!activeItems.length&&<p className="settings-empty">{optedOut?'Nenhum material é cobrado separadamente. Você ainda pode adicionar um item quando precisar.':'Nenhum material ou equipamento na lista.'}</p>}
     </div>
-    {saveAttempted&&activeItems.some(item=>{const d=drafts[item.id];return !d||d.name.trim().length<2||parseMoney(d.price)===null||!d.unit})&&<p className="form-error" role="alert">Revise os campos obrigatórios destacados antes de salvar os itens.</p>}
+    {saveAttempted&&catalogInvalid&&<p className="form-error" role="alert">Preencha todos os campos obrigatórios de todos os itens antes de salvar ou continuar.</p>}
+    {addAttempted&&adding&&(newName.trim().length<2||parseMoney(newPrice)===null||!newUnit||!newKind)&&<p className="form-error" role="alert">Conclua o novo item ou feche o formulário de adição antes de continuar.</p>}
     {(create.isError||update.isError||remove.isError||updateBusiness.isError)&&<MutationError/>}
     {!!activeItems.length&&<button className="primary-button onboarding-save-all" type="button" disabled={update.isPending} onClick={()=>void save()}><Save size={17}/>{update.isPending?'Salvando…':'Salvar itens'}</button>}
-    <StepActions onBack={onBack} onNext={onNext} nextDisabled={!setup.data?.materials}/>
+    <StepActions onBack={onBack} onNext={()=>void continueStep()} nextDisabled={update.isPending||create.isPending||remove.isPending||updateBusiness.isPending||(!activeItems.length&&!optedOut&&!business.data.materials_catalog_reviewed)}/>
   </StepCard>
 }
 
