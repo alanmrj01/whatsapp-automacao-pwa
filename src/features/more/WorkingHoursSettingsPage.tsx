@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { ErrorState } from '../../components/ErrorState'
 import { InfoHelp } from '../../components/InfoHelp'
 import { LoadingState } from '../../components/LoadingState'
+import { RequiredLabel } from '../../components/RequiredLabel'
 import { canConfigureWhatsApp } from '../auth/types'
 import { useAuth } from '../auth/useAuth'
 import { useBusinessHours, useUpdateBusinessHours } from '../operations/api'
@@ -51,15 +52,15 @@ export function WorkingHoursSettingsPage(){
       })
     }}>
       <fieldset className="settings-fieldset">
-        <legend>Dias da semana</legend>
+        <legend><RequiredLabel>Dias da semana</RequiredLabel></legend>
         <div className="settings-weekday-grid">
           {weekdays.map((label,index)=><label className={selectedDays.includes(index)?'settings-day-chip is-selected':'settings-day-chip'} key={label}><input type="checkbox" checked={selectedDays.includes(index)} onChange={()=>toggle(index)}/><span>{label}</span></label>)}
         </div>
         <button className="text-button" type="button" onClick={()=>setSelectedDays([0,1,2,3,4])}>Selecionar segunda a sexta</button>
       </fieldset>
-      <div className="form-grid"><label>Início<input type="time" value={start} onChange={event=>setStart(event.target.value)}/></label><label>Fim<input type="time" value={end} onChange={event=>setEnd(event.target.value)}/></label></div>
+      <div className="form-grid"><label><RequiredLabel>Início</RequiredLabel><input type="time" value={start} onChange={event=>setStart(event.target.value)}/></label><label><RequiredLabel>Fim</RequiredLabel><input type="time" value={end} onChange={event=>setEnd(event.target.value)}/></label></div>
       <label className="settings-checkbox"><input type="checkbox" checked={weekendEnabled} onChange={event=>setWeekendEnabled(event.target.checked)}/><span><strong>Atendemos em finais de semana e feriados nacionais</strong><small>Defina um horário específico para sábados, domingos e feriados nacionais reconhecidos pelo ALOVIA.</small></span></label>
-      {weekendEnabled&&<div className="form-grid"><label>Início — finais de semana/feriados<input type="time" value={weekendStart} onChange={event=>setWeekendStart(event.target.value)}/></label><label>Fim — finais de semana/feriados<input type="time" value={weekendEnd} onChange={event=>setWeekendEnd(event.target.value)}/></label></div>}
+      {weekendEnabled&&<div className="form-grid"><label><RequiredLabel>Início — finais de semana/feriados</RequiredLabel><input type="time" value={weekendStart} onChange={event=>setWeekendStart(event.target.value)}/></label><label><RequiredLabel>Fim — finais de semana/feriados</RequiredLabel><input type="time" value={weekendEnd} onChange={event=>setWeekendEnd(event.target.value)}/></label></div>}
       {update.isError&&<MutationError/>}
       {update.isSuccess&&<p className="form-success">Horários salvos.</p>}
       <button className="primary-button" disabled={!valid||update.isPending}><Save size={18}/>{update.isPending?'Salvando…':'Salvar horários'}</button>
