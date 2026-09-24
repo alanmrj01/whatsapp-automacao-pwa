@@ -314,3 +314,20 @@ test('required markers stay compact and catalog saves reject incomplete visible 
   assert.match(materials,/optional-label/)
   assert.doesNotMatch(materials,/<RequiredLabel>Descrição<\/RequiredLabel>/)
 })
+
+
+test('WhatsApp is the only onboarding step that can be deferred and remains visibly pending', () => {
+  const onboarding = read('src/features/onboarding/OnboardingPage.tsx')
+  const shell = read('src/app/AppShell.tsx')
+  const dashboard = read('src/features/dashboard/DashboardPage.tsx')
+  const more = read('src/features/more/MorePage.tsx')
+
+  assert.match(onboarding,/Conectar Whatsapp Depois/)
+  assert.match(onboarding,/onFinished\(deferred\)/)
+  assert.match(onboarding,/A conexão com o WhatsApp ficou pendente/)
+  assert.match(shell,/Conexão com WhatsApp pendente/)
+  assert.match(shell,/setup\.data\?\.onboarding_completed===true&&!connected/)
+  assert.match(shell,/to="\/app\/whatsapp"/)
+  assert.match(dashboard,/nonWhatsAppBlockingReasons/)
+  assert.match(more,/whatsappPending/)
+})
