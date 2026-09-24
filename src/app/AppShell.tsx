@@ -1,10 +1,12 @@
-import { Outlet, useLocation } from 'react-router-dom'
+import { Link, Outlet, useLocation } from 'react-router-dom'
 import { AppHeader } from '../components/AppHeader'
 import { BottomNavigation } from '../components/BottomNavigation'
 import { DesktopSidebar } from '../components/DesktopSidebar'
 import { BusinessSelector } from '../features/auth/BusinessSelector'
 import { UpgradePromptProvider } from '../features/access/UpgradePrompt'
 import { NotificationCenter } from '../features/notifications/NotificationCenter'
+import { useSetupStatus } from '../features/operations/api'
+import { useConnection } from '../features/whatsapp/useConnection'
 
 const titles: Record<string, string> = {
   '/app': 'Início',
@@ -34,6 +36,7 @@ export function AppShell() {
       <UpgradePromptProvider>
         <div className="conversation-route-shell" id="main-content">
           <NotificationCenter backgroundOnly />
+          <WhatsAppPendingBanner />
           <Outlet />
         </div>
       </UpgradePromptProvider>
@@ -48,6 +51,7 @@ export function AppShell() {
         <AppHeader title={title} showBack={isDetail} backTo={isSettingsDetail?'/app/mais':'/app/whatsapp'} actions={<NotificationCenter/>} />
         <main className="app-content" id="main-content">
           <div className="page-stack"><BusinessSelector /></div>
+          <WhatsAppPendingBanner />
           <Outlet />
         </main>
         <BottomNavigation />
@@ -55,4 +59,20 @@ export function AppShell() {
     </div>
     </UpgradePromptProvider>
   )
+}
+
+
+function WhatsAppPendingBanner() {
+  const setup=useSetupStatus()
+  const connection=useConnection()
+  const connected=setup.data?.whatsapp===true||connection.data?.status==='connected'
+  const pending=setup.data?.onboarding_completed===true&&!connected
+  if(!pending)return null
+  return <section className="app-pending-banner" role="status">
+    <div>
+      <strong>Conexão com WhatsApp pendente</strong>
+      <span>Você pode visualizar o ALOVIA, mas o atendimento automático pelo WhatsApp ficará indisponível até concluir a conexão.</span>
+    </div>
+    <Link className="compact-button" to="/app/whatsapp">Conectar WhatsApp</Link>
+  </section>
 }
