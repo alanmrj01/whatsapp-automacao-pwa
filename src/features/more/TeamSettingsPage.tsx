@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { ErrorState } from '../../components/ErrorState'
 import { InfoHelp } from '../../components/InfoHelp'
 import { LoadingState } from '../../components/LoadingState'
+import { RequiredLabel } from '../../components/RequiredLabel'
 import { StatusBadge } from '../../components/StatusBadge'
 import { canConfigureWhatsApp } from '../auth/types'
 import { useAuth } from '../auth/useAuth'
@@ -22,8 +23,8 @@ export function TeamSettingsPage(){
   return <Shell>
     <section className="operational-heading"><div><span className="eyebrow">Empresa</span><h1>Técnicos e responsáveis</h1></div><InfoHelp title="Técnicos e responsáveis">Um técnico ativo pode ser alocado em qualquer serviço. Você não precisa configurar serviços por técnico.</InfoHelp></section>
     {canEdit&&<form className="settings-form settings-form--inline" onSubmit={event=>{event.preventDefault();create.mutate({name,operational_role:role},{onSuccess:()=>{setName('');setRole('technician')}})}}>
-      <label>Novo profissional<input required minLength={2} value={name} onChange={event=>setName(event.target.value)}/></label>
-      <label>Função<select value={role} onChange={event=>setRole(event.target.value as OperationalRole)}>{Object.entries(roles).map(([value,label])=><option value={value} key={value}>{label}</option>)}</select></label>
+      <label><RequiredLabel>Novo profissional</RequiredLabel><input required minLength={2} value={name} onChange={event=>setName(event.target.value)}/></label>
+      <label><RequiredLabel>Função</RequiredLabel><select value={role} onChange={event=>setRole(event.target.value as OperationalRole)}>{Object.entries(roles).map(([value,label])=><option value={value} key={value}>{label}</option>)}</select></label>
       {create.isError&&<MutationError/>}
       <button className="primary-button" disabled={create.isPending||!name.trim()}><Plus size={18}/>{create.isPending?'Adicionando…':'Adicionar profissional'}</button>
     </form>}
@@ -38,7 +39,7 @@ function EmployeeEditor({employee,canEdit}:{employee:Employee;canEdit:boolean}){
   const [saved,setSaved]=useState(false)
   return <article className="settings-editor">
     <div className="settings-editor__heading"><UsersRound/><input aria-label="Nome do profissional" value={name} disabled={!canEdit} onChange={event=>setName(event.target.value)}/><StatusBadge tone={employee.active?'success':'neutral'}>{employee.active?'Ativo':'Inativo'}</StatusBadge></div>
-    <label>Função operacional<select value={role} disabled={!canEdit} onChange={event=>setRole(event.target.value as OperationalRole)}>{Object.entries(roles).map(([value,label])=><option value={value} key={value}>{label}</option>)}</select></label>
+    <label><RequiredLabel>Função operacional</RequiredLabel><select value={role} disabled={!canEdit} onChange={event=>setRole(event.target.value as OperationalRole)}>{Object.entries(roles).map(([value,label])=><option value={value} key={value}>{label}</option>)}</select></label>
     {update.isError&&<MutationError/>}{saved&&<p className="form-success">Profissional salvo.</p>}
     {canEdit&&<div className="settings-editor__actions"><button className="danger-button" type="button" disabled={update.isPending} onClick={()=>update.mutate({id:employee.id,values:{active:!employee.active}})}>{employee.active?'Desativar':'Ativar'}</button><button className="compact-button" type="button" disabled={update.isPending} onClick={()=>{setSaved(false);update.mutate({id:employee.id,values:{name,operational_role:role}},{onSuccess:()=>setSaved(true)})}}><Save size={16}/>{update.isPending?'Salvando…':'Salvar'}</button></div>}
   </article>
