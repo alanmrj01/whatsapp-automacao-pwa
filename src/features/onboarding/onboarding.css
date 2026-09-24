@@ -673,3 +673,40 @@
 .onboarding-item-row--material select{
   min-height:46px;
 }
+
+
+/* WhatsApp is the only onboarding step that can be deferred. */
+.onboarding-whatsapp-defer{
+  display:grid;
+  gap:4px;
+  padding:13px 14px;
+  border:1px solid #efd58c;
+  border-radius:14px;
+  color:#66511a;
+  background:#fff8df;
+  line-height:1.45;
+}
+.onboarding-whatsapp-defer strong{font-size:.8rem}
+.onboarding-whatsapp-defer span{font-size:.74rem}
+.defer-whatsapp-button{
+  min-height:44px;
+  padding:9px 13px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  border:1px solid #bcd4ee;
+  border-radius:12px;
+  color:var(--color-primary-700);
+  background:#f7fbff;
+  font:inherit;
+  font-size:.78rem;
+  font-weight:750;
+  cursor:pointer;
+}
+.defer-whatsapp-button:hover{background:#eef6ff}
+.defer-whatsapp-button:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:480px){
+  .onboarding-actions--whatsapp .defer-whatsapp-button,
+  .onboarding-actions--whatsapp .compact-button{width:100%}
+}
