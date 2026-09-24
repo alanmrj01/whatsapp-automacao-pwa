@@ -291,3 +291,26 @@ test('routes are lazy-loaded so the initial shell does not bundle every feature 
   assert.match(router,/Suspense/)
   assert.doesNotMatch(router,/import \{ DashboardPage \}/)
 })
+
+
+test('required markers stay compact and catalog saves reject incomplete visible items', () => {
+  const required = read('src/components/RequiredLabel.tsx')
+  const onboarding = read('src/features/onboarding/OnboardingPage.tsx')
+  const services = read('src/features/more/ServiceCatalogPage.tsx')
+  const materials = read('src/features/more/MaterialsCatalogPage.tsx')
+
+  assert.match(required,/required-field-star/)
+  assert.match(required,/>\*</)
+  assert.doesNotMatch(required,/Obrigatório/)
+
+  assert.match(onboarding,/catalogInvalid/)
+  assert.match(onboarding,/if\(catalogInvalid\)return false/)
+  assert.match(onboarding,/Descrição<\/span><span className="optional-label">Opcional/)
+  assert.doesNotMatch(onboarding,/<RequiredLabel>Descrição<\/RequiredLabel>/)
+
+  assert.match(services,/if\(catalogInvalid\)return/)
+  assert.match(services,/<RequiredLabel>Serviço<\/RequiredLabel>/)
+  assert.match(materials,/if\(catalogInvalid\)return/)
+  assert.match(materials,/optional-label/)
+  assert.doesNotMatch(materials,/<RequiredLabel>Descrição<\/RequiredLabel>/)
+})
