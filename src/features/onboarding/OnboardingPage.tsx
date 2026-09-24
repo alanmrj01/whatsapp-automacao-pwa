@@ -4,6 +4,7 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import { ErrorState } from '../../components/ErrorState'
 import { LoadingState } from '../../components/LoadingState'
 import { PrimaryButton } from '../../components/PrimaryButton'
+import { RequiredLabel } from '../../components/RequiredLabel'
 import { canConfigureWhatsApp } from '../auth/types'
 import { SessionActions } from '../auth/SessionActions'
 import { useAuth } from '../auth/useAuth'
@@ -180,7 +181,7 @@ function CompanyStep({onNext}:{onNext:()=>void}){
     }
   }
 
-  return <StepCard number={1} title="Dados da empresa" description="Preencha as informações básicas que o ALOVIA usa para identificar sua operação e calcular o primeiro deslocamento do dia.">
+  return <StepCard number={1} title="Dados da empresa" description="Preencha as informações básicas que o ALOVIA usa para identificar sua operação e calcular o deslocamento entre serviços.">
     <form className="onboarding-form" noValidate onSubmit={async event=>{
       event.preventDefault()
       setAttempted(true)
@@ -257,7 +258,7 @@ function TeamStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
     await setup.refetch()
   }
 
-  return <StepCard number={2} title="Técnico responsável" description="Cadastre pelo menos um técnico. Ele poderá ser alocado a qualquer serviço; não é necessário vincular serviços ao profissional.">
+  return <StepCard number={2} title="Técnico responsável" description="Cadastre pelo menos um técnico. Ele poderá ser alocado a qualquer serviço.">
     <div className="onboarding-form">
       <label><RequiredLabel>Nome do técnico</RequiredLabel><div className="inline-create"><input className={attempted&&name.trim().length<2?'field-invalid':''} aria-invalid={attempted&&name.trim().length<2} value={name} onChange={event=>setName(event.target.value)} placeholder="Nome do profissional"/><button className="compact-button" type="button" disabled={create.isPending} onClick={()=>void add()}><Plus size={16}/>Adicionar</button></div>{attempted&&name.trim().length<2&&<FieldError>Informe o nome do técnico.</FieldError>}</label>
       {technicians.length>0&&<div className="technician-list">{technicians.map(item=><div className="technician-row" key={item.id}>
@@ -314,7 +315,7 @@ function HoursStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
     onNext()
   }
 
-  return <StepCard number={3} title="Horários de funcionamento" description="Defina quando a empresa atende. Esta etapa representa o horário da operação — não a escala individual de cada técnico.">
+  return <StepCard number={3} title="Horários de funcionamento" description="Defina quando a empresa atende. Esta etapa representa o horário da operação dos técnicos para o agendamento automático.">
     <div className="onboarding-form">
       <fieldset className={attempted&&!selectedDays.length?'onboarding-fieldset fieldset-invalid':'onboarding-fieldset'}>
         <legend><RequiredLabel>Dias da semana</RequiredLabel></legend>
@@ -574,7 +575,6 @@ function WhatsAppStep({onBack,onFinished}:{onBack:()=>void;onFinished:()=>void})
   </StepCard>
 }
 
-function RequiredLabel({children}:{children:React.ReactNode}){return <span className="field-label-text">{children}<span className="required-indicator">Obrigatório</span></span>}
 function FieldError({children}:{children:React.ReactNode}){return <small className="field-error" role="alert">{children}</small>}
 function formatPostalCode(value:string){const digits=value.replace(/\D/g,'').slice(0,8);return digits.length>5?`${digits.slice(0,5)}-${digits.slice(5)}`:digits}
 
