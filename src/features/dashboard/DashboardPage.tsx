@@ -31,7 +31,8 @@ export function DashboardPage() {
   const canMutate = entitlement.canMutateOperationalData
   const readOnly = entitlement.isReadOnlyRetained
   const active = state === 'ACTIVE'
-  const needsReview = !demo&&setup.data?.onboarding_completed===true&&setup.data.blocking_reasons.length>0
+  const nonWhatsAppBlockingReasons = setup.data?.blocking_reasons.filter(reason=>!/WhatsApp/i.test(reason))??[]
+  const needsReview = !demo&&setup.data?.onboarding_completed===true&&nonWhatsAppBlockingReasons.length>0
   const metrics = demo ? demoOverview : dashboard.data ? {
     waiting:dashboard.data.metrics.waiting_count,
     inProgress:dashboard.data.metrics.in_progress_count,
@@ -69,7 +70,7 @@ export function DashboardPage() {
     </section>
 
     {needsReview&&<section className="setup-callout setup-callout--warning" role="status">
-      <div><strong>Revise sua configuração</strong><span>{setup.data?.blocking_reasons[0]} O Assistente Virtual pode não conseguir criar novos agendamentos.</span></div>
+      <div><strong>Revise sua configuração</strong><span>{nonWhatsAppBlockingReasons[0]} O Assistente Virtual pode não conseguir criar novos agendamentos.</span></div>
       <Link className="compact-button" to="/app/mais#configuracao">Corrigir configuração</Link>
     </section>}
 
