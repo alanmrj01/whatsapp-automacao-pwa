@@ -256,7 +256,7 @@ test('company data, services and materials are separated into simple focused scr
   const materials = read('src/features/more/MaterialsCatalogPage.tsx')
   const agenda = read('src/features/more/AgendaSettingsPage.tsx')
   assert.match(company,/Responsável pela empresa/)
-  assert.match(company,/Endereço de saída para o primeiro atendimento/)
+  assert.match(company,/Endereço da Empresa/)
   assert.doesNotMatch(company,/Novo serviço/)
   assert.match(services,/Catálogo de serviços/)
   assert.match(services,/Preço \(R\$\)/)
