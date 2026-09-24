@@ -22,7 +22,7 @@ const stateLabels = {
 } as const
 
 export function DashboardPage() {
-  const {state,membership,connection} = useProductState()
+  const {state,membership,connection,setup} = useProductState()
   const entitlement = useEntitlements()
   const {openUpgrade} = useUpgradePrompt()
   const dashboard = useDashboardToday()
@@ -31,6 +31,8 @@ export function DashboardPage() {
   const canMutate = entitlement.canMutateOperationalData
   const readOnly = entitlement.isReadOnlyRetained
   const active = state === 'ACTIVE'
+  const nonWhatsAppBlockingReasons = setup.data?.blocking_reasons.filter(reason=>!/WhatsApp/i.test(reason))??[]
+  const needsReview = !demo&&setup.data?.onboarding_completed===true&&nonWhatsAppBlockingReasons.length>0
   const metrics = demo ? demoOverview : dashboard.data ? {
     waiting:dashboard.data.metrics.waiting_count,
     inProgress:dashboard.data.metrics.in_progress_count,
@@ -67,7 +69,12 @@ export function DashboardPage() {
         : <Link className="compact-button" to="/app/whatsapp">{whatsappStatus==='disconnected'?'Conectar':whatsappStatus==='error'?'Revisar':'Ver conexão'}</Link>}
     </section>
 
-    {!demo && !active && !readOnly && <section className="setup-callout">
+    {needsReview&&<section className="setup-callout setup-callout--warning" role="status">
+      <div><strong>Revise sua configuração</strong><span>{nonWhatsAppBlockingReasons[0]} O Assistente Virtual pode não conseguir criar novos agendamentos.</span></div>
+      <Link className="compact-button" to="/app/mais#configuracao">Corrigir configuração</Link>
+    </section>}
+
+    {!demo && !active && !readOnly && !needsReview && <section className="setup-callout">
       <div><strong>{state==='CONNECTION_PENDING'?'Estamos preparando sua conexão':state==='ERROR'?'Revise a configuração':'Complete a configuração da operação'}</strong><span>Próxima etapa disponível em Mais.</span></div>
       <Link className="compact-button" to="/app/mais#configuracao">Continuar</Link>
     </section>}

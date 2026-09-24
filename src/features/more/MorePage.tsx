@@ -1,6 +1,4 @@
-import { Bot, Building2, CalendarCog, Check, CircleUserRound, Clock3, CreditCard, LockKeyhole, MessageCircleMore, ShieldCheck, UsersRound } from 'lucide-react'
-import { InfoHelp } from '../../components/InfoHelp'
-import { Link } from 'react-router-dom'
+import { Bot, Boxes, Building2, CalendarCog, CircleUserRound, Clock3, CreditCard, LockKeyhole, MessageCircleMore, PackageOpen, ShieldCheck, UsersRound } from 'lucide-react'
 import { ListRow } from '../../components/ListRow'
 import { Section } from '../../components/Section'
 import { StatusBadge } from '../../components/StatusBadge'
@@ -9,44 +7,46 @@ import { useEntitlements } from '../access/useEntitlements'
 import { useUpgradePrompt } from '../access/upgradePromptContext'
 import { useProductState } from '../product/productState'
 
-export function MorePage() {
-  const {state,membership,connection,setup} = useProductState()
-  const entitlement = useEntitlements()
-  const {openUpgrade} = useUpgradePrompt()
-  const whatsappReady = connection.data?.status==='connected'||setup.data?.whatsapp||state==='ACTIVE'
-  const paid = entitlement.isPaid
-  const completed = state==='FREE_DEMO'?1:setup.data?.completed??0
-  const connectionLabel = state==='FREE_DEMO'?'Disponível com assinatura':connection.isPending?'Consultando':connection.isError||connection.data?.status==='error'?'Atenção necessária':connection.data?.status==='pending'?'Conectando':whatsappReady?'Conectado':'Não conectado'
-  const planLabel = paid?'Acesso liberado':entitlement.isReadOnlyRetained?'Acesso pausado':'Gratuito'
+export function MorePage(){
+  const {state,membership,connection,setup}=useProductState()
+  const entitlement=useEntitlements()
+  const {openUpgrade}=useUpgradePrompt()
+  const paid=entitlement.isPaid
+  const whatsappReady=connection.data?.status==='connected'||setup.data?.whatsapp||state==='ACTIVE'
+  const whatsappPending=paid&&setup.data?.onboarding_completed===true&&!whatsappReady
+  const nonWhatsAppBlockingReasons=setup.data?.blocking_reasons.filter(reason=>!/WhatsApp/i.test(reason))??[]
+  const needsReview=paid&&setup.data?.onboarding_completed===true&&nonWhatsAppBlockingReasons.length>0
+  const connectionLabel=state==='FREE_DEMO'?'Disponível com assinatura':connection.isPending?'Consultando':connection.isError||connection.data?.status==='error'?'Atenção necessária':connection.data?.status==='pending'?'Conectando':whatsappReady?'Conectado':'Não conectado'
+  const planLabel=paid?'Acesso liberado':entitlement.isReadOnlyRetained?'Acesso pausado':'Gratuito'
+  const gated=(label:string)=>()=>openUpgrade(label)
 
   return <div className="page-stack operational-page compact-page">
     <section className="operational-heading"><div><span className="eyebrow">{membership?.business_name??'Sua empresa'}</span><h1>Mais</h1></div></section>
 
-    <section className="setup-progress" id="configuracao" aria-labelledby="setup-title">
-      <div className="section-title-row"><div><span className="eyebrow">Primeiros passos</span><h2 id="setup-title">Configuração {completed} de 5</h2></div><InfoHelp title="Progresso da configuração">Em contas com acesso operacional, cada etapa é confirmada pelos dados reais da empresa ativa.</InfoHelp></div>
-      <div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={5} aria-valuenow={completed}><span style={{width:`${completed/5*100}%`}}/></div>
-      <ol className="setup-steps">
-        <SetupStep ready={state==='FREE_DEMO'||!!setup.data?.company} number={1}>Dados da empresa</SetupStep>
-        <SetupStep ready={!!setup.data?.automation} number={2}>Assistente Virtual</SetupStep>
-        <li className={whatsappReady?'is-complete':''}>{whatsappReady?<Check/>:<span>3</span>}Conectar WhatsApp</li>
-        <SetupStep ready={!!setup.data?.business_hours} number={4}>Horários de funcionamento</SetupStep>
-        <SetupStep ready={!!setup.data?.agenda} number={5}>Configuração da agenda</SetupStep>
-      </ol>
-      {paid&&setup.data?.next_step&&setup.data.next_step!=='complete'&&<Link className="compact-button setup-next" to={setupRoute[setup.data.next_step]}>Continuar configuração</Link>}
-    </section>
+    {needsReview?<section className="setup-callout setup-callout--warning" role="status"><div><strong>Revise sua configuração</strong><span>{nonWhatsAppBlockingReasons.join(' ')}</span></div></section>:paid&&setup.data?.onboarding_completed&&!whatsappPending&&<section className="setup-callout setup-callout--complete"><div><strong>Configuração inicial concluída</strong><span>Você pode alterar os dados da operação a qualquer momento nas opções abaixo.</span></div></section>}
 
     <Section title="WhatsApp">
       <div className="list-surface"><ListRow icon={MessageCircleMore} title="Conexão do WhatsApp" subtitle={connectionLabel} to="/app/whatsapp" trailing={<StatusBadge tone={whatsappReady?'success':connection.isError||connection.data?.status==='error'?'danger':'info'}>{connectionLabel}</StatusBadge>}/></div>
     </Section>
+
     <Section title="Atendimento">
-      <div className="list-surface"><ListRow icon={Bot} title="Assistente Virtual" to={paid?'/app/mais/automacao':undefined} onClick={!paid?()=>openUpgrade('Configurar o Assistente Virtual'):undefined}/></div>
+      <div className="list-surface"><ListRow icon={Bot} title="Assistente Virtual" subtitle="Mensagens, reconhecimento e contatos sem resposta automática" to={paid?'/app/mais/automacao':undefined} onClick={!paid?gated('Configurar o Assistente Virtual'):undefined}/></div>
     </Section>
+
     <Section title="Empresa">
-      <div className="list-surface"><ListRow icon={Building2} title="Dados da empresa" to={paid?'/app/mais/empresa':undefined} onClick={!paid?()=>openUpgrade('Configurar os dados operacionais da empresa'):undefined} trailing={<StatusBadge tone={setup.data?.company||state==='FREE_DEMO'?'success':'warning'}>{setup.data?.company||state==='FREE_DEMO'?'Concluído':'Pendente'}</StatusBadge>}/><ListRow icon={UsersRound} title="Técnicos e responsáveis" to={paid?'/app/mais/equipe':undefined} onClick={!paid?()=>openUpgrade('Gerenciar técnicos e responsáveis'):undefined}/><ListRow icon={Clock3} title="Horários de funcionamento" to={paid?'/app/mais/horarios':undefined} onClick={!paid?()=>openUpgrade('Configurar horários de funcionamento'):undefined}/></div>
+      <div className="list-surface">
+        <ListRow icon={Building2} title="Dados da empresa" subtitle="Nome, responsável, endereço e fuso horário" to={paid?'/app/mais/empresa':undefined} onClick={!paid?gated('Configurar os dados da empresa'):undefined}/>
+        <ListRow icon={UsersRound} title="Técnicos e responsáveis" to={paid?'/app/mais/equipe':undefined} onClick={!paid?gated('Gerenciar técnicos e responsáveis'):undefined}/>
+        <ListRow icon={Clock3} title="Horários de funcionamento" to={paid?'/app/mais/horarios':undefined} onClick={!paid?gated('Configurar horários de funcionamento'):undefined}/>
+        <ListRow icon={Boxes} title="Catálogo de serviços" subtitle="Serviços, duração e preço" to={paid?'/app/mais/servicos':undefined} onClick={!paid?gated('Configurar catálogo de serviços'):undefined}/>
+        <ListRow icon={PackageOpen} title="Catálogo de equipamentos e materiais" subtitle="Materiais e equipamentos cobrados à parte" to={paid?'/app/mais/catalogo':undefined} onClick={!paid?gated('Configurar catálogo da empresa'):undefined}/>
+      </div>
     </Section>
+
     <Section title="Agenda">
-      <div className="list-surface"><ListRow icon={CalendarCog} title="Agenda e disponibilidade" to={paid?'/app/mais/agenda':undefined} onClick={!paid?()=>openUpgrade('Configurar agenda e disponibilidade'):undefined}/></div>
+      <div className="list-surface"><ListRow icon={CalendarCog} title="Agenda e disponibilidade" subtitle="Tempos automáticos ou definidos por você" to={paid?'/app/mais/agenda':undefined} onClick={!paid?gated('Configurar agenda e disponibilidade'):undefined}/></div>
     </Section>
+
     <Section title="Conta">
       <div className="list-surface">
         <ListRow icon={CreditCard} title="Plano" subtitle={planLabel} to="/app/mais/plano"/>
@@ -55,10 +55,6 @@ export function MorePage() {
         <ListRow icon={ShieldCheck} title="Privacidade" to="/app/mais/privacidade"/>
       </div>
     </Section>
-    <SessionActions />
+    <SessionActions/>
   </div>
 }
-
-function SetupStep({ready,number,children}:{ready:boolean;number:number;children:React.ReactNode}) {return <li className={ready?'is-complete':''}>{ready?<Check/>:<span>{number}</span>}{children}</li>}
-
-const setupRoute={company:'/app/mais/empresa',business_hours:'/app/mais/horarios',automation:'/app/mais/automacao',agenda:'/app/mais/agenda',whatsapp:'/app/whatsapp'} as const

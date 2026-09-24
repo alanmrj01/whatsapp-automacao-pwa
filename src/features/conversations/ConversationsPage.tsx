@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, LockKeyhole, MessageCircleMore, Search } from 'lucide-react'
+import { CheckCheck, ChevronLeft, ChevronRight, LockKeyhole, MessageCircleMore, MoreVertical, Pin, PinOff, Search, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { EmptyState } from '../../components/EmptyState'
@@ -11,7 +11,7 @@ import { demoConversations } from '../../demo/operationalDemo'
 import { DemoDataNotice } from '../access/DemoDataNotice'
 import { useEntitlements } from '../access/useEntitlements'
 import { useUpgradePrompt } from '../access/upgradePromptContext'
-import { useBusiness, useConversations } from '../operations/api'
+import { useDeleteConversation, useBusiness, useConversations, useSetConversationPinned, useSetConversationRead } from '../operations/api'
 import type { Conversation, ConversationStatus } from '../operations/types'
 
 const labels = {waiting:'Aguardando',in_progress:'Em atendimento',answered:'Respondida'} as const
@@ -96,6 +96,38 @@ function formatMoment(value:string|null,timeZone?:string) {
 }
 
 function RealConversationList({items,timezone}:{items:Conversation[];timezone:string}) {
+  const [menuId,setMenuId]=useState<string|null>(null)
+  const [deleteTarget,setDeleteTarget]=useState<Conversation|null>(null)
+  const pin=useSetConversationPinned()
+  const read=useSetConversationRead()
+  const archive=useDeleteConversation()
   if(!items.length)return <EmptyState icon={MessageCircleMore} title="Nenhuma conversa" description="A fila não possui itens para este filtro."/>
-  return <section className="conversation-list" aria-live="polite">{items.map(item=><article className={item.priority?'conversation-row is-priority':'conversation-row'} key={item.id}><div className="conversation-avatar" aria-hidden="true">{item.customer_name.split(' ').map(value=>value[0]).join('').slice(0,2)}</div><Link className="conversation-copy conversation-copy--button" to={`/app/conversas/${item.id}`} aria-label={`Abrir conversa com ${item.customer_name}`}><div><strong>{item.customer_name}</strong><time>{formatMoment(item.last_message_at,timezone)}</time></div><p>{item.last_content??'Sem conteúdo textual'}</p><footer><span>{item.assignee_name??'Sem responsável'}</span><StatusBadge tone={item.status==='waiting'?'warning':item.status==='answered'?'success':'info'}>{labels[item.status]}</StatusBadge></footer></Link>{item.unread_count>0&&<span className="unread-count" aria-label={`${item.unread_count} mensagens não lidas`}>{item.unread_count}</span>}</article>)}</section>
+  return <>
+    <section className="conversation-list" aria-live="polite">
+      {items.map(item=><article className={`conversation-row ${item.priority?'is-priority':''} ${item.pinned?'is-pinned':''}`} key={item.id}>
+        <div className="conversation-avatar" aria-hidden="true">{item.customer_name.split(' ').map(value=>value[0]).join('').slice(0,2)}</div>
+        <Link className="conversation-copy conversation-copy--button" to={`/app/conversas/${item.id}`} aria-label={`Abrir conversa com ${item.customer_name}`}>
+          <div><strong>{item.customer_name}{item.pinned&&<Pin size={13} aria-label="Conversa fixada"/>}</strong><time>{formatMoment(item.last_message_at,timezone)}</time></div>
+          <p>{item.last_content??'Sem conteúdo textual'}</p>
+          <footer><span>{item.assignee_name??'Sem responsável'}</span><StatusBadge tone={item.status==='waiting'?'warning':item.status==='answered'?'success':'info'}>{labels[item.status]}</StatusBadge></footer>
+        </Link>
+        <div className="conversation-row__trailing">
+          {item.unread_count>0&&<span className="unread-count" aria-label={`${item.unread_count} mensagens não lidas`}>{item.unread_count}</span>}
+          <button className="conversation-menu-trigger" type="button" aria-label={`Opções de ${item.customer_name}`} aria-expanded={menuId===item.id} onClick={()=>setMenuId(value=>value===item.id?null:item.id)}><MoreVertical size={19}/></button>
+          {menuId===item.id&&<div className="conversation-menu" role="menu">
+            <button type="button" role="menuitem" disabled={pin.isPending} onClick={()=>{pin.mutate({id:item.id,pinned:!item.pinned});setMenuId(null)}}>{item.pinned?<PinOff size={17}/>:<Pin size={17}/>} {item.pinned?'Desafixar conversa':'Fixar conversa'}</button>
+            <button type="button" role="menuitem" disabled={read.isPending} onClick={()=>{read.mutate({id:item.id,read:item.unread_count>0});setMenuId(null)}}><CheckCheck size={17}/> {item.unread_count>0?'Marcar como lida':'Marcar como não lida'}</button>
+            <button className="is-danger" type="button" role="menuitem" onClick={()=>{setDeleteTarget(item);setMenuId(null)}}><Trash2 size={17}/>Excluir conversa</button>
+          </div>}
+        </div>
+      </article>)}
+    </section>
+    <BottomSheet open={!!deleteTarget} title="Excluir conversa?" description="A conversa sai da sua lista, mas o histórico é preservado. Se o contato enviar uma nova mensagem, ela volta a aparecer." onClose={()=>setDeleteTarget(null)}>
+      <div className="conversation-delete-confirm">
+        <button className="secondary-button" type="button" onClick={()=>setDeleteTarget(null)}>Cancelar</button>
+        <button className="danger-button" type="button" disabled={archive.isPending} onClick={()=>{if(!deleteTarget)return;archive.mutate(deleteTarget.id,{onSuccess:()=>setDeleteTarget(null)})}}>{archive.isPending?'Excluindo…':'Excluir conversa'}</button>
+      </div>
+      {archive.isError&&<p className="form-error" role="alert">Não foi possível excluir a conversa.</p>}
+    </BottomSheet>
+  </>
 }

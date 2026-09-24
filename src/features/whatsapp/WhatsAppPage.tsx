@@ -1,4 +1,4 @@
-import { ArrowRight, CalendarClock, LockKeyhole, MessageCircleMore, Snowflake, Wrench } from 'lucide-react'
+import { ArrowRight, CalendarClock, LockKeyhole, MessageCircleMore, Snowflake, Unplug, Wrench } from 'lucide-react'
 import { useState } from 'react'
 import { PrimaryButton } from '../../components/PrimaryButton'
 import { LoadingState } from '../../components/LoadingState'
@@ -8,19 +8,21 @@ import { useEntitlements } from '../access/useEntitlements'
 import { useUpgradePrompt } from '../access/upgradePromptContext'
 import { useAuth } from '../auth/useAuth'
 import { canConfigureWhatsApp } from '../auth/types'
-import { useConnection } from './useConnection'
+import { useConnection, useDisconnectWhatsApp } from './useConnection'
 import { connectionModeLabels } from './connectionPresentation'
 import { ConnectWhatsAppSheet } from './ConnectWhatsAppSheet'
 import { ConnectionStatusBadge } from './ConnectionStatusBadge'
 
 export function WhatsAppPage() {
   const [isSheetOpen, setIsSheetOpen] = useState(false)
+  const [confirmDisconnect,setConfirmDisconnect]=useState(false)
   const {membership} = useAuth()
   const entitlement = useEntitlements()
   const {openUpgrade} = useUpgradePrompt()
   const demo = entitlement.usesDemoData
   const readOnly = entitlement.isReadOnlyRetained
   const connection = useConnection()
+  const disconnect = useDisconnectWhatsApp()
 
   if (demo) {
     return (
@@ -33,7 +35,7 @@ export function WhatsAppPage() {
           <span className="eyebrow">Canal principal de atendimento</span>
           <h1>WhatsApp</h1>
           <StatusBadge tone="info">Modo demonstração</StatusBadge>
-          <p>Veja como o ALOVIA organiza pedidos, conversas e agendamentos. A conexão oficial com o WhatsApp Business está disponível com assinatura.</p>
+          <p>Veja como o ALOVIA organiza pedidos, conversas e agendamentos. A conexão oficial está disponível com assinatura.</p>
           <PrimaryButton fullWidth icon={<ArrowRight size={19}/>} onClick={()=>openUpgrade('Conectar o WhatsApp')}>
             Conectar WhatsApp
           </PrimaryButton>
@@ -57,7 +59,9 @@ export function WhatsAppPage() {
   if (connection.isPending) return <div className="page-stack whatsapp-page"><section className="operational-heading"><div><span className="eyebrow">Canal principal</span><h1>WhatsApp</h1></div></section><LoadingState /></div>
   if (connection.isError) return <div className="page-stack whatsapp-page"><section className="operational-heading"><div><span className="eyebrow">Canal principal</span><h1>WhatsApp</h1></div></section><ErrorState onRetry={()=>void connection.refetch()} /></div>
   const {status,mode} = connection.data
-  const canConnect = entitlement.isPaid && canConfigureWhatsApp(membership?.role) && (status === 'disconnected' || status === 'error')
+  const canConfigure = canConfigureWhatsApp(membership?.role)
+  const canConnect = entitlement.isPaid && canConfigure && (status === 'disconnected' || status === 'error')
+  const canDisconnect = entitlement.isPaid && canConfigure && status==='connected'
 
   return (
     <div className="page-stack whatsapp-page">
@@ -70,10 +74,10 @@ export function WhatsAppPage() {
         <h1>WhatsApp</h1>
         <ConnectionStatusBadge status={status} />
         <p>
-          {status === 'connected' ? 'O WhatsApp da empresa está conectado e pronto para organizar os atendimentos no ALOVIA.' :
+          {status === 'connected' ? 'O número da empresa está conectado e pronto para organizar os atendimentos no ALOVIA.' :
             status === 'pending' ? 'Estamos concluindo a autorização. Você pode sair desta tela e acompanhar o status depois.' :
             status === 'error' ? 'Não foi possível manter a conexão. Revise a autorização e tente novamente quando estiver pronto.' :
-            'Conecte o WhatsApp Business oficial para receber pedidos, organizar conversas e gerar agendamentos.'}
+            'Conecte o número que será usado pelo ALOVIA para receber pedidos, organizar conversas e gerar agendamentos.'}
         </p>
         {status==='connected'&&<dl className="connection-facts">
           {connection.data.display_phone_number&&<div><dt>Número conectado</dt><dd>{connection.data.display_phone_number}</dd></div>}
@@ -92,19 +96,14 @@ export function WhatsAppPage() {
         >
           {status==='error'?'Tentar conectar novamente':'Conectar WhatsApp'}
         </PrimaryButton>}
-        {!canConfigureWhatsApp(membership?.role) && !readOnly && <p>Acesso de leitura. A configuração é gerenciada pelo administrador.</p>}
-      </section>
-
-      <section className="alovia-flow" aria-labelledby="alovia-flow-title">
-        <div className="alovia-flow__heading">
-          <span className="alovia-flow__mark"><Snowflake size={18}/></span>
-          <div><span className="eyebrow">O diferencial da Alovia</span><h2 id="alovia-flow-title">Do pedido à visita técnica</h2></div>
-        </div>
-        <div className="alovia-flow__steps">
-          <div><span><MessageCircleMore size={18}/></span><strong>1. Entende a demanda</strong><p>Organiza o contato por tipo de serviço e necessidade do cliente.</p></div>
-          <div><span><Wrench size={18}/></span><strong>2. Estrutura o atendimento</strong><p>Relaciona serviço, equipamento, endereço e informações úteis para a equipe.</p></div>
-          <div><span><CalendarClock size={18}/></span><strong>3. Leva para a agenda</strong><p>Direciona o próximo passo para a operação técnica, não apenas para uma conversa.</p></div>
-        </div>
+        {canDisconnect&&!confirmDisconnect&&<button className="danger-outline-button" type="button" onClick={()=>setConfirmDisconnect(true)}><Unplug size={18}/>Desconectar WhatsApp</button>}
+        {canDisconnect&&confirmDisconnect&&<div className="disconnect-confirm" role="alert">
+          <strong>Desconectar este número do ALOVIA?</strong>
+          <p>O ALOVIA deixará de receber e enviar mensagens por esta conexão. Isso não exclui sua conta do WhatsApp ou da Meta.</p>
+          <div><button className="compact-button" type="button" onClick={()=>setConfirmDisconnect(false)}>Cancelar</button><button className="danger-button" type="button" disabled={disconnect.isPending} onClick={()=>disconnect.mutate(undefined,{onSuccess:()=>setConfirmDisconnect(false)})}>{disconnect.isPending?'Desconectando…':'Confirmar desconexão'}</button></div>
+          {disconnect.isError&&<p className="form-error" role="alert">Não foi possível desconectar. Tente novamente.</p>}
+        </div>}
+        {!canConfigure && !readOnly && <p>Acesso de leitura. A configuração é gerenciada pelo administrador.</p>}
       </section>
 
       <section className="security-note">

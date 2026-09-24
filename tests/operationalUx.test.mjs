@@ -12,8 +12,8 @@ test('operational product states distinguish demo, setup, active and failures', 
   assert.equal(deriveProductState({access_mode:'free'}),'FREE_DEMO')
   assert.equal(deriveProductState({access_mode:'paid'},{status:'disconnected'}),'SETUP_PENDING')
   assert.equal(deriveProductState({access_mode:'paid'},{status:'connected'}),'ACTIVE')
-  assert.equal(deriveProductState({access_mode:'paid'},{status:'connected'},{},{completed:4,total:5}),'SETUP_PENDING')
-  assert.equal(deriveProductState({access_mode:'paid'},{status:'connected'},{},{completed:5,total:5}),'ACTIVE')
+  assert.equal(deriveProductState({access_mode:'paid'},{status:'connected'},{},{completed:6,total:7}),'SETUP_PENDING')
+  assert.equal(deriveProductState({access_mode:'paid'},{status:'connected'},{},{completed:7,total:7}),'ACTIVE')
   assert.equal(deriveProductState({access_mode:'paid'},{status:'pending'}),'CONNECTION_PENDING')
   assert.equal(deriveProductState({access_mode:'paid'},undefined,{isError:true}),'ERROR')
 })
@@ -35,20 +35,92 @@ test('paid operation uses authenticated public APIs while free mode disables eve
   assert.match(conversationDetail,/useConversation/)
 })
 
-test('setup and More routes are backed by real data and configuration mutations', () => {
+test('paid accounts are guided through seven persisted onboarding steps before normal navigation', () => {
   const operations = read('src/features/operations/api.ts')
   const router = read('src/app/router.tsx')
-  const more = read('src/features/more/MorePage.tsx')
-  const settings = read('src/features/more/OperationalSettingsPages.tsx')
-  for (const route of ['empresa','horarios','automacao','equipe','agenda']) assert.match(router,new RegExp(`mais/${route}`))
+  const onboarding = read('src/features/onboarding/OnboardingPage.tsx')
+  for (const route of ['empresa','servicos','catalogo','horarios','automacao','equipe','agenda']) assert.match(router,new RegExp(`mais/${route}`))
   assert.match(operations,/\/setup\/status/)
-  assert.match(more,/setup\.data\?\.completed/)
-  for (const hook of ['useUpdateBusiness','useCreateWorkingHours','useUpdateAutomation','useCreateEmployee','useCreateService']) assert.match(settings,new RegExp(hook))
+  assert.match(operations,/\/setup\/complete/)
+  assert.match(router,/OnboardingGuard/)
+  assert.match(router,/\/app\/onboarding/)
+  assert.match(onboarding,/Etapa \{step\} de \{TOTAL_STEPS\}/)
+  assert.match(onboarding,/const TOTAL_STEPS=7/)
+  assert.match(onboarding,/As funcionalidades da sua conta estão liberadas/)
+  assert.match(onboarding,/7 etapas · leva poucos minutos/)
+  assert.match(onboarding,/<SessionActions\/>/)
+  assert.match(onboarding,/<Navigate to="\/app" replace\/>/)
+  assert.match(onboarding,/!result\.onboarding_completed\|\|!result\.onboarding_completed_at/)
+  assert.match(onboarding,/connection\.data\?\.status==='connected'\|\|setup\.data\?\.whatsapp===true/)
+  assert.match(router,/setup\.data\?\.onboarding_completed \? children : <Navigate to="\/app\/onboarding" replace\/>/)
+})
+
+test('company hours are configured independently from technicians and support weekdays plus weekends', () => {
+  const onboarding = read('src/features/onboarding/OnboardingPage.tsx')
+  const settings = read('src/features/more/WorkingHoursSettingsPage.tsx')
+  const operations = read('src/features/operations/api.ts')
+  assert.match(onboarding,/Dias da semana/)
+  assert.match(onboarding,/Selecionar segunda a sexta/)
+  assert.doesNotMatch(onboarding,/label>Técnico<select/)
+  assert.match(onboarding,/finais de semana e feriados nacionais/i)
+  assert.match(settings,/useBusinessHours/)
+  assert.match(operations,/\/business-hours/)
+})
+
+test('paid WhatsApp connection supports explicit disconnect without keeping marketing content', () => {
+  const whatsapp = read('src/features/whatsapp/WhatsAppPage.tsx')
+  const connection = read('src/features/whatsapp/useConnection.ts')
+  assert.match(whatsapp,/Desconectar WhatsApp/)
+  assert.match(whatsapp,/Confirmar desconexão/)
+  assert.match(connection,/\/whatsapp\/disconnect/)
+  const paidSection = whatsapp.slice(whatsapp.indexOf("if (connection.isPending)"))
+  assert.doesNotMatch(paidSection,/O diferencial da Alovia/)
+})
+
+test('materials onboarding supports an explicit no-separate-charge decision and simple units', () => {
+  const onboarding = read('src/features/onboarding/OnboardingPage.tsx')
+  const materials = read('src/features/more/MaterialsCatalogPage.tsx')
+  const operations = read('src/features/operations/api.ts')
+  assert.match(onboarding,/Minha empresa não cobra materiais adicionais separadamente/)
+  assert.match(onboarding,/materials_catalog_reviewed:true/)
+  assert.match(onboarding,/remove\.mutateAsync\(item\.id\)/)
+  assert.match(materials,/Minha empresa não cobra materiais adicionais separadamente/)
+  for (const unit of ['metro','unidade','kit','valor fixo']) assert.match(materials,new RegExp(`value:'${unit}'`))
+  assert.match(materials,/unit_label:newUnit/)
+  assert.match(materials,/unit_label:draft\.unit/)
+  assert.match(operations,/'materials_catalog_reviewed'/)
+})
+
+test('completed onboarding stays unlocked and exposes configuration warnings without reblocking', () => {
+  const dashboard = read('src/features/dashboard/DashboardPage.tsx')
+  const more = read('src/features/more/MorePage.tsx')
+  const router = read('src/app/router.tsx')
+  for (const source of [dashboard,more]) {
+    assert.match(source,/blocking_reasons/)
+    assert.match(source,/Revise sua configuração/)
+  }
+  assert.match(dashboard,/Corrigir configuração/)
+  assert.match(router,/setup\.data\?\.onboarding_completed \? children/)
+})
+
+test('automatic booking notifications use authenticated polling and honest browser-local alerts', () => {
+  const operations = read('src/features/operations/api.ts')
+  const center = read('src/features/notifications/NotificationCenter.tsx')
+  const shell = read('src/app/AppShell.tsx')
+  assert.match(operations,/\/notifications\?unread_only=/)
+  assert.match(operations,/\/notifications\/\$\{id\}\/read/)
+  assert.match(operations,/refetchInterval:30_000/)
+  assert.match(center,/Notification\.requestPermission\(\)/)
+  assert.match(center,/permission==='granted'/)
+  assert.match(center,/Alertas em segundo plano exigem infraestrutura Web Push/)
+  assert.match(center,/safeTarget/)
+  assert.match(shell,/<NotificationCenter\/>/)
+  assert.match(shell,/<NotificationCenter backgroundOnly \/>/)
 })
 
 test('mutations invalidate only tenant operational resources that changed', () => {
   const operations = read('src/features/operations/api.ts')
-  assert.match(operations,/invalidate\(context\.businessId,'appointments','dashboard','setup'\)/)
+  assert.match(operations,/invalidate\(context\.businessId,'appointments','appointments-range','dashboard','setup'\)/)
   assert.match(operations,/invalidate\(context\.businessId,'working-hours','setup'\)/)
   assert.match(operations,/invalidate\(context\.businessId,'automation','setup'\)/)
   assert.match(operations,/invalidate\(context\.businessId,'employees','setup'\)/)
@@ -59,7 +131,7 @@ test('main navigation stays focused and WhatsApp setup remains available from Mo
   const more = read('src/features/more/MorePage.tsx')
   assert.deepEqual([...navigation.matchAll(/label: '([^']+)'/g)].map(match=>match[1]),['Início','Conversas','Agenda','Mais'])
   assert.match(more, /to="\/app\/whatsapp"/)
-  assert.match(more, /Configuração \{completed\} de 5/)
+  assert.match(more, /Configuração inicial concluída/)
 })
 
 test('never-activated free dashboard is populated from isolated demo data and points to setup', () => {
@@ -178,15 +250,20 @@ test('More prioritizes WhatsApp before the remaining operational setup', () => {
   assert.ok(more.indexOf('title="Dados da empresa"') < more.indexOf('title="Técnicos e responsáveis"'))
 })
 
-test('services are managed with company data instead of agenda settings', () => {
-  const settings = read('src/features/more/OperationalSettingsPages.tsx')
-  const companyStart = settings.indexOf('export function CompanySettingsPage')
-  const agendaStart = settings.indexOf('export function AgendaSettingsPage')
-  const servicesStart = settings.indexOf('function ServicesSettings')
-  assert.ok(companyStart >= 0 && servicesStart > companyStart)
-  assert.match(settings,/title="Serviços oferecidos"/)
-  assert.match(settings,/Os serviços são gerenciados em Dados da empresa/)
-  assert.doesNotMatch(settings.slice(agendaStart, settings.indexOf('function AgendaInterval')),/useCreateService|Novo serviço/)
+test('company data, services and materials are separated into simple focused screens', () => {
+  const company = read('src/features/more/CompanySettingsPage.tsx')
+  const services = read('src/features/more/ServiceCatalogPage.tsx')
+  const materials = read('src/features/more/MaterialsCatalogPage.tsx')
+  const agenda = read('src/features/more/AgendaSettingsPage.tsx')
+  assert.match(company,/Responsável pela empresa/)
+  assert.match(company,/Endereço da Empresa/)
+  assert.doesNotMatch(company,/Novo serviço/)
+  assert.match(services,/Catálogo de serviços/)
+  assert.match(services,/Preço \(R\$\)/)
+  assert.match(materials,/Catálogo de equipamentos e materiais/)
+  assert.match(materials,/Descrição/)
+  assert.match(agenda,/Automático pelo ALOVIA/)
+  assert.doesNotMatch(agenda,/Deslocamento entre atendimentos/)
 })
 
 test('real agenda converts company-local schedules to an absolute instant', () => {
@@ -213,4 +290,63 @@ test('routes are lazy-loaded so the initial shell does not bundle every feature 
   assert.match(router,/lazy\(async/)
   assert.match(router,/Suspense/)
   assert.doesNotMatch(router,/import \{ DashboardPage \}/)
+})
+
+
+test('required markers stay compact and catalog saves reject incomplete visible items', () => {
+  const required = read('src/components/RequiredLabel.tsx')
+  const onboarding = read('src/features/onboarding/OnboardingPage.tsx')
+  const services = read('src/features/more/ServiceCatalogPage.tsx')
+  const materials = read('src/features/more/MaterialsCatalogPage.tsx')
+
+  assert.match(required,/required-field-star/)
+  assert.match(required,/>\*</)
+  assert.doesNotMatch(required,/Obrigatório/)
+
+  assert.match(onboarding,/catalogInvalid/)
+  assert.match(onboarding,/if\(catalogInvalid\)return false/)
+  assert.match(onboarding,/Descrição<\/span><span className="optional-label">Opcional/)
+  assert.doesNotMatch(onboarding,/<RequiredLabel>Descrição<\/RequiredLabel>/)
+
+  assert.match(services,/if\(catalogInvalid\)return/)
+  assert.match(services,/<RequiredLabel>Serviço<\/RequiredLabel>/)
+  assert.match(materials,/if\(catalogInvalid\)return/)
+  assert.match(materials,/optional-label/)
+  assert.doesNotMatch(materials,/<RequiredLabel>Descrição<\/RequiredLabel>/)
+})
+
+
+test('WhatsApp is the only onboarding step that can be deferred and remains visibly pending', () => {
+  const onboarding = read('src/features/onboarding/OnboardingPage.tsx')
+  const shell = read('src/app/AppShell.tsx')
+  const dashboard = read('src/features/dashboard/DashboardPage.tsx')
+  const more = read('src/features/more/MorePage.tsx')
+
+  assert.match(onboarding,/Conectar Whatsapp Depois/)
+  assert.match(onboarding,/onFinished\(deferred\)/)
+  assert.match(onboarding,/A conexão com o WhatsApp ficou pendente/)
+  assert.match(shell,/Conexão com WhatsApp pendente/)
+  assert.match(shell,/setup\.data\?\.onboarding_completed===true&&!connected/)
+  assert.match(shell,/to="\/app\/whatsapp"/)
+  assert.match(dashboard,/nonWhatsAppBlockingReasons/)
+  assert.match(more,/whatsappPending/)
+})
+
+
+test('company settings preserve the structured validated address workflow after onboarding', () => {
+  const page = read('src/features/more/CompanySettingsPage.tsx')
+
+  assert.match(page,/lookupPostalCode/)
+  assert.match(page,/<RequiredLabel>CEP<\/RequiredLabel>/)
+  assert.match(page,/<RequiredLabel>Rua<\/RequiredLabel>/)
+  assert.match(page,/<RequiredLabel>Bairro<\/RequiredLabel>/)
+  assert.match(page,/<RequiredLabel>Número<\/RequiredLabel>/)
+  assert.match(page,/<RequiredLabel>Cidade<\/RequiredLabel>/)
+  assert.match(page,/service_origin_postal_code/)
+  assert.match(page,/service_origin_street/)
+  assert.match(page,/service_origin_neighborhood/)
+  assert.match(page,/service_origin_number/)
+  assert.match(page,/service_origin_city/)
+  assert.match(page,/service_origin_state/)
+  assert.doesNotMatch(page,/Endereço de saída para o primeiro atendimento/)
 })
