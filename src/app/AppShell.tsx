@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { AppHeader } from '../components/AppHeader'
 import { BottomNavigation } from '../components/BottomNavigation'
@@ -25,7 +24,6 @@ const titles: Record<string, string> = {
 }
 
 export function AppShell() {
-  useBrowserViewportGuard()
   const { pathname } = useLocation()
   const isConversationDetail = /^\/app\/conversas\/[^/]+$/.test(pathname)
   const isWhatsAppDetail = pathname.startsWith('/app/whatsapp/')
@@ -77,45 +75,4 @@ function WhatsAppPendingBanner() {
     </div>
     <Link className="compact-button" to="/app/whatsapp">Conectar WhatsApp</Link>
   </section>
-}
-
-
-function useBrowserViewportGuard() {
-  useEffect(() => {
-    const root=document.documentElement
-    const viewport=window.visualViewport
-
-    const update=()=>{
-      if(!viewport){
-        root.style.setProperty('--browser-ui-bottom-offset','0px')
-        return
-      }
-
-      const obstruction=Math.max(
-        0,
-        window.innerHeight-viewport.height-viewport.offsetTop,
-      )
-
-      // Browser bars/prompts are usually short. A much larger obstruction is
-      // normally the virtual keyboard; the bottom navigation must not jump
-      // above the keyboard and cover form content.
-      const browserUiOffset=obstruction>0&&obstruction<=120
-        ? Math.ceil(obstruction)
-        : 0
-
-      root.style.setProperty('--browser-ui-bottom-offset',`${browserUiOffset}px`)
-    }
-
-    update()
-    window.addEventListener('resize',update)
-    viewport?.addEventListener('resize',update)
-    viewport?.addEventListener('scroll',update)
-
-    return ()=>{
-      window.removeEventListener('resize',update)
-      viewport?.removeEventListener('resize',update)
-      viewport?.removeEventListener('scroll',update)
-      root.style.removeProperty('--browser-ui-bottom-offset')
-    }
-  },[])
 }
