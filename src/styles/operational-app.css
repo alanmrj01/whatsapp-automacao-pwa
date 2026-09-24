@@ -751,3 +751,50 @@
   .app-pending-banner{align-items:stretch;flex-direction:column}
   .app-pending-banner .compact-button{width:100%}
 }
+
+
+/* Structured company address in post-onboarding settings. */
+.company-address-settings{
+  display:grid;
+  gap:13px;
+  padding:16px;
+  border:1px solid #d8e5f2;
+  border-radius:17px;
+  background:#fbfdff;
+  min-width:0;
+}
+.company-address-settings__heading{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+  color:var(--color-primary-800);
+}
+.company-address-settings__heading>div{
+  min-width:0;
+  display:grid;
+  gap:2px;
+}
+.company-address-settings__heading strong{font-size:.93rem}
+.company-address-settings__heading span{
+  color:var(--color-text-soft);
+  font-size:.74rem;
+  font-weight:600;
+  overflow-wrap:anywhere;
+}
+.company-address-settings__grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+}
+.company-address-settings__grid>label{min-width:0}
+.settings-note--important{
+  border:1px solid #efd58c;
+  color:#66511a;
+  background:#fff8df;
+}
+.settings-note--important strong{color:#6a5314}
+.settings-note--important span{color:#6b5a2e}
+@media(max-width:600px){
+  .company-address-settings__grid{grid-template-columns:1fr}
+}
