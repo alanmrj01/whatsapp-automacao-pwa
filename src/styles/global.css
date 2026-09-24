@@ -260,7 +260,7 @@ p {
 .app-content {
   width: 100%;
   min-width: 0;
-  padding: var(--space-5) var(--space-4) calc(92px + env(safe-area-inset-bottom));
+  padding: var(--space-5) var(--space-4) calc(92px + env(safe-area-inset-bottom) + var(--browser-ui-bottom-offset, 0px));
 }
 
 .page-stack {
@@ -1105,7 +1105,7 @@ a.list-row:active {
   position: fixed;
   z-index: 40;
   right: 0;
-  bottom: 0;
+  bottom: var(--browser-ui-bottom-offset, 0px);
   left: 0;
   min-height: calc(68px + env(safe-area-inset-bottom));
   padding: 4px max(6px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(6px, env(safe-area-inset-left));
