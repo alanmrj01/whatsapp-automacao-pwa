@@ -12,6 +12,8 @@ type AuthContextValue = {
   selectBusiness: (id: string) => Promise<void>
   bootstrap: () => Promise<void>
   reconnect: () => Promise<void>
+  retryPendingLogout: () => Promise<void>
+  continueToLogin: () => void
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)
