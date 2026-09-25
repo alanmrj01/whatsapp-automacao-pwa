@@ -110,6 +110,7 @@ test('automatic booking notifications use authenticated polling and honest brows
   assert.match(operations,/\/notifications\?unread_only=/)
   assert.match(operations,/\/notifications\/\$\{id\}\/read/)
   assert.match(operations,/refetchInterval:30_000/)
+  assert.match(operations,/refetchIntervalInBackground:true/)
   assert.match(center,/Notification\.requestPermission\(\)/)
   assert.match(center,/permission==='granted'/)
   assert.match(center,/Alertas em segundo plano exigem infraestrutura Web Push/)
