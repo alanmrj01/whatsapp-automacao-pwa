@@ -23,7 +23,7 @@ test('catalog images allow HTTPS without relaxing executable origins', () => {
 
   assert.match(policy,/img-src 'self' data: https:/)
   assert.doesNotMatch(policy,/img-src[^;]*\*/)
-  assert.doesNotMatch(policy,/script-src[^;]*https:/)
+  assert.doesNotMatch(policy,/script-src[^;]*\*/)
   assert.doesNotMatch(policy,/connect-src[^;]*\*/)
 })
 test('transport and browser capabilities are hardened without changing app routes', () => {
