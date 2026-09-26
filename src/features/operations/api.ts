@@ -65,7 +65,7 @@ export function useNotifications(unreadOnly=true) {
     enabled:context.enabled,
     retry:false,
     refetchInterval:30_000,
-    refetchIntervalInBackground:false,
+    refetchIntervalInBackground:true,
   })
 }
 export function useMarkNotificationRead() {

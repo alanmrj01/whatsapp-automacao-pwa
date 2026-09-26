@@ -11,7 +11,7 @@ const wait = (milliseconds: number) => new Promise(resolve => setTimeout(resolve
 
 export function AuthProvider({children}: {children:ReactNode}) {
   const [user, setUser] = useState<SessionUser | null>(null)
-  const [state, setState] = useState<AuthState>(() => hasPendingLogout() ? 'logout_failed' : 'loading')
+  const [state, setState] = useState<AuthState>('loading')
   const operation = useRef(0)
   const logoutBlocked = useRef(hasPendingLogout())
   const bootstrapping = useRef<Promise<void> | null>(null)
@@ -20,6 +20,37 @@ export function AuthProvider({children}: {children:ReactNode}) {
     queryClient.clear()
     setUser(null)
   }, [])
+
+  const revokePendingLogout = useCallback(async (persistIntent: boolean) => {
+    const expected = ++operation.current
+    logoutBlocked.current = true
+    if (persistIntent) markPendingLogout()
+    dropPrivateState()
+    setState('logging_out')
+    try {
+      await api.logout()
+      if (operation.current !== expected) return
+      clearPendingLogout()
+      logoutBlocked.current = false
+      setState('anonymous')
+    } catch(error) {
+      if (operation.current === expected) setState('logout_failed')
+      throw error
+    }
+  }, [dropPrivateState])
+
+  const retryPendingLogout = useCallback(async () => {
+    await revokePendingLogout(false)
+  }, [revokePendingLogout])
+
+  const continueToLogin = useCallback(() => {
+    operation.current++
+    clearPendingLogout()
+    logoutBlocked.current = false
+    api.clear()
+    dropPrivateState()
+    setState('anonymous')
+  }, [dropPrivateState])
 
   const bootstrap = useCallback(async () => {
     if (logoutBlocked.current) return
@@ -66,14 +97,21 @@ export function AuthProvider({children}: {children:ReactNode}) {
       dropPrivateState()
       if (!logoutBlocked.current) setState('anonymous')
     })
-    // StrictMode may subscribe/unsubscribe in the same tick. Start one bootstrap
-    // only for the surviving subscription, never for an abandoned mount.
-    void Promise.resolve().then(() => { if (active) return bootstrap() })
+    // A failed logout from an earlier outage/deploy must never deadlock the app.
+    // Retry the server revocation automatically on the next healthy load.
+    void Promise.resolve().then(() => {
+      if (!active) return
+      if (logoutBlocked.current) {
+        void retryPendingLogout().catch(() => {})
+        return
+      }
+      return bootstrap()
+    })
     return () => { active = false; api.onExpired(() => {}) }
-  }, [bootstrap, dropPrivateState])
+  }, [bootstrap, dropPrivateState, retryPendingLogout])
 
   async function login(email:string,password:string) {
-    if (hasPendingLogout()) throw new ApiError(401)
+    clearPendingLogout()
     const expected = ++operation.current
     logoutBlocked.current = false
     dropPrivateState()
@@ -86,7 +124,7 @@ export function AuthProvider({children}: {children:ReactNode}) {
   }
 
   async function signup(businessName:string,email:string,password:string,idempotencyKey:string) {
-    if (hasPendingLogout()) throw new ApiError(401)
+    clearPendingLogout()
     const expected = ++operation.current
     logoutBlocked.current = false
     dropPrivateState()
@@ -104,19 +142,7 @@ export function AuthProvider({children}: {children:ReactNode}) {
   }
 
   async function logout() {
-    operation.current++
-    logoutBlocked.current = true
-    markPendingLogout()
-    dropPrivateState()
-    setState('logging_out')
-    try {
-      await api.logout()
-      clearPendingLogout()
-      setState('anonymous')
-    } catch(error) {
-      setState('logout_failed')
-      throw error
-    }
+    await revokePendingLogout(true)
   }
 
   async function selectBusiness(id:string) {
@@ -144,5 +170,6 @@ export function AuthProvider({children}: {children:ReactNode}) {
 
   return <AuthContext.Provider value={{state,user,
     membership:user?.memberships.find(m=>m.business_id===user.active_business_id),
-    login,signup,logout,selectBusiness,bootstrap,reconnect:bootstrap}}>{children}</AuthContext.Provider>
+    login,signup,logout,selectBusiness,bootstrap,reconnect:bootstrap,
+    retryPendingLogout,continueToLogin}}>{children}</AuthContext.Provider>
 }
