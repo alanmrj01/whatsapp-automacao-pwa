@@ -266,6 +266,30 @@ test('company data, services and materials are separated into simple focused scr
   assert.doesNotMatch(agenda,/Deslocamento entre atendimentos/)
 })
 
+test('materials and equipment references keep independent commercial rules', () => {
+  const types = read('src/features/operations/types.ts')
+  const onboarding = read('src/features/onboarding/OnboardingPage.tsx')
+  const catalog = read('src/features/more/MaterialsCatalogPage.tsx')
+
+  assert.match(types,/export type EquipmentCatalogDetails/)
+  assert.match(types,/cycles:Array<'cooling_only'\|'heat_cool'>/)
+  assert.match(types,/equipment_details:EquipmentCatalogDetails\|null/)
+
+  assert.match(onboarding,/activeMaterials=.*item\.kind==='material'&&item\.active/)
+  assert.match(onboarding,/equipmentCount=.*item\.equipment_details!==null/)
+  assert.match(onboarding,/kind:'material'/)
+  assert.doesNotMatch(onboarding,/for\(const item of activeItems\)/)
+
+  assert.match(catalog,/activeMaterials=.*item\.kind==='material'&&item\.active/)
+  assert.match(catalog,/equipmentReferences=.*item\.equipment_details!==null/)
+  assert.match(catalog,/for\(const item of activeMaterials\)await remove\.mutateAsync/)
+  assert.doesNotMatch(catalog,/for\(const item of equipmentReferences\)await remove\.mutateAsync/)
+  assert.match(catalog,/Preço da empresa \(R\$\)/)
+  assert.match(catalog,/Preço é opcional e nunca será inventado pelo assistente/)
+  assert.match(catalog,/Oferecer este equipamento/)
+  assert.match(catalog,/equipment_details/)
+})
+
 test('real agenda converts company-local schedules to an absolute instant', () => {
   assert.equal(zonedDateTimeToIso('2026-09-09','09:00','America/Sao_Paulo'),'2026-09-09T12:00:00.000Z')
 })

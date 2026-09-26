@@ -154,6 +154,29 @@ export type Service = {
   intent_examples:string[]
 }
 
+export type EquipmentCatalogDetails = {
+  catalog_item_id:string
+  brand:string
+  line:string
+  capacity_btu:number
+  model_sku:string|null
+  inverter:boolean
+  voltage:string|null
+  energy_efficiency:string|null
+  wifi:boolean|null
+  segment:'modern'|'cost_benefit'|'economy'
+  cycles:Array<'cooling_only'|'heat_cool'>
+  features:string[]
+  source_url:string
+  image_url:string|null
+  image_alt:string|null
+  indoor_unit_dimensions:string|null
+  outdoor_unit_dimensions:string|null
+  condenser_type:string|null
+  indoor_restrictions:string|null
+  outdoor_restrictions:string|null
+}
+
 export type CatalogItem = {
   id:string
   kind:'material'|'equipment'
@@ -163,4 +186,5 @@ export type CatalogItem = {
   unit_label:string|null
   preset_key:string|null
   active:boolean
+  equipment_details:EquipmentCatalogDetails|null
 }
