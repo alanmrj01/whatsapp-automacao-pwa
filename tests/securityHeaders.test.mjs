@@ -18,13 +18,14 @@ test('production headers enforce a strict same-origin browser boundary', () => {
   assert.doesNotMatch(netlify, /(?:^|;\s*)script-src\s+[^;"\n]*'unsafe-eval'/m)
 })
 
-test('catalog images allow only the verified manufacturer hosts', () => {
+test('catalog images allow HTTPS without relaxing executable origins', () => {
   const policy = netlify.match(/Content-Security-Policy = "([^"]+)"/)?.[1] ?? ''
 
-  assert.match(policy,/img-src 'self' data: https:\/\/www\.lg\.com https:\/\/gree\.com\.br https:\/\/www\.daikin\.com\.br https:\/\/blobmarketingsemp\.blob\.core\.windows\.net/)
+  assert.match(policy,/img-src 'self' data: https:/)
   assert.doesNotMatch(policy,/img-src[^;]*\*/)
+  assert.doesNotMatch(policy,/script-src[^;]*https:/)
+  assert.doesNotMatch(policy,/connect-src[^;]*\*/)
 })
-
 test('transport and browser capabilities are hardened without changing app routes', () => {
   assert.match(netlify, /Strict-Transport-Security\s*=\s*"max-age=31536000"/)
   assert.match(netlify, /Permissions-Policy\s*=\s*"camera=\(\), microphone=\(\), geolocation=\(\), payment=\(\), usb=\(\)"/)
