@@ -436,32 +436,32 @@ function MaterialsStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
   const items=useCatalogItems(),business=useBusiness(),create=useCreateCatalogItem(),update=useUpdateCatalogItem(),remove=useDeleteCatalogItem(),updateBusiness=useUpdateBusiness(),setup=useSetupStatus()
   const [drafts,setDrafts]=useState<Record<string,MaterialDraft>>({})
   const [adding,setAdding]=useState(false)
-  const [newKind,setNewKind]=useState<'material'|'equipment'>('material')
   const [newName,setNewName]=useState('')
   const [newDescription,setNewDescription]=useState('')
   const [newPrice,setNewPrice]=useState('')
   const [newUnit,setNewUnit]=useState('unidade')
   const [addAttempted,setAddAttempted]=useState(false)
   const [saveAttempted,setSaveAttempted]=useState(false)
-  const activeItems=useMemo(()=>items.data?.items.filter(item=>item.active)??[],[items.data])
+  const activeMaterials=useMemo(()=>items.data?.items.filter(item=>item.kind==='material'&&item.active)??[],[items.data])
+  const equipmentCount=useMemo(()=>items.data?.items.filter(item=>item.equipment_details!==null).length??0,[items.data])
 
   useEffect(()=>{
     if(!items.data)return
-    setDrafts(Object.fromEntries(items.data.items.filter(item=>item.active).map(item=>[item.id,{name:item.name,description:item.description??'',price:item.price==null?'':String(item.price),unit:item.unit_label??'unidade',kind:item.kind}])))
+    setDrafts(Object.fromEntries(items.data.items.filter(item=>item.kind==='material'&&item.active).map(item=>[item.id,{name:item.name,description:item.description??'',price:item.price==null?'':String(item.price),unit:item.unit_label??'unidade',kind:'material'}])))
   },[items.data])
 
   if(items.isPending||business.isPending)return <LoadingState/>
   if(items.isError||business.isError||!items.data||!business.data)return <ErrorState onRetry={()=>{void items.refetch();void business.refetch()}}/>
-  const optedOut=business.data.materials_catalog_reviewed&&!activeItems.length
+  const optedOut=business.data.materials_catalog_reviewed&&!activeMaterials.length
   const itemDraftInvalid=(itemId:string)=>{
     const draft=drafts[itemId]
     return !draft||draft.name.trim().length<2||parseMoney(draft.price)===null||!draft.unit||!draft.kind
   }
-  const catalogInvalid=activeItems.some(item=>itemDraftInvalid(item.id))
+  const catalogInvalid=activeMaterials.some(item=>itemDraftInvalid(item.id))
 
   const toggleOptOut=async(checked:boolean)=>{
     if(checked){
-      for(const item of activeItems)await remove.mutateAsync(item.id)
+      for(const item of activeMaterials)await remove.mutateAsync(item.id)
       await updateBusiness.mutateAsync({materials_catalog_reviewed:true})
     }else{
       await updateBusiness.mutateAsync({materials_catalog_reviewed:false})
@@ -472,16 +472,16 @@ function MaterialsStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
   const add=async()=>{
     setAddAttempted(true)
     const price=parseMoney(newPrice)
-    if(newName.trim().length<2||price===null||!newUnit||!newKind)return false
-    await create.mutateAsync({kind:newKind,name:newName.trim(),description:newDescription.trim()||null,price,unit_label:newUnit})
-    setNewName('');setNewDescription('');setNewPrice('');setNewUnit('unidade');setNewKind('material');setAdding(false);setAddAttempted(false)
+    if(newName.trim().length<2||price===null||!newUnit)return false
+    await create.mutateAsync({kind:'material',name:newName.trim(),description:newDescription.trim()||null,price,unit_label:newUnit})
+    setNewName('');setNewDescription('');setNewPrice('');setNewUnit('unidade');setAdding(false);setAddAttempted(false)
     await setup.refetch()
     return true
   }
   const save=async()=>{
     setSaveAttempted(true)
     if(catalogInvalid)return false
-    for(const item of activeItems){
+    for(const item of activeMaterials){
       const draft=drafts[item.id]
       const price=parseMoney(draft.price)
       await update.mutateAsync({id:item.id,values:{kind:draft.kind,name:draft.name.trim(),description:draft.description.trim()||null,price:price!,unit_label:draft.unit}})
@@ -496,21 +496,21 @@ function MaterialsStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
       setAddAttempted(true)
       return
     }
-    if(activeItems.length){
+    if(activeMaterials.length){
       if(await save())onNext()
       return
     }
     if(optedOut||business.data.materials_catalog_reviewed)onNext()
   }
 
-  return <StepCard number={5} title="Materiais e equipamentos" description="Mantenha aqui somente o que sua empresa cobra separadamente. Você pode editar os itens sugeridos, excluir o que não usa e criar novos itens.">
+  return <StepCard number={5} title="Materiais" description="Mantenha aqui somente os materiais que sua empresa cobra separadamente. Os equipamentos de referência ficam disponíveis no catálogo após o onboarding.">
     <label className="onboarding-choice">
       <input type="checkbox" checked={optedOut} disabled={updateBusiness.isPending||remove.isPending} onChange={event=>void toggleOptOut(event.target.checked)}/>
-      <span><strong>Minha empresa não cobra materiais adicionais separadamente</strong><small>Ao selecionar, a lista fica vazia. A opção de adicionar materiais e equipamentos continuará disponível depois.</small></span>
+      <span><strong>Minha empresa não cobra materiais adicionais separadamente</strong><small>Ao selecionar, somente a lista de materiais fica vazia. Os equipamentos de referência permanecem disponíveis.</small></span>
     </label>
-    <div className="catalog-toolbar"><button className="compact-button" type="button" onClick={()=>{setAdding(value=>!value);setAddAttempted(false)}}><Plus size={16}/>Adicionar material ou equipamento</button></div>
+    <p className="settings-note">{equipmentCount} equipamentos de referência já estão separados deste passo e poderão ser ativados, desativados e precificados no catálogo da empresa.</p>
+    <div className="catalog-toolbar"><button className="compact-button" type="button" onClick={()=>{setAdding(value=>!value);setAddAttempted(false)}}><Plus size={16}/>Adicionar material</button></div>
     {adding&&<div className="catalog-add-card">
-      <label><RequiredLabel>Tipo</RequiredLabel><select value={newKind} onChange={event=>setNewKind(event.target.value as 'material'|'equipment')}><option value="material">Material</option><option value="equipment">Equipamento</option></select></label>
       <label><RequiredLabel>Nome</RequiredLabel><input className={addAttempted&&newName.trim().length<2?'field-invalid':''} value={newName} onChange={event=>setNewName(event.target.value)} placeholder="Ex.: Tubulação adicional"/>{addAttempted&&newName.trim().length<2&&<FieldError>Informe o nome do item.</FieldError>}</label>
       <label><span className="field-label-row"><span>Descrição</span><span className="optional-label">Opcional</span></span><input value={newDescription} onChange={event=>setNewDescription(event.target.value)} placeholder="Quando é usado ou cobrado"/></label>
       <label><RequiredLabel>Preço (R$)</RequiredLabel><input className={addAttempted&&parseMoney(newPrice)===null?'field-invalid':''} inputMode="decimal" value={newPrice} onChange={event=>setNewPrice(event.target.value)} placeholder="0,00"/>{addAttempted&&parseMoney(newPrice)===null&&<FieldError>Informe o preço.</FieldError>}</label>
@@ -518,7 +518,7 @@ function MaterialsStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
       <button className="primary-button" type="button" disabled={create.isPending} onClick={()=>void add()}>{create.isPending?'Adicionando…':'Adicionar à lista'}</button>
     </div>}
     <div className="onboarding-service-list onboarding-material-list">
-      {activeItems.map(item=>{
+      {activeMaterials.map(item=>{
         const draft=drafts[item.id]??materialDraft(item)
         const invalidName=draft.name.trim().length<2,invalidPrice=parseMoney(draft.price)===null,invalidUnit=!draft.unit
         return <article className="onboarding-item-row onboarding-item-row--material" key={item.id}>
@@ -529,13 +529,13 @@ function MaterialsStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
           <button className="icon-danger-button" type="button" aria-label={`Excluir ${item.name}`} disabled={remove.isPending} onClick={()=>remove.mutate(item.id)}><Trash2 size={18}/></button>
         </article>
       })}
-      {!activeItems.length&&<p className="settings-empty">{optedOut?'Nenhum material é cobrado separadamente. Você ainda pode adicionar um item quando precisar.':'Nenhum material ou equipamento na lista.'}</p>}
+      {!activeMaterials.length&&<p className="settings-empty">{optedOut?'Nenhum material é cobrado separadamente. Você ainda pode adicionar um item quando precisar.':'Nenhum material na lista.'}</p>}
     </div>
     {saveAttempted&&catalogInvalid&&<p className="form-error" role="alert">Preencha todos os campos obrigatórios de todos os itens antes de salvar ou continuar.</p>}
-    {addAttempted&&adding&&(newName.trim().length<2||parseMoney(newPrice)===null||!newUnit||!newKind)&&<p className="form-error" role="alert">Conclua o novo item ou feche o formulário de adição antes de continuar.</p>}
+    {addAttempted&&adding&&(newName.trim().length<2||parseMoney(newPrice)===null||!newUnit)&&<p className="form-error" role="alert">Conclua o novo material ou feche o formulário de adição antes de continuar.</p>}
     {(create.isError||update.isError||remove.isError||updateBusiness.isError)&&<MutationError/>}
-    {!!activeItems.length&&<button className="primary-button onboarding-save-all" type="button" disabled={update.isPending} onClick={()=>void save()}><Save size={17}/>{update.isPending?'Salvando…':'Salvar itens'}</button>}
-    <StepActions onBack={onBack} onNext={()=>void continueStep()} nextDisabled={update.isPending||create.isPending||remove.isPending||updateBusiness.isPending||(!activeItems.length&&!optedOut&&!business.data.materials_catalog_reviewed)}/>
+    {!!activeMaterials.length&&<button className="primary-button onboarding-save-all" type="button" disabled={update.isPending} onClick={()=>void save()}><Save size={17}/>{update.isPending?'Salvando…':'Salvar materiais'}</button>}
+    <StepActions onBack={onBack} onNext={()=>void continueStep()} nextDisabled={update.isPending||create.isPending||remove.isPending||updateBusiness.isPending||(!activeMaterials.length&&!optedOut&&!business.data.materials_catalog_reviewed)}/>
   </StepCard>
 }
 

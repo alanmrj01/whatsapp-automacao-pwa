@@ -86,7 +86,7 @@ test('materials onboarding supports an explicit no-separate-charge decision and 
   assert.match(onboarding,/remove\.mutateAsync\(item\.id\)/)
   assert.match(materials,/Minha empresa não cobra materiais adicionais separadamente/)
   for (const unit of ['metro','unidade','kit','valor fixo']) assert.match(materials,new RegExp(`value:'${unit}'`))
-  assert.match(materials,/unit_label:newUnit/)
+  assert.match(materials,/unit_label:newDraft\.unit/)
   assert.match(materials,/unit_label:draft\.unit/)
   assert.match(operations,/'materials_catalog_reviewed'/)
 })
@@ -265,6 +265,37 @@ test('company data, services and materials are separated into simple focused scr
   assert.match(materials,/Descrição/)
   assert.match(agenda,/Automático pelo ALOVIA/)
   assert.doesNotMatch(agenda,/Deslocamento entre atendimentos/)
+})
+
+test('materials and equipment references keep independent commercial rules', () => {
+  const types = read('src/features/operations/types.ts')
+  const onboarding = read('src/features/onboarding/OnboardingPage.tsx')
+  const catalog = read('src/features/more/MaterialsCatalogPage.tsx')
+
+  assert.match(types,/export type EquipmentCatalogDetails/)
+  assert.match(types,/cycles:Array<'cooling_only'\|'heat_cool'>/)
+  assert.match(types,/equipment_details:EquipmentCatalogDetails\|null/)
+
+  assert.match(onboarding,/activeMaterials=.*item\.kind==='material'&&item\.active/)
+  assert.match(onboarding,/equipmentCount=.*item\.equipment_details!==null/)
+  assert.match(onboarding,/kind:'material'/)
+  assert.doesNotMatch(onboarding,/for\(const item of activeItems\)/)
+
+  assert.match(catalog,/activeMaterials=useMemo/)
+  assert.match(catalog,/item\.kind==='material'/)
+  assert.match(catalog,/equipmentReferences=useMemo/)
+  assert.match(catalog,/item\.kind==='equipment'/)
+  assert.match(catalog,/for\(const item of activeMaterials\)await remove\.mutateAsync/)
+  assert.doesNotMatch(catalog,/for\(const item of equipmentReferences\)await remove\.mutateAsync/)
+  assert.match(catalog,/Preço da empresa \(R\$\)/)
+  assert.match(catalog,/Preço é opcional e nunca será inventado pelo assistente/)
+  assert.match(catalog,/Oferecer este equipamento/)
+  assert.match(catalog,/equipment_details/)
+  assert.match(catalog,/equipmentSpecifications/)
+  assert.match(catalog,/Capacidade \(BTU\/h\)/)
+  assert.match(catalog,/Evaporadora — largura \(cm\)/)
+  assert.match(catalog,/Condensadora — largura \(cm\)/)
+  assert.match(catalog,/Formato da condensadora/)
 })
 
 test('real agenda converts company-local schedules to an absolute instant', () => {
