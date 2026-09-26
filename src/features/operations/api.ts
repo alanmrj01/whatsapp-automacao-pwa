@@ -253,11 +253,11 @@ export function useCatalogItems() {
 }
 export function useCreateCatalogItem() {
   const context=usePaidContext()
-  return useMutation({mutationFn:(values:Pick<CatalogItem,'kind'|'name'|'description'|'price'|'unit_label'>)=>paidMutation(context,()=>api.request<CatalogItem>('/catalog-items',{method:'POST',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'catalog-items','setup')})
+  return useMutation({mutationFn:(values:Pick<CatalogItem,'kind'|'name'|'description'|'price'|'unit_label'> & Partial<Pick<CatalogItem,'image_url'|'source_url'|'specifications'>>)=>paidMutation(context,()=>api.request<CatalogItem>('/catalog-items',{method:'POST',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'catalog-items','setup')})
 }
 export function useUpdateCatalogItem() {
   const context=usePaidContext()
-  return useMutation({mutationFn:({id,values}:{id:string;values:Partial<Pick<CatalogItem,'kind'|'name'|'description'|'price'|'unit_label'|'active'>>})=>paidMutation(context,()=>api.request<CatalogItem>(`/catalog-items/${id}`,{method:'PATCH',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'catalog-items','setup')})
+  return useMutation({mutationFn:({id,values}:{id:string;values:Partial<Pick<CatalogItem,'kind'|'name'|'description'|'price'|'unit_label'|'image_url'|'source_url'|'specifications'|'active'>>})=>paidMutation(context,()=>api.request<CatalogItem>(`/catalog-items/${id}`,{method:'PATCH',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'catalog-items','setup')})
 }
 export function useDeleteCatalogItem() {
   const context=usePaidContext()
