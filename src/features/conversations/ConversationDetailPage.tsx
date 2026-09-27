@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { BottomSheet } from '../../components/BottomSheet'
 import { ErrorState } from '../../components/ErrorState'
 import { LoadingState } from '../../components/LoadingState'
+import { api } from '../../lib/api'
 import { useAuth } from '../auth/useAuth'
 import {
   useDeleteConversation,
@@ -255,14 +256,73 @@ export function ConversationDetailPage() {
 
 function MessageBubble({message,timezone,copied,onCopy}:{message:ConversationMessage;timezone?:string;copied:boolean;onCopy:()=>void}) {
   const status = outboundStatusLabels[message.status.toLocaleLowerCase('pt-BR')]??message.status
+  const hasMedia = Boolean(message.media_url&&['image','audio','video'].includes(message.message_type))
   return <article className={`conversation-bubble conversation-bubble--${message.direction}`}>
-    <p>{message.body??`Mensagem ${message.message_type}`}</p>
+    {hasMedia&&<MediaAttachment message={message}/>}
+    {message.body&&<p>{message.body}</p>}
+    {!message.body&&!hasMedia&&<p>{`Mensagem ${message.message_type}`}</p>}
     <footer>
       <time>{new Intl.DateTimeFormat('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:timezone}).format(new Date(message.created_at))}</time>
       {message.direction==='outbound'&&<span className={`conversation-delivery-status conversation-delivery-status--${message.status}`}>{status}</span>}
       {message.body&&<button type="button" onClick={onCopy} aria-label="Copiar mensagem" title="Copiar mensagem">{copied?<Check size={14}/>:<Copy size={14}/>}</button>}
     </footer>
   </article>
+}
+
+function MediaAttachment({message}:{message:ConversationMessage}) {
+  const [objectUrl,setObjectUrl]=useState<string|null>(null)
+  const [failed,setFailed]=useState(false)
+  const mediaUrl=message.media_url
+
+  useEffect(()=>{
+    if(!mediaUrl)return
+    const controller=new AbortController()
+    let localUrl:string|null=null
+    setObjectUrl(null)
+    setFailed(false)
+    void api.requestBlob(mediaUrl,{signal:controller.signal})
+      .then(blob=>{
+        if(controller.signal.aborted)return
+        localUrl=URL.createObjectURL(blob)
+        setObjectUrl(localUrl)
+      })
+      .catch(()=>{
+        if(!controller.signal.aborted)setFailed(true)
+      })
+    return ()=>{
+      controller.abort()
+      if(localUrl)URL.revokeObjectURL(localUrl)
+    }
+  },[mediaUrl])
+
+  if(failed)return <div className="conversation-media-state" role="status">
+    Não foi possível carregar esta mídia. Tente novamente ao reabrir a conversa.
+  </div>
+  if(!objectUrl)return <div className="conversation-media-state" role="status">Carregando mídia…</div>
+
+  const label=message.media_filename?.trim()||(
+    message.message_type==='image'?'Imagem recebida':
+    message.message_type==='audio'?'Áudio recebido':
+    'Vídeo recebido'
+  )
+  if(message.message_type==='image')return <img
+    className="conversation-media conversation-media--image"
+    src={objectUrl}
+    alt={label}
+    loading="lazy"
+  />
+  if(message.message_type==='audio')return <div className="conversation-media-wrap">
+    <span className="conversation-media-label">{label}</span>
+    <audio className="conversation-media conversation-media--audio" controls preload="metadata" src={objectUrl}>
+      Seu navegador não consegue reproduzir este áudio.
+    </audio>
+  </div>
+  return <div className="conversation-media-wrap">
+    <span className="conversation-media-label">{label}</span>
+    <video className="conversation-media conversation-media--video" controls playsInline preload="metadata" src={objectUrl}>
+      Seu navegador não consegue reproduzir este vídeo.
+    </video>
+  </div>
 }
 
 function initials(name:string) {
