@@ -382,3 +382,52 @@ test('company settings preserve the structured validated address workflow after 
   assert.match(page,/service_origin_state/)
   assert.doesNotMatch(page,/Endereço de saída para o primeiro atendimento/)
 })
+
+test('equipment catalog supports search and technical filters without changing tenant data', () => {
+  const catalog = read('src/features/more/MaterialsCatalogPage.tsx')
+
+  assert.match(catalog,/Buscar equipamento/)
+  assert.match(catalog,/Nome, marca, linha ou modelo/)
+  assert.match(catalog,/filteredEquipmentReferences/)
+  assert.match(catalog,/filteredEquipmentReferences\.map\(item/)
+  assert.match(catalog,/brandFilter/)
+  assert.match(catalog,/cycleFilter/)
+  assert.match(catalog,/capacityFilter/)
+  assert.match(catalog,/inverterFilter/)
+  assert.match(catalog,/wifiFilter/)
+  assert.match(catalog,/segmentFilter/)
+  assert.match(catalog,/statusFilter/)
+  for (const label of ['Marca','Ciclo','Capacidade','Tecnologia','Wi-Fi','Perfil','Status']) {
+    assert.match(catalog,new RegExp(`<span>${label}<\\/span>`))
+  }
+  assert.match(catalog,/Só frio/)
+  assert.match(catalog,/Quente\/frio/)
+  assert.match(catalog,/Limpar filtros/)
+})
+
+
+test('catalog save action stays at the top as a floppy disk icon', () => {
+  const catalog = read('src/features/more/MaterialsCatalogPage.tsx')
+
+  assert.match(catalog,/className="catalog-save-button"/)
+  assert.match(catalog,/aria-label="Salvar catálogo"/)
+  assert.match(catalog,/<Save size=\{21\}\/>/)
+  assert.ok(catalog.indexOf('catalog-save-button') < catalog.indexOf('materials-opt-out'))
+  assert.doesNotMatch(catalog,/>Salvar catálogo<\//)
+})
+
+
+test('equipment catalog desktop layout cannot collapse no-image cards into the image column', () => {
+  const catalog = read('src/features/more/MaterialsCatalogPage.tsx')
+  const css = read('src/styles/operational-app.css')
+
+  assert.match(catalog,/catalog-settings-page/)
+  assert.match(catalog,/item\.image_url\?' has-image':''/)
+  assert.match(css,/\.catalog-settings-page\{[\s\S]*max-width:1280px/)
+  assert.match(css,/\.catalog-settings-page \.equipment-catalog-card\{[\s\S]*grid-template-columns:minmax\(0,1fr\)/)
+  assert.match(css,/\.catalog-settings-page \.equipment-catalog-card\.has-image\{[\s\S]*grid-template-columns:160px minmax\(0,1fr\)/)
+  assert.match(css,/repeat\(auto-fit,minmax\(min\(100%,460px\),1fr\)\)/)
+  assert.match(css,/word-break:normal/)
+  assert.match(css,/@media\(max-width:1000px\)/)
+})
+

@@ -1,4 +1,4 @@
-import { ExternalLink, Plus, Save, Trash2 } from 'lucide-react'
+import { ExternalLink, Plus, RotateCcw, Save, Search, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { ErrorState } from '../../components/ErrorState'
 import { InfoHelp } from '../../components/InfoHelp'
@@ -56,6 +56,14 @@ export function MaterialsCatalogPage(){
   const [newDraft,setNewDraft]=useState<Draft>(()=>emptyDraft())
   const [addAttempted,setAddAttempted]=useState(false)
   const [saveAttempted,setSaveAttempted]=useState(false)
+  const [equipmentSearch,setEquipmentSearch]=useState('')
+  const [brandFilter,setBrandFilter]=useState('all')
+  const [cycleFilter,setCycleFilter]=useState<'all'|EquipmentCycle>('all')
+  const [capacityFilter,setCapacityFilter]=useState('all')
+  const [inverterFilter,setInverterFilter]=useState<'all'|'inverter'|'conventional'>('all')
+  const [wifiFilter,setWifiFilter]=useState<'all'|'wifi'|'no_wifi'>('all')
+  const [segmentFilter,setSegmentFilter]=useState<'all'|EquipmentSegment>('all')
+  const [statusFilter,setStatusFilter]=useState<'all'|'active'|'inactive'>('all')
 
   const activeMaterials=useMemo(
     ()=>items.data?.items.filter(item=>(item.kind==='material'||item.preset_key==='condenser-bracket')&&item.active)??[],
@@ -65,6 +73,59 @@ export function MaterialsCatalogPage(){
     ()=>items.data?.items.filter(item=>item.kind==='equipment'&&item.preset_key!=='condenser-bracket')??[],
     [items.data],
   )
+
+  const equipmentBrands=useMemo(
+    ()=>[...new Set(equipmentReferences.map(item=>(drafts[item.id]?.brand??item.equipment_details?.brand??'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR')),
+    [equipmentReferences,drafts],
+  )
+  const equipmentCapacities=useMemo(
+    ()=>[...new Set(equipmentReferences.map(item=>Number(drafts[item.id]?.capacity??item.equipment_details?.capacity_btu??0)).filter(value=>Number.isFinite(value)&&value>0))].sort((a,b)=>a-b),
+    [equipmentReferences,drafts],
+  )
+  const filteredEquipmentReferences=useMemo(()=>{
+    const query=equipmentSearch.trim().toLocaleLowerCase('pt-BR')
+    return equipmentReferences.filter(item=>{
+      const draft=drafts[item.id]??toDraft(item)
+      const details=item.equipment_details
+      const searchable=[
+        draft.name,
+        draft.brand,
+        draft.line,
+        details?.model_sku??'',
+      ].join(' ').toLocaleLowerCase('pt-BR')
+      const wifi=details?.wifi===true||item.specifications.wifi===true||
+        (Array.isArray(item.specifications.features)&&item.specifications.features.some(feature=>typeof feature==='string'&&feature.toLocaleLowerCase('pt-BR').replace(/[- ]/g,'').includes('wifi')))
+      if(query&&!searchable.includes(query))return false
+      if(brandFilter!=='all'&&draft.brand!==brandFilter)return false
+      if(cycleFilter!=='all'&&draft.cycle!==cycleFilter)return false
+      if(capacityFilter!=='all'&&draft.capacity!==capacityFilter)return false
+      if(inverterFilter==='inverter'&&!draft.inverter)return false
+      if(inverterFilter==='conventional'&&draft.inverter)return false
+      if(wifiFilter==='wifi'&&!wifi)return false
+      if(wifiFilter==='no_wifi'&&wifi)return false
+      if(segmentFilter!=='all'&&draft.segment!==segmentFilter)return false
+      if(statusFilter==='active'&&!draft.active)return false
+      if(statusFilter==='inactive'&&draft.active)return false
+      return true
+    })
+  },[
+    equipmentReferences,drafts,equipmentSearch,brandFilter,cycleFilter,capacityFilter,
+    inverterFilter,wifiFilter,segmentFilter,statusFilter,
+  ])
+  const equipmentFiltersActive=
+    equipmentSearch.trim()!==''||brandFilter!=='all'||cycleFilter!=='all'||
+    capacityFilter!=='all'||inverterFilter!=='all'||wifiFilter!=='all'||
+    segmentFilter!=='all'||statusFilter!=='all'
+  const clearEquipmentFilters=()=>{
+    setEquipmentSearch('')
+    setBrandFilter('all')
+    setCycleFilter('all')
+    setCapacityFilter('all')
+    setInverterFilter('all')
+    setWifiFilter('all')
+    setSegmentFilter('all')
+    setStatusFilter('all')
+  }
 
   useEffect(()=>{
     if(!items.data)return
@@ -161,7 +222,20 @@ export function MaterialsCatalogPage(){
   }
 
   return <Shell>
-    <section className="operational-heading"><div><span className="eyebrow">Empresa</span><h1>Catálogo de equipamentos e materiais</h1></div><InfoHelp title="Catálogo da empresa">Materiais cobrados e equipamentos de referência têm regras separadas. A recomendação usa somente equipamentos técnicos ativos da sua empresa.</InfoHelp></section>
+    <section className="operational-heading catalog-page-heading">
+      <div><span className="eyebrow">Empresa</span><h1>Catálogo de equipamentos e materiais</h1></div>
+      <div className="catalog-page-actions">
+        {canEdit&&!!(activeMaterials.length||equipmentReferences.length)&&<button
+          className="catalog-save-button"
+          type="button"
+          aria-label="Salvar catálogo"
+          title="Salvar catálogo"
+          disabled={update.isPending||updateBusiness.isPending}
+          onClick={()=>void save()}
+        ><Save size={21}/></button>}
+        <InfoHelp title="Catálogo da empresa">Materiais cobrados e equipamentos de referência têm regras separadas. A recomendação usa somente equipamentos técnicos ativos da sua empresa.</InfoHelp>
+      </div>
+    </section>
     {canEdit&&<label className="settings-editor materials-opt-out">
       <span>Política de cobrança de materiais</span>
       <span className="settings-checkbox"><input type="checkbox" checked={optedOut} disabled={updateBusiness.isPending||remove.isPending} onChange={event=>void toggleOptOut(event.target.checked)}/><strong>Minha empresa não cobra materiais adicionais separadamente</strong></span>
@@ -206,12 +280,33 @@ export function MaterialsCatalogPage(){
 
     <section className="catalog-section equipment-catalog" aria-labelledby="equipment-title">
       <div className="section-title-row"><div><span className="eyebrow">Referências da empresa</span><h2 id="equipment-title">Equipamentos</h2><p>{equipmentReferences.length} configurações cadastradas. Preço é opcional e nunca será inventado pelo assistente.</p></div></div>
+
+      <div className="equipment-filter-panel" role="search" aria-label="Buscar e filtrar equipamentos">
+        <label className="equipment-filter-search">
+          <span>Buscar equipamento</span>
+          <div><Search size={17}/><input value={equipmentSearch} onChange={event=>setEquipmentSearch(event.target.value)} placeholder="Nome, marca, linha ou modelo"/></div>
+        </label>
+        <div className="equipment-filter-grid">
+          <label><span>Marca</span><select value={brandFilter} onChange={event=>setBrandFilter(event.target.value)}><option value="all">Todas</option>{equipmentBrands.map(brand=><option key={brand} value={brand}>{brand}</option>)}</select></label>
+          <label><span>Ciclo</span><select value={cycleFilter} onChange={event=>setCycleFilter(event.target.value as 'all'|EquipmentCycle)}><option value="all">Todos</option><option value="cold">Só frio</option><option value="heat_cool">Quente/frio</option></select></label>
+          <label><span>Capacidade</span><select value={capacityFilter} onChange={event=>setCapacityFilter(event.target.value)}><option value="all">Todos os BTUs</option>{equipmentCapacities.map(capacity=><option key={capacity} value={String(capacity)}>{capacity.toLocaleString('pt-BR')} BTU/h</option>)}</select></label>
+          <label><span>Tecnologia</span><select value={inverterFilter} onChange={event=>setInverterFilter(event.target.value as typeof inverterFilter)}><option value="all">Todas</option><option value="inverter">Inverter</option><option value="conventional">Convencional</option></select></label>
+          <label><span>Wi-Fi</span><select value={wifiFilter} onChange={event=>setWifiFilter(event.target.value as typeof wifiFilter)}><option value="all">Todos</option><option value="wifi">Com Wi-Fi</option><option value="no_wifi">Sem Wi-Fi</option></select></label>
+          <label><span>Perfil</span><select value={segmentFilter} onChange={event=>setSegmentFilter(event.target.value as 'all'|EquipmentSegment)}><option value="all">Todos</option><option value="modern">Mais moderno</option><option value="cost_benefit">Custo-benefício</option><option value="economy">Maior economia</option></select></label>
+          <label><span>Status</span><select value={statusFilter} onChange={event=>setStatusFilter(event.target.value as typeof statusFilter)}><option value="all">Todos</option><option value="active">Ativos</option><option value="inactive">Inativos</option></select></label>
+        </div>
+        <div className="equipment-filter-summary">
+          <span><strong>{filteredEquipmentReferences.length}</strong> de {equipmentReferences.length} equipamentos exibidos</span>
+          {equipmentFiltersActive&&<button type="button" onClick={clearEquipmentFilters}><RotateCcw size={15}/>Limpar filtros</button>}
+        </div>
+      </div>
+
       <div className="equipment-catalog-grid">
-        {equipmentReferences.map(item=>{
+        {filteredEquipmentReferences.map(item=>{
           const draft=drafts[item.id]??toDraft(item)
           const details=item.equipment_details
           const invalid=equipmentInvalid(draft)
-          return <article className={`equipment-catalog-card${draft.active?'':' is-inactive'}`} key={item.id}>
+          return <article className={`equipment-catalog-card${item.image_url?' has-image':''}${draft.active?'':' is-inactive'}`} key={item.id}>
             {item.image_url&&<img src={item.image_url} alt={details?.image_alt??`Imagem de referência de ${item.name}`} loading="lazy" referrerPolicy="no-referrer"/>}
             <div className="equipment-catalog-card__body">
               <div className="equipment-catalog-card__heading"><div><span className="catalog-kind">{draft.brand||'Equipamento'}</span><h3>{draft.name}</h3></div><span className={`equipment-status${draft.active?' is-active':''}`}>{draft.active?'Ativo':'Inativo'}</span></div>
@@ -241,13 +336,13 @@ export function MaterialsCatalogPage(){
           </article>
         })}
         {!equipmentReferences.length&&<p className="settings-empty">Nenhum equipamento de referência cadastrado.</p>}
+        {!!equipmentReferences.length&&!filteredEquipmentReferences.length&&<p className="settings-empty equipment-filter-empty">Nenhum equipamento corresponde aos filtros selecionados.</p>}
       </div>
     </section>
 
     {saveAttempted&&catalogInvalid&&<p className="form-error" role="alert">Revise os campos destacados antes de salvar.</p>}
     {(create.isError||update.isError||remove.isError||updateBusiness.isError)&&<MutationError/>}
     {(update.isSuccess||updateBusiness.isSuccess)&&!catalogInvalid&&<p className="form-success">Catálogo salvo.</p>}
-    {canEdit&&!!(activeMaterials.length||equipmentReferences.length)&&<button className="primary-button" type="button" disabled={update.isPending} onClick={()=>void save()}><Save size={17}/>{update.isPending?'Salvando…':'Salvar catálogo'}</button>}
   </Shell>
 }
 
@@ -391,4 +486,4 @@ function parseMoney(value:string){if(!value.trim())return null;const parsed=Numb
 function parseOptionalMoney(value:string){return value.trim()===''?null:parseMoney(value)}
 function cycleLabel(cycles:Array<'cooling_only'|'heat_cool'>){return cycles.includes('heat_cool')?'Quente/frio':'Só frio'}
 function MutationError(){return <p className="form-error" role="alert">Não foi possível salvar. Revise os dados e tente novamente.</p>}
-function Shell({children}:{children:React.ReactNode}){return <div className="page-stack operational-page compact-page settings-page">{children}</div>}
+function Shell({children}:{children:React.ReactNode}){return <div className="page-stack operational-page compact-page settings-page catalog-settings-page">{children}</div>}
