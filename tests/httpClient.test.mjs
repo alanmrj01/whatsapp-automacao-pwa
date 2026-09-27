@@ -239,3 +239,44 @@ test('server failure during refresh keeps the session recoverable', async () => 
   assert.deepEqual(await api.request('/me'), {ok:true})
   assert.equal(expired, 0)
 })
+
+test('authenticated media download accepts api-v1 paths and returns a blob', async () => {
+  const token = secret(), calls = []
+  const api = createApiClient('https://api.example.test', async (url, options) => {
+    calls.push({url,options})
+    if (url.endsWith('/login')) return response(200, {access_token:token})
+    return new Response(new Blob(['media-bytes'], {type:'video/mp4'}), {
+      status:200,
+      headers:{'Content-Type':'video/mp4'},
+    })
+  })
+
+  await api.login('member@example.test', secret())
+  const blob = await api.requestBlob(
+    '/api/v1/conversations/c1/messages/m1/media',
+  )
+
+  assert.equal(blob.type, 'video/mp4')
+  assert.equal(await blob.text(), 'media-bytes')
+  assert.equal(calls[1].url, 'https://api.example.test/api/v1/conversations/c1/messages/m1/media')
+  assert.equal(calls[1].options.headers.Authorization, `Bearer ${token}`)
+  assert.equal(calls[1].options.credentials, 'include')
+})
+
+
+test('media download refreshes once after 401 and retries with the new bearer', async () => {
+  const token = secret(), calls = []
+  const api = createApiClient('', async (url, options) => {
+    calls.push({url,authorization:options.headers.Authorization})
+    if (url.endsWith('/refresh')) return response(200, {access_token:token})
+    if (!options.headers.Authorization) return response(401)
+    return new Response(new Blob(['image'], {type:'image/jpeg'}), {status:200})
+  })
+
+  const blob = await api.requestBlob('/conversations/c1/messages/m1/media')
+
+  assert.equal(blob.type, 'image/jpeg')
+  assert.equal(calls.filter(call=>call.url.endsWith('/refresh')).length, 1)
+  assert.equal(calls.at(-1).authorization, `Bearer ${token}`)
+})
+

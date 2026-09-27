@@ -50,3 +50,25 @@ test('conversation layout owns the full viewport without duplicated navigation',
   assert.match(css,/@media \(max-width: 430px\)/)
   assert.match(css,/@media \(min-width: 900px\)/)
 })
+
+test('conversation renders images audio and video with authenticated media loading', () => {
+  const detail = read('src/features/conversations/ConversationDetailPage.tsx')
+  const types = read('src/features/operations/types.ts')
+  const client = read('src/lib/httpClient.ts')
+  const css = read('src/features/conversations/conversation-detail.css')
+
+  assert.match(types,/media_mime_type:string\|null/)
+  assert.match(types,/media_filename:string\|null/)
+  assert.match(types,/media_url:string\|null/)
+  assert.match(detail,/function MediaAttachment/)
+  assert.match(detail,/api\.requestBlob\(mediaUrl/)
+  assert.match(detail,/<img[\s\S]*conversation-media--image/)
+  assert.match(detail,/<audio[\s\S]*controls[\s\S]*preload="metadata"/)
+  assert.match(detail,/<video[\s\S]*controls[\s\S]*playsInline[\s\S]*preload="metadata"/)
+  assert.match(detail,/URL\.revokeObjectURL/)
+  assert.match(client,/async function requestBlob/)
+  assert.match(client,/60_000/)
+  assert.match(css,/\.conversation-media--video/)
+  assert.match(css,/\.conversation-media--audio/)
+})
+
