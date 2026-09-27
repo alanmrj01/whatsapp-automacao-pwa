@@ -23,12 +23,17 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
   function clear() { token = null; blocked = true; generation++ }
   function expire() { clear(); onExpired() }
 
-  async function raw(path: string, options: RequestInit = {}, bearer: string | null = null): Promise<Response> {
+  async function raw(
+    path: string,
+    options: RequestInit = {},
+    bearer: string | null = null,
+    timeoutMs = 15_000,
+  ): Promise<Response> {
     const controller = new AbortController()
     const abort = () => controller.abort()
     if (options.signal?.aborted) controller.abort()
     options.signal?.addEventListener('abort', abort, { once: true })
-    const timeout = setTimeout(abort, 15_000)
+    const timeout = setTimeout(abort, timeoutMs)
     try {
       return await fetcher(base + path, {
         ...options, credentials: 'include', cache: 'no-store', signal: controller.signal,
@@ -99,6 +104,27 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
     return value
   }
 
+  async function requestBlob(path: string, options: RequestInit = {}): Promise<Blob> {
+    if (blocked) throw new ApiError(401)
+    const normalizedPath = path.startsWith('/api/v1/')
+      ? path.slice('/api/v1'.length)
+      : path
+    const expected = generation
+    const initial = token
+    let response = await raw(normalizedPath, options, initial, 60_000)
+    if (generation !== expected) throw new ApiError(401)
+    if (response.status === 401) {
+      if (!token || token === initial) await refresh()
+      if (generation !== expected) throw new ApiError(401)
+      response = await raw(normalizedPath, options, token, 60_000)
+      if (response.status === 401 && generation === expected) expire()
+    }
+    if (!response.ok) throw new ApiError(response.status)
+    const value = await response.blob()
+    if (generation !== expected) throw new ApiError(401)
+    return value
+  }
+
   async function startAuthentication<T = unknown>(path: string, payload: object, headers?: HeadersInit): Promise<T | undefined> {
     if (loggingOut || loggingIn) throw new ApiError(401)
     const previousRefresh = refreshing
@@ -119,7 +145,7 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
   }
 
   return {
-    request, refresh, clear,
+    request, requestBlob, refresh, clear,
     onExpired(listener: () => void) { onExpired = listener },
     async login<T = unknown>(email: string, password: string) {
       return startAuthentication<T>('/auth/login', {email,password})
