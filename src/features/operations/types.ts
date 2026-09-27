@@ -55,7 +55,17 @@ export type Conversation = {
   assignee_name:string|null
 }
 export type ConversationList = {items:Conversation[];page:number;page_size:number;total:number}
-export type ConversationMessage = {id:string;direction:'inbound'|'outbound';message_type:string;body:string|null;status:string;created_at:string}
+export type ConversationMessage = {
+  id:string
+  direction:'inbound'|'outbound'
+  message_type:string
+  body:string|null
+  status:string
+  created_at:string
+  media_mime_type:string|null
+  media_filename:string|null
+  media_url:string|null
+}
 export type ConversationDetail = Conversation & {
   messages:ConversationMessage[]
   assistant_enabled:boolean
