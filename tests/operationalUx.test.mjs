@@ -288,7 +288,8 @@ test('materials and equipment references keep independent commercial rules', () 
   assert.match(catalog,/for\(const item of activeMaterials\)await remove\.mutateAsync/)
   assert.doesNotMatch(catalog,/for\(const item of equipmentReferences\)await remove\.mutateAsync/)
   assert.match(catalog,/Preço da empresa \(R\$\)/)
-  assert.match(catalog,/Preço é opcional e nunca será inventado pelo assistente/)
+  assert.match(catalog,/preço de referência de mercado/)
+  assert.doesNotMatch(catalog,/<RequiredLabel>Unidade<\/RequiredLabel><select aria-label={`Unidade de \$\{item\.name\}`}/)
   assert.match(catalog,/Oferecer este equipamento/)
   assert.match(catalog,/equipment_details/)
   assert.match(catalog,/equipmentSpecifications/)
@@ -422,7 +423,7 @@ test('equipment catalog desktop layout cannot collapse no-image cards into the i
   const css = read('src/styles/operational-app.css')
 
   assert.match(catalog,/catalog-settings-page/)
-  assert.match(catalog,/item\.image_url\?' has-image':''/)
+  assert.match(catalog,/draft\.imageUrl\?' has-image':''/)
   assert.match(css,/\.catalog-settings-page\{[\s\S]*max-width:1280px/)
   assert.match(css,/\.catalog-settings-page \.equipment-catalog-card\{[\s\S]*grid-template-columns:minmax\(0,1fr\)/)
   assert.match(css,/\.catalog-settings-page \.equipment-catalog-card\.has-image\{[\s\S]*grid-template-columns:160px minmax\(0,1fr\)/)
@@ -431,3 +432,29 @@ test('equipment catalog desktop layout cannot collapse no-image cards into the i
   assert.match(css,/@media\(max-width:1000px\)/)
 })
 
+
+
+test('equipment photos can be uploaded and are clearly used by the assistant', () => {
+  const api = read('src/features/operations/api.ts')
+  const catalog = read('src/features/more/MaterialsCatalogPage.tsx')
+
+  assert.match(api,/useUploadCatalogItemImage/)
+  assert.match(api,/catalog-items\/\$\{id\}\/image/)
+  assert.match(api,/method:'PUT'/)
+  assert.match(catalog,/Foto do equipamento/)
+  assert.match(catalog,/accept="image\/jpeg,image\/png,image\/webp"/)
+  assert.match(catalog,/Até 4 MB/)
+  assert.match(catalog,/foto que o assistente envia ao cliente/)
+  assert.match(catalog,/unit_label:null/)
+  assert.doesNotMatch(catalog,/aria-label={`Unidade de \$\{item\.name\}`}/)
+})
+
+test('equipment status badge stays intact on narrow mobile cards', () => {
+  const css = read('src/styles/operational-app.css')
+
+  assert.match(css,/\.equipment-catalog-card__heading\{[^}]*grid-template-columns:minmax\(0,1fr\) max-content/)
+  assert.match(css,/\.equipment-status\{[^}]*white-space:nowrap/)
+  assert.match(css,/\.equipment-status\{[^}]*word-break:keep-all/)
+  assert.match(css,/\.equipment-status\{[^}]*overflow-wrap:normal/)
+  assert.match(css,/\.equipment-status\{[^}]*flex:0 0 auto/)
+})
