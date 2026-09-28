@@ -280,3 +280,22 @@ test('media download refreshes once after 401 and retries with the new bearer', 
   assert.equal(calls.at(-1).authorization, `Bearer ${token}`)
 })
 
+
+
+test('multipart uploads keep the browser-generated FormData content type boundary', async () => {
+  const calls = []
+  const api = createApiClient('', async (url, options) => {
+    calls.push({url,options})
+    return response(200, {ok:true})
+  })
+  const form = new FormData()
+  form.append('file', new Blob(['image'], {type:'image/jpeg'}), 'equipment.jpg')
+
+  assert.deepEqual(await api.request('/catalog-items/item-1/image', {
+    method:'POST',
+    body:form,
+  }), {ok:true})
+
+  assert.equal(calls[0].options.body, form)
+  assert.equal(calls[0].options.headers['Content-Type'], undefined)
+})
