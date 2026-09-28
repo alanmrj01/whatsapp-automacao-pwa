@@ -297,7 +297,7 @@ export function MaterialsCatalogPage(){
     </section>
 
     <section className="catalog-section equipment-catalog" aria-labelledby="equipment-title">
-      <div className="section-title-row"><div><span className="eyebrow">Referências da empresa</span><h2 id="equipment-title">Equipamentos</h2><p>{equipmentReferences.length} configurações cadastradas. Preço é opcional e nunca será inventado pelo assistente.</p></div></div>
+      <div className="section-title-row"><div><span className="eyebrow">Referências da empresa</span><h2 id="equipment-title">Equipamentos</h2><p>{equipmentReferences.length} configurações cadastradas. Os equipamentos padrão já têm preço sugerido de mercado; a empresa pode editar e o assistente usa somente o valor salvo.</p></div></div>
 
       <div className="equipment-filter-panel" role="search" aria-label="Buscar e filtrar equipamentos">
         <label className="equipment-filter-search">
