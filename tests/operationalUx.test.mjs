@@ -422,7 +422,8 @@ test('equipment catalog desktop layout cannot collapse no-image cards into the i
   const css = read('src/styles/operational-app.css')
 
   assert.match(catalog,/catalog-settings-page/)
-  assert.match(catalog,/item\.image_url\?' has-image':''/)
+  assert.match(catalog,/displayImageUrl=draft\.imageUrl\.trim\(\)\|\|item\.image_url/)
+  assert.match(catalog,/displayImageUrl\?' has-image':''/)
   assert.match(css,/\.catalog-settings-page\{[\s\S]*max-width:1280px/)
   assert.match(css,/\.catalog-settings-page \.equipment-catalog-card\{[\s\S]*grid-template-columns:minmax\(0,1fr\)/)
   assert.match(css,/\.catalog-settings-page \.equipment-catalog-card\.has-image\{[\s\S]*grid-template-columns:160px minmax\(0,1fr\)/)
