@@ -360,7 +360,7 @@ export function MaterialsCatalogPage(){
 
     {imageError&&<p className="form-error" role="alert">{imageError}</p>}
     {saveAttempted&&catalogInvalid&&<p className="form-error" role="alert">Revise os campos destacados antes de salvar.</p>}
-    {(create.isError||update.isError||remove.isError||updateBusiness.isError)&&<MutationError/>}
+    {(create.isError||update.isError||uploadImage.isError||remove.isError||updateBusiness.isError)&&<MutationError/>}
     {(update.isSuccess||updateBusiness.isSuccess)&&!catalogInvalid&&<p className="form-success">Catálogo salvo.</p>}
   </Shell>
 }
@@ -475,7 +475,6 @@ function equipmentInvalid(draft:Draft|undefined){
     draft.line.trim().length<2||
     !Number.isInteger(capacity)||
     capacity<1000||
-    !draft.unit||
     (draft.price.trim()!==''&&parseMoney(draft.price)===null)||
     !dimensionPairValid(draft.indoorWidth,draft.indoorHeight,draft.indoorDepth)||
     !dimensionPairValid(draft.outdoorWidth,draft.outdoorHeight,draft.outdoorDepth)||
