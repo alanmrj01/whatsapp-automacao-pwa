@@ -181,6 +181,9 @@ export function MaterialsCatalogPage(){
       })
       try{
         if(newEquipmentImageFile)await uploadImage.mutateAsync({id:created.id,file:newEquipmentImageFile})
+      }catch{
+        // The equipment itself is already saved. Keep it and surface the upload
+        // error so the photo can be retried directly from its catalog card.
       }finally{
         setNewEquipmentImageFile(null)
       }
