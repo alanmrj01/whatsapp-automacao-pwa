@@ -288,7 +288,9 @@ test('materials and equipment references keep independent commercial rules', () 
   assert.match(catalog,/for\(const item of activeMaterials\)await remove\.mutateAsync/)
   assert.doesNotMatch(catalog,/for\(const item of equipmentReferences\)await remove\.mutateAsync/)
   assert.match(catalog,/Preço da empresa \(R\$\)/)
-  assert.match(catalog,/Preço é opcional e nunca será inventado pelo assistente/)
+  assert.match(catalog,/Os preços padrão são referências editáveis/)
+  assert.match(catalog,/unit_label:null/)
+  assert.doesNotMatch(catalog,/Unidade de/)
   assert.match(catalog,/Oferecer este equipamento/)
   assert.match(catalog,/equipment_details/)
   assert.match(catalog,/equipmentSpecifications/)
@@ -422,7 +424,7 @@ test('equipment catalog desktop layout cannot collapse no-image cards into the i
   const css = read('src/styles/operational-app.css')
 
   assert.match(catalog,/catalog-settings-page/)
-  assert.match(catalog,/item\.image_url\?' has-image':''/)
+  assert.match(catalog,/draft\.imageUrl\?' has-image':''/)
   assert.match(css,/\.catalog-settings-page\{[\s\S]*max-width:1280px/)
   assert.match(css,/\.catalog-settings-page \.equipment-catalog-card\{[\s\S]*grid-template-columns:minmax\(0,1fr\)/)
   assert.match(css,/\.catalog-settings-page \.equipment-catalog-card\.has-image\{[\s\S]*grid-template-columns:160px minmax\(0,1fr\)/)
@@ -431,3 +433,42 @@ test('equipment catalog desktop layout cannot collapse no-image cards into the i
   assert.match(css,/@media\(max-width:1000px\)/)
 })
 
+
+
+test('equipment photos are uploadable while material unit rules stay isolated', () => {
+  const catalog = read('src/features/more/MaterialsCatalogPage.tsx')
+  const api = read('src/features/operations/api.ts')
+  const http = read('src/lib/httpClient.ts')
+
+  assert.match(catalog,/Foto do equipamento/)
+  assert.match(catalog,/accept="image\\/jpeg,image\\/png,image\\/webp"/)
+  assert.match(catalog,/useUploadCatalogItemImage/)
+  assert.match(catalog,/uploadImage\.mutateAsync/)
+  assert.match(catalog,/URL alternativa da foto \(HTTPS\)/)
+  assert.match(catalog,/unit_label:null/)
+  assert.match(catalog,/<RequiredLabel>Unidade<\/RequiredLabel>/)
+  assert.doesNotMatch(catalog,/aria-label=.*Unidade de/)
+  assert.match(api,/catalog-items\/.*\/image/)
+  assert.match(api,/new FormData\(\)/)
+  assert.match(http,/options\.body instanceof FormData/)
+})
+
+
+test('equipment status badge cannot split on narrow mobile cards', () => {
+  const css = read('src/styles/operational-app.css')
+
+  assert.match(css,/\.equipment-status\{[\s\S]*flex:0 0 auto/)
+  assert.match(css,/\.equipment-status\{[\s\S]*white-space:nowrap/)
+  assert.match(css,/\.equipment-status\{[\s\S]*word-break:keep-all/)
+  assert.match(css,/\.equipment-status\{[\s\S]*overflow-wrap:normal/)
+  assert.match(css,/\.catalog-settings-page \.equipment-catalog-card__heading>div\{[\s\S]*min-width:0/)
+})
+
+
+test('equipment photo editor remains usable on mobile without overflowing the card', () => {
+  const css = read('src/styles/operational-app.css')
+
+  assert.match(css,/\.equipment-photo-field\{[\s\S]*min-width:0/)
+  assert.match(css,/\.equipment-photo-upload\{[\s\S]*overflow:hidden/)
+  assert.match(css,/@media\(max-width:560px\)\{[\s\S]*\.equipment-photo-upload\{[\s\S]*width:100%/)
+})
