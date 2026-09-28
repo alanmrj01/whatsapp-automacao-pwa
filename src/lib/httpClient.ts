@@ -37,9 +37,13 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
     try {
       return await fetcher(base + path, {
         ...options, credentials: 'include', cache: 'no-store', signal: controller.signal,
-        headers: { ...(options.body ? {'Content-Type':'application/json'} : {}),
+        headers: {
+          ...(options.body && !(typeof FormData !== 'undefined' && options.body instanceof FormData)
+            ? {'Content-Type':'application/json'}
+            : {}),
           ...(options.headers ?? {}),
-          ...(bearer ? {Authorization: `Bearer ${bearer}`} : {}) },
+          ...(bearer ? {Authorization: `Bearer ${bearer}`} : {}),
+        },
       })
     } catch {
       throw new ApiError(0)
