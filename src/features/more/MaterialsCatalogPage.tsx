@@ -1,4 +1,4 @@
-import { ExternalLink, Plus, RotateCcw, Save, Search, Trash2 } from 'lucide-react'
+import { ExternalLink, ImagePlus, Plus, RotateCcw, Save, Search, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { ErrorState } from '../../components/ErrorState'
 import { InfoHelp } from '../../components/InfoHelp'
@@ -6,7 +6,7 @@ import { LoadingState } from '../../components/LoadingState'
 import { RequiredLabel } from '../../components/RequiredLabel'
 import { canConfigureWhatsApp } from '../auth/types'
 import { useAuth } from '../auth/useAuth'
-import { useBusiness, useCatalogItems, useCreateCatalogItem, useDeleteCatalogItem, useUpdateBusiness, useUpdateCatalogItem } from '../operations/api'
+import { useBusiness, useCatalogItems, useCreateCatalogItem, useDeleteCatalogItem, useUpdateBusiness, useUpdateCatalogItem, useUploadCatalogItemImage } from '../operations/api'
 import type { CatalogItem, EquipmentCatalogSpecifications } from '../operations/types'
 
 const unitOptions=[
@@ -48,12 +48,14 @@ export function MaterialsCatalogPage(){
   const business=useBusiness()
   const create=useCreateCatalogItem()
   const update=useUpdateCatalogItem()
+  const uploadImage=useUploadCatalogItemImage()
   const remove=useDeleteCatalogItem()
   const updateBusiness=useUpdateBusiness()
   const canEdit=canConfigureWhatsApp(useAuth().membership?.role)
   const [drafts,setDrafts]=useState<Record<string,Draft>>({})
   const [adding,setAdding]=useState(false)
   const [newDraft,setNewDraft]=useState<Draft>(()=>emptyDraft())
+  const [newEquipmentImageFile,setNewEquipmentImageFile]=useState<File|null>(null)
   const [addAttempted,setAddAttempted]=useState(false)
   const [saveAttempted,setSaveAttempted]=useState(false)
   const [equipmentSearch,setEquipmentSearch]=useState('')
@@ -167,16 +169,21 @@ export function MaterialsCatalogPage(){
       })
     }else{
       if(equipmentInvalid(newDraft))return
-      await create.mutateAsync({
+      const created=await create.mutateAsync({
         kind:'equipment',
         name:newDraft.name.trim(),
         description:newDraft.description.trim()||null,
         price:parseOptionalMoney(newDraft.price),
-        unit_label:'unidade',
+        unit_label:null,
         image_url:newDraft.imageUrl.trim()||null,
         source_url:newDraft.sourceUrl.trim()||null,
         specifications:equipmentSpecifications(newDraft),
       })
+      try{
+        if(newEquipmentImageFile)await uploadImage.mutateAsync({id:created.id,file:newEquipmentImageFile})
+      }finally{
+        setNewEquipmentImageFile(null)
+      }
     }
     setNewDraft(emptyDraft())
     setAdding(false)
@@ -209,7 +216,7 @@ export function MaterialsCatalogPage(){
           name:draft.name.trim(),
           description:draft.description.trim()||null,
           price:parseOptionalMoney(draft.price),
-          unit_label:'unidade',
+          unit_label:null,
           image_url:draft.imageUrl.trim()||null,
           source_url:draft.sourceUrl.trim()||null,
           specifications:{...item.specifications,...equipmentSpecifications(draft)},
@@ -244,7 +251,7 @@ export function MaterialsCatalogPage(){
 
     {canEdit&&<div className="catalog-toolbar"><button className="compact-button" type="button" onClick={()=>{setAdding(value=>!value);setAddAttempted(false)}}><Plus size={16}/>Adicionar material ou equipamento</button></div>}
     {canEdit&&adding&&<div className="settings-form settings-form--inline">
-      <label><RequiredLabel>Tipo</RequiredLabel><select value={newDraft.kind} onChange={event=>setNewDraft(current=>({...current,kind:event.target.value as Draft['kind'],unit:event.target.value==='equipment'?'unidade':current.unit}))}><option value="material">Material</option><option value="equipment">Equipamento</option></select></label>
+      <label><RequiredLabel>Tipo</RequiredLabel><select value={newDraft.kind} onChange={event=>setNewDraft(current=>({...current,kind:event.target.value as Draft['kind']}))}><option value="material">Material</option><option value="equipment">Equipamento</option></select></label>
       <label><RequiredLabel>Nome</RequiredLabel><input className={addAttempted&&newDraft.name.trim().length<2?'field-invalid':''} value={newDraft.name} onChange={event=>setNewDraft(current=>({...current,name:event.target.value}))} placeholder={newDraft.kind==='equipment'?'Ex.: LG Dual Inverter 12.000 BTU':'Ex.: Tubulação adicional'}/>{addAttempted&&newDraft.name.trim().length<2&&<small className="field-error">Informe o nome do item.</small>}</label>
       <label><span className="field-label-row"><span>Descrição</span><span className="optional-label">Opcional</span></span><input value={newDraft.description} onChange={event=>setNewDraft(current=>({...current,description:event.target.value}))} placeholder="Informações úteis para a empresa"/></label>
 
@@ -253,7 +260,15 @@ export function MaterialsCatalogPage(){
           <label><RequiredLabel>Preço (R$)</RequiredLabel><input className={addAttempted&&parseMoney(newDraft.price)===null?'field-invalid':''} inputMode="decimal" value={newDraft.price} onChange={event=>setNewDraft(current=>({...current,price:event.target.value}))} placeholder="0,00"/>{addAttempted&&parseMoney(newDraft.price)===null&&<small className="field-error">Informe o preço.</small>}</label>
           <label><RequiredLabel>Unidade</RequiredLabel><select value={newDraft.unit} onChange={event=>setNewDraft(current=>({...current,unit:event.target.value}))}>{unitOptions.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
         </div>
-      </>:<EquipmentEditor draft={newDraft} setDraft={value=>setNewDraft(value)} attempted={addAttempted}/>}
+      </>:<>
+        <EquipmentEditor draft={newDraft} setDraft={value=>setNewDraft(value)} attempted={addAttempted}/>
+        <EquipmentPhotoField
+          imageUrl={newDraft.imageUrl}
+          fileName={newEquipmentImageFile?.name}
+          disabled={create.isPending||uploadImage.isPending}
+          onFile={setNewEquipmentImageFile}
+        />
+      </>}
 
       <button className="primary-button" type="button" disabled={create.isPending} onClick={()=>void add()}>{create.isPending?'Adicionando…':'Adicionar à lista'}</button>
     </div>}
@@ -279,7 +294,7 @@ export function MaterialsCatalogPage(){
     </section>
 
     <section className="catalog-section equipment-catalog" aria-labelledby="equipment-title">
-      <div className="section-title-row"><div><span className="eyebrow">Referências da empresa</span><h2 id="equipment-title">Equipamentos</h2><p>{equipmentReferences.length} configurações cadastradas. Preço é opcional e nunca será inventado pelo assistente.</p></div></div>
+      <div className="section-title-row"><div><span className="eyebrow">Referências da empresa</span><h2 id="equipment-title">Equipamentos</h2><p>{equipmentReferences.length} configurações cadastradas. Os preços padrão são referências editáveis e o assistente usa somente o valor salvo pela empresa.</p></div></div>
 
       <div className="equipment-filter-panel" role="search" aria-label="Buscar e filtrar equipamentos">
         <label className="equipment-filter-search">
@@ -306,8 +321,8 @@ export function MaterialsCatalogPage(){
           const draft=drafts[item.id]??toDraft(item)
           const details=item.equipment_details
           const invalid=equipmentInvalid(draft)
-          return <article className={`equipment-catalog-card${item.image_url?' has-image':''}${draft.active?'':' is-inactive'}`} key={item.id}>
-            {item.image_url&&<img src={item.image_url} alt={details?.image_alt??`Imagem de referência de ${item.name}`} loading="lazy" referrerPolicy="no-referrer"/>}
+          return <article className={`equipment-catalog-card${draft.imageUrl?' has-image':''}${draft.active?'':' is-inactive'}`} key={item.id}>
+            {draft.imageUrl&&<img src={draft.imageUrl} alt={details?.image_alt??`Imagem de referência de ${item.name}`} loading="lazy" referrerPolicy="no-referrer"/>}
             <div className="equipment-catalog-card__body">
               <div className="equipment-catalog-card__heading"><div><span className="catalog-kind">{draft.brand||'Equipamento'}</span><h3>{draft.name}</h3></div><span className={`equipment-status${draft.active?' is-active':''}`}>{draft.active?'Ativo':'Inativo'}</span></div>
               {details&&<div className="equipment-facts"><span>{details.capacity_btu.toLocaleString('pt-BR')} BTU/h</span><span>{details.inverter?'Inverter':'Convencional'}</span><span>{cycleLabel(details.cycles)}</span>{details.voltage&&<span>{details.voltage}</span>}</div>}
@@ -323,9 +338,13 @@ export function MaterialsCatalogPage(){
               </details>}
 
               <div className="equipment-commercial-fields">
-                <label><span className="field-label-row"><span>Preço da empresa (R$)</span><span className="optional-label">Opcional</span></span><input aria-label={`Preço de ${item.name}`} className={saveAttempted&&draft.price.trim()!==''&&parseMoney(draft.price)===null?'field-invalid':''} inputMode="decimal" value={draft.price} disabled={!canEdit} onChange={event=>patchDraft(item.id,draft,{price:event.target.value},setDrafts)} placeholder="Confirmar com a empresa"/></label>
-                <label><RequiredLabel>Unidade</RequiredLabel><select aria-label={`Unidade de ${item.name}`} value="unidade" disabled><option value="unidade">Por unidade</option></select></label>
+                <label><span className="field-label-row"><span>Preço da empresa (R$)</span><span className="optional-label">Editável</span></span><input aria-label={`Preço de ${item.name}`} className={saveAttempted&&draft.price.trim()!==''&&parseMoney(draft.price)===null?'field-invalid':''} inputMode="decimal" value={draft.price} disabled={!canEdit} onChange={event=>patchDraft(item.id,draft,{price:event.target.value},setDrafts)} placeholder="Confirmar com a empresa"/></label>
               </div>
+              {canEdit&&<EquipmentPhotoField
+                imageUrl={draft.imageUrl}
+                disabled={uploadImage.isPending}
+                onFile={file=>{void uploadImage.mutateAsync({id:item.id,file}).then(updated=>setDrafts(current=>({...current,[item.id]:toDraft(updated)})))}}
+              />}
               {saveAttempted&&invalid&&<p className="field-error">Preencha marca, linha, BTU, ciclo e os demais campos técnicos obrigatórios. Preço pode ficar vazio.</p>}
               <div className="equipment-catalog-card__actions">
                 <label className="settings-checkbox"><input type="checkbox" checked={draft.active} disabled={!canEdit} onChange={event=>patchDraft(item.id,draft,{active:event.target.checked},setDrafts)}/><span><strong>Oferecer este equipamento</strong><small>Somente equipamentos ativos e tecnicamente válidos entram nas recomendações.</small></span></label>
@@ -341,7 +360,7 @@ export function MaterialsCatalogPage(){
     </section>
 
     {saveAttempted&&catalogInvalid&&<p className="form-error" role="alert">Revise os campos destacados antes de salvar.</p>}
-    {(create.isError||update.isError||remove.isError||updateBusiness.isError)&&<MutationError/>}
+    {(create.isError||update.isError||uploadImage.isError||remove.isError||updateBusiness.isError)&&<MutationError/>}
     {(update.isSuccess||updateBusiness.isSuccess)&&!catalogInvalid&&<p className="form-success">Catálogo salvo.</p>}
   </Shell>
 }
@@ -374,10 +393,41 @@ function EquipmentEditor({draft,setDraft,attempted}:{draft:Draft;setDraft:(draft
     <div className="form-grid">
       <label><span>Formato da condensadora</span><select value={draft.condenserForm} onChange={event=>setDraft({...draft,condenserForm:event.target.value})}><option value="unknown">Não informado</option><option value="square">Quadrada/retangular</option><option value="round">Redonda/cilíndrica</option></select></label>
       <label><span className="field-label-row"><span>Preço (R$)</span><span className="optional-label">Opcional</span></span><input className={optionalPriceInvalid?'field-invalid':''} inputMode="decimal" value={draft.price} onChange={event=>setDraft({...draft,price:event.target.value})} placeholder="Confirmar com a empresa"/></label>
-      <label><span className="field-label-row"><span>Imagem HTTPS</span><span className="optional-label">Opcional</span></span><input value={draft.imageUrl} onChange={event=>setDraft({...draft,imageUrl:event.target.value})} placeholder="https://..."/></label>
+      <label><span className="field-label-row"><span>URL alternativa da foto (HTTPS)</span><span className="optional-label">Opcional</span></span><input value={draft.imageUrl} onChange={event=>setDraft({...draft,imageUrl:event.target.value})} placeholder="https://..."/></label>
       <label><span className="field-label-row"><span>Fonte/fabricante HTTPS</span><span className="optional-label">Opcional</span></span><input value={draft.sourceUrl} onChange={event=>setDraft({...draft,sourceUrl:event.target.value})} placeholder="https://..."/></label>
     </div>
   </>
+}
+
+function EquipmentPhotoField({
+  imageUrl,fileName,onFile,disabled,
+}:{
+  imageUrl:string
+  fileName?:string
+  onFile:(file:File)=>void
+  disabled:boolean
+}){
+  return <div className="equipment-photo-field">
+    <div className="field-label-row"><span>Foto do equipamento</span><span className="optional-label">JPG, PNG ou WebP · até 5 MB</span></div>
+    <div className="equipment-photo-controls">
+      <label className={`compact-button equipment-photo-upload${disabled?' is-disabled':''}`}>
+        <ImagePlus size={16}/>
+        <span>{imageUrl?'Trocar foto':'Adicionar foto'}</span>
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          disabled={disabled}
+          onChange={event=>{
+            const file=event.currentTarget.files?.[0]
+            event.currentTarget.value=''
+            if(file)onFile(file)
+          }}
+        />
+      </label>
+      {fileName&&<small className="equipment-photo-file">{fileName}</small>}
+      {imageUrl&&<a className="equipment-photo-link" href={imageUrl} target="_blank" rel="noreferrer">Visualizar foto <ExternalLink size={14}/></a>}
+    </div>
+  </div>
 }
 
 function emptyDraft():Draft{
@@ -447,7 +497,6 @@ function equipmentInvalid(draft:Draft|undefined){
     draft.line.trim().length<2||
     !Number.isInteger(capacity)||
     capacity<1000||
-    !draft.unit||
     (draft.price.trim()!==''&&parseMoney(draft.price)===null)||
     !dimensionPairValid(draft.indoorWidth,draft.indoorHeight,draft.indoorDepth)||
     !dimensionPairValid(draft.outdoorWidth,draft.outdoorHeight,draft.outdoorDepth)||
