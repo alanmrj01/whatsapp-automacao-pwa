@@ -724,7 +724,7 @@
 .equipment-catalog-card__body{min-width:0;padding:14px;display:grid;gap:11px}
 .equipment-catalog-card__heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 .equipment-catalog-card__heading h3{margin:3px 0 0;font-size:.92rem;line-height:1.25}
-.equipment-status{padding:5px 8px;border-radius:999px;color:var(--color-text-muted);background:#eef1f4;font-size:.65rem;font-weight:800}
+.equipment-status{min-width:max-content;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;padding:5px 8px;border-radius:999px;color:var(--color-text-muted);background:#eef1f4;font-size:.65rem;font-weight:800;line-height:1.2;white-space:nowrap;word-break:keep-all;overflow-wrap:normal}
 .equipment-status.is-active{color:#126a45;background:#e9f7ef}
 .equipment-facts{display:flex;flex-wrap:wrap;gap:6px}
 .equipment-facts span{padding:5px 7px;border-radius:8px;color:var(--color-primary-700);background:var(--color-primary-50);font-size:.65rem;font-weight:750}
@@ -984,10 +984,62 @@
   overflow-wrap:break-word;
 }
 .catalog-settings-page .equipment-commercial-fields{
-  grid-template-columns:minmax(180px,1fr) minmax(130px,.48fr);
+  grid-template-columns:minmax(0,1fr);
 }
 .catalog-settings-page .equipment-filter-empty{
   grid-column:1/-1;
+}
+
+.catalog-settings-page .equipment-catalog-card__heading{
+  min-width:0;
+}
+.catalog-settings-page .equipment-catalog-card__heading>div{
+  flex:1 1 auto;
+}
+.catalog-settings-page .equipment-status{
+  min-width:max-content;
+  flex:0 0 auto;
+  white-space:nowrap;
+  word-break:keep-all;
+  overflow-wrap:normal;
+}
+.equipment-image-upload{
+  min-width:0;
+}
+.equipment-image-upload__button{
+  width:100%;
+  min-height:44px;
+  box-sizing:border-box;
+  padding:9px 11px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  border:1px dashed var(--color-primary-500);
+  border-radius:10px;
+  color:var(--color-primary-700);
+  background:var(--color-primary-50);
+  font-size:.74rem;
+  font-weight:750;
+  cursor:pointer;
+}
+.equipment-image-upload__button input{
+  position:absolute;
+  width:1px;
+  height:1px;
+  overflow:hidden;
+  opacity:0;
+  pointer-events:none;
+}
+.equipment-image-upload__button:has(input:disabled){
+  opacity:.6;
+  cursor:wait;
+}
+.equipment-image-upload small{
+  color:var(--color-text-muted);
+  font-size:.66rem;
+  font-weight:600;
+  line-height:1.4;
 }
 
 @media(max-width:1000px){
@@ -1011,6 +1063,8 @@
   }
 }
 @media(max-width:560px){
+  .catalog-settings-page .equipment-catalog-card__heading{align-items:flex-start}
+  .catalog-settings-page .equipment-status{margin-top:1px}
   .equipment-filter-grid{
     grid-template-columns:1fr;
   }
