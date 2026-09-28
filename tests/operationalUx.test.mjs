@@ -288,7 +288,7 @@ test('materials and equipment references keep independent commercial rules', () 
   assert.match(catalog,/for\(const item of activeMaterials\)await remove\.mutateAsync/)
   assert.doesNotMatch(catalog,/for\(const item of equipmentReferences\)await remove\.mutateAsync/)
   assert.match(catalog,/Preço da empresa \(R\$\)/)
-  assert.match(catalog,/Preço é opcional e nunca será inventado pelo assistente/)
+  assert.match(catalog,/equipamentos padrão já têm preço sugerido de mercado/)
   assert.match(catalog,/Oferecer este equipamento/)
   assert.match(catalog,/equipment_details/)
   assert.match(catalog,/equipmentSpecifications/)
@@ -431,3 +431,31 @@ test('equipment catalog desktop layout cannot collapse no-image cards into the i
   assert.match(css,/@media\(max-width:1000px\)/)
 })
 
+
+
+test('equipment cards keep mobile status badges intact and never expose material unit controls', () => {
+  const catalog = read('src/features/more/MaterialsCatalogPage.tsx')
+  const css = read('src/styles/operational-app.css')
+
+  assert.match(catalog,/unit_label:null/)
+  assert.match(catalog,/unit_label:draft\.unit/)
+  assert.doesNotMatch(catalog,/aria-label=\{\`Unidade de \$\{item\.name\}\`\}/)
+  assert.match(css,/\.equipment-status\{[\s\S]*white-space:nowrap/)
+  assert.match(css,/\.equipment-status\{[\s\S]*flex:0 0 auto/)
+  assert.match(css,/\.catalog-settings-page \.equipment-status\{[\s\S]*word-break:keep-all/)
+})
+
+test('equipment photos can be uploaded and are used as catalog recommendation media', () => {
+  const catalog = read('src/features/more/MaterialsCatalogPage.tsx')
+  const api = read('src/features/operations/api.ts')
+
+  assert.match(catalog,/Foto do equipamento/)
+  assert.match(catalog,/accept="image\/jpeg,image\/png,image\/webp"/)
+  assert.match(catalog,/Até 4 MB/)
+  assert.match(catalog,/useUploadCatalogItemImage/)
+  assert.match(catalog,/uploadEquipmentImage/)
+  assert.match(catalog,/displayImageUrl=draft\.imageUrl\.trim\(\)\|\|item\.image_url/)
+  assert.match(api,/useUploadCatalogItemImage/)
+  assert.match(api,/\/catalog-items\/\$\{id\}\/image/)
+  assert.match(api,/body:file/)
+})
