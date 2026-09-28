@@ -259,6 +259,20 @@ export function useUpdateCatalogItem() {
   const context=usePaidContext()
   return useMutation({mutationFn:({id,values}:{id:string;values:Partial<Pick<CatalogItem,'kind'|'name'|'description'|'price'|'unit_label'|'image_url'|'source_url'|'specifications'|'active'>>})=>paidMutation(context,()=>api.request<CatalogItem>(`/catalog-items/${id}`,{method:'PATCH',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'catalog-items','setup')})
 }
+export function useUploadCatalogItemImage() {
+  const context=usePaidContext()
+  return useMutation({
+    mutationFn:({id,file}:{id:string;file:File})=>paidMutation(
+      context,
+      ()=>api.request<CatalogItem>(`/catalog-items/${id}/image`,{
+        method:'PUT',
+        headers:{'Content-Type':file.type},
+        body:file,
+      }),
+    ),
+    onSuccess:()=>invalidate(context.businessId,'catalog-items','setup'),
+  })
+}
 export function useDeleteCatalogItem() {
   const context=usePaidContext()
   return useMutation({mutationFn:(id:string)=>paidMutation(context,()=>api.request<void>(`/catalog-items/${id}`,{method:'DELETE'})),onSuccess:()=>invalidate(context.businessId,'catalog-items','setup')})
