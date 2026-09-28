@@ -369,7 +369,7 @@ export function MaterialsCatalogPage(){
               {canEdit&&<EquipmentPhotoUpload
                 currentUrl={draft.imageUrl}
                 disabled={uploadImage.isPending}
-                onFile={file=>void uploadEquipmentPhoto(item.id,file)}
+                onFile={file=>{if(file)void uploadEquipmentPhoto(item.id,file)}}
               />}
               {saveAttempted&&invalid&&<p className="field-error">Preencha marca, linha, BTU, ciclo e os demais campos técnicos obrigatórios. Preço pode ficar vazio.</p>}
               <div className="equipment-catalog-card__actions">
