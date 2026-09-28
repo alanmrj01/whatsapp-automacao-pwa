@@ -1,4 +1,4 @@
-import { ExternalLink, Plus, RotateCcw, Save, Search, Trash2 } from 'lucide-react'
+import { ExternalLink, ImagePlus, Plus, RotateCcw, Save, Search, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { ErrorState } from '../../components/ErrorState'
 import { InfoHelp } from '../../components/InfoHelp'
@@ -6,7 +6,7 @@ import { LoadingState } from '../../components/LoadingState'
 import { RequiredLabel } from '../../components/RequiredLabel'
 import { canConfigureWhatsApp } from '../auth/types'
 import { useAuth } from '../auth/useAuth'
-import { useBusiness, useCatalogItems, useCreateCatalogItem, useDeleteCatalogItem, useUpdateBusiness, useUpdateCatalogItem } from '../operations/api'
+import { useBusiness, useCatalogItems, useCreateCatalogItem, useDeleteCatalogItem, useUpdateBusiness, useUpdateCatalogItem, useUploadCatalogItemImage } from '../operations/api'
 import type { CatalogItem, EquipmentCatalogSpecifications } from '../operations/types'
 
 const unitOptions=[
@@ -48,12 +48,15 @@ export function MaterialsCatalogPage(){
   const business=useBusiness()
   const create=useCreateCatalogItem()
   const update=useUpdateCatalogItem()
+  const uploadImage=useUploadCatalogItemImage()
   const remove=useDeleteCatalogItem()
   const updateBusiness=useUpdateBusiness()
   const canEdit=canConfigureWhatsApp(useAuth().membership?.role)
   const [drafts,setDrafts]=useState<Record<string,Draft>>({})
   const [adding,setAdding]=useState(false)
   const [newDraft,setNewDraft]=useState<Draft>(()=>emptyDraft())
+  const [newImageFile,setNewImageFile]=useState<File|null>(null)
+  const [imageError,setImageError]=useState<string|null>(null)
   const [addAttempted,setAddAttempted]=useState(false)
   const [saveAttempted,setSaveAttempted]=useState(false)
   const [equipmentSearch,setEquipmentSearch]=useState('')
@@ -153,6 +156,15 @@ export function MaterialsCatalogPage(){
     await items.refetch()
   }
 
+  const uploadEquipmentImage=async(id:string,file:File)=>{
+    const error=catalogImageError(file)
+    if(error){setImageError(error);return false}
+    setImageError(null)
+    await uploadImage.mutateAsync({id,file})
+    await items.refetch()
+    return true
+  }
+
   const add=async()=>{
     setAddAttempted(true)
     if(newDraft.kind==='material'){
@@ -167,18 +179,24 @@ export function MaterialsCatalogPage(){
       })
     }else{
       if(equipmentInvalid(newDraft))return
-      await create.mutateAsync({
+      const created=await create.mutateAsync({
         kind:'equipment',
         name:newDraft.name.trim(),
         description:newDraft.description.trim()||null,
         price:parseOptionalMoney(newDraft.price),
-        unit_label:'unidade',
+        unit_label:null,
         image_url:newDraft.imageUrl.trim()||null,
         source_url:newDraft.sourceUrl.trim()||null,
         specifications:equipmentSpecifications(newDraft),
       })
+      if(newImageFile){
+        const uploaded=await uploadEquipmentImage(created.id,newImageFile)
+        if(!uploaded)return
+      }
     }
     setNewDraft(emptyDraft())
+    setNewImageFile(null)
+    setImageError(null)
     setAdding(false)
     setAddAttempted(false)
   }
@@ -209,7 +227,7 @@ export function MaterialsCatalogPage(){
           name:draft.name.trim(),
           description:draft.description.trim()||null,
           price:parseOptionalMoney(draft.price),
-          unit_label:'unidade',
+          unit_label:null,
           image_url:draft.imageUrl.trim()||null,
           source_url:draft.sourceUrl.trim()||null,
           specifications:{...item.specifications,...equipmentSpecifications(draft)},
@@ -230,7 +248,7 @@ export function MaterialsCatalogPage(){
           type="button"
           aria-label="Salvar catálogo"
           title="Salvar catálogo"
-          disabled={update.isPending||updateBusiness.isPending}
+          disabled={update.isPending||updateBusiness.isPending||uploadImage.isPending}
           onClick={()=>void save()}
         ><Save size={21}/></button>}
         <InfoHelp title="Catálogo da empresa">Materiais cobrados e equipamentos de referência têm regras separadas. A recomendação usa somente equipamentos técnicos ativos da sua empresa.</InfoHelp>
@@ -253,7 +271,7 @@ export function MaterialsCatalogPage(){
           <label><RequiredLabel>Preço (R$)</RequiredLabel><input className={addAttempted&&parseMoney(newDraft.price)===null?'field-invalid':''} inputMode="decimal" value={newDraft.price} onChange={event=>setNewDraft(current=>({...current,price:event.target.value}))} placeholder="0,00"/>{addAttempted&&parseMoney(newDraft.price)===null&&<small className="field-error">Informe o preço.</small>}</label>
           <label><RequiredLabel>Unidade</RequiredLabel><select value={newDraft.unit} onChange={event=>setNewDraft(current=>({...current,unit:event.target.value}))}>{unitOptions.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
         </div>
-      </>:<EquipmentEditor draft={newDraft} setDraft={value=>setNewDraft(value)} attempted={addAttempted}/>}
+      </>:<EquipmentEditor draft={newDraft} setDraft={value=>setNewDraft(value)} attempted={addAttempted} onImageFile={file=>{const error=catalogImageError(file);if(error){setImageError(error);return}setImageError(null);setNewImageFile(file)}} selectedImageName={newImageFile?.name}/>}
 
       <button className="primary-button" type="button" disabled={create.isPending} onClick={()=>void add()}>{create.isPending?'Adicionando…':'Adicionar à lista'}</button>
     </div>}
@@ -306,8 +324,9 @@ export function MaterialsCatalogPage(){
           const draft=drafts[item.id]??toDraft(item)
           const details=item.equipment_details
           const invalid=equipmentInvalid(draft)
-          return <article className={`equipment-catalog-card${item.image_url?' has-image':''}${draft.active?'':' is-inactive'}`} key={item.id}>
-            {item.image_url&&<img src={item.image_url} alt={details?.image_alt??`Imagem de referência de ${item.name}`} loading="lazy" referrerPolicy="no-referrer"/>}
+          const displayImageUrl=draft.imageUrl.trim()||item.image_url
+          return <article className={`equipment-catalog-card${displayImageUrl?' has-image':''}${draft.active?'':' is-inactive'}`} key={item.id}>
+            {displayImageUrl&&<img src={displayImageUrl} alt={details?.image_alt??`Imagem de referência de ${item.name}`} loading="lazy" referrerPolicy="no-referrer"/>}
             <div className="equipment-catalog-card__body">
               <div className="equipment-catalog-card__heading"><div><span className="catalog-kind">{draft.brand||'Equipamento'}</span><h3>{draft.name}</h3></div><span className={`equipment-status${draft.active?' is-active':''}`}>{draft.active?'Ativo':'Inativo'}</span></div>
               {details&&<div className="equipment-facts"><span>{details.capacity_btu.toLocaleString('pt-BR')} BTU/h</span><span>{details.inverter?'Inverter':'Convencional'}</span><span>{cycleLabel(details.cycles)}</span>{details.voltage&&<span>{details.voltage}</span>}</div>}
@@ -318,13 +337,12 @@ export function MaterialsCatalogPage(){
                 <div className="settings-form">
                   <label><RequiredLabel>Nome comercial</RequiredLabel><input value={draft.name} onChange={event=>patchDraft(item.id,draft,{name:event.target.value},setDrafts)}/></label>
                   <label><span className="field-label-row"><span>Descrição</span><span className="optional-label">Opcional</span></span><input value={draft.description} onChange={event=>patchDraft(item.id,draft,{description:event.target.value},setDrafts)}/></label>
-                  <EquipmentEditor draft={draft} setDraft={value=>setDrafts(current=>({...current,[item.id]:value}))} attempted={saveAttempted}/>
+                  <EquipmentEditor draft={draft} setDraft={value=>setDrafts(current=>({...current,[item.id]:value}))} attempted={saveAttempted} onImageFile={file=>void uploadEquipmentImage(item.id,file)} uploading={uploadImage.isPending}/>
                 </div>
               </details>}
 
               <div className="equipment-commercial-fields">
-                <label><span className="field-label-row"><span>Preço da empresa (R$)</span><span className="optional-label">Opcional</span></span><input aria-label={`Preço de ${item.name}`} className={saveAttempted&&draft.price.trim()!==''&&parseMoney(draft.price)===null?'field-invalid':''} inputMode="decimal" value={draft.price} disabled={!canEdit} onChange={event=>patchDraft(item.id,draft,{price:event.target.value},setDrafts)} placeholder="Confirmar com a empresa"/></label>
-                <label><RequiredLabel>Unidade</RequiredLabel><select aria-label={`Unidade de ${item.name}`} value="unidade" disabled><option value="unidade">Por unidade</option></select></label>
+                <label><span className="field-label-row"><span>Preço da empresa (R$)</span><span className="optional-label">Editável</span></span><input aria-label={`Preço de ${item.name}`} className={saveAttempted&&draft.price.trim()!==''&&parseMoney(draft.price)===null?'field-invalid':''} inputMode="decimal" value={draft.price} disabled={!canEdit} onChange={event=>patchDraft(item.id,draft,{price:event.target.value},setDrafts)} placeholder="Confirmar com a empresa"/></label>
               </div>
               {saveAttempted&&invalid&&<p className="field-error">Preencha marca, linha, BTU, ciclo e os demais campos técnicos obrigatórios. Preço pode ficar vazio.</p>}
               <div className="equipment-catalog-card__actions">
@@ -340,13 +358,14 @@ export function MaterialsCatalogPage(){
       </div>
     </section>
 
+    {imageError&&<p className="form-error" role="alert">{imageError}</p>}
     {saveAttempted&&catalogInvalid&&<p className="form-error" role="alert">Revise os campos destacados antes de salvar.</p>}
     {(create.isError||update.isError||remove.isError||updateBusiness.isError)&&<MutationError/>}
     {(update.isSuccess||updateBusiness.isSuccess)&&!catalogInvalid&&<p className="form-success">Catálogo salvo.</p>}
   </Shell>
 }
 
-function EquipmentEditor({draft,setDraft,attempted}:{draft:Draft;setDraft:(draft:Draft)=>void;attempted:boolean}){
+function EquipmentEditor({draft,setDraft,attempted,onImageFile,selectedImageName,uploading=false}:{draft:Draft;setDraft:(draft:Draft)=>void;attempted:boolean;onImageFile?:(file:File)=>void;selectedImageName?:string|null;uploading?:boolean}){
   const capacity=Number(draft.capacity)
   const requiredInvalid=attempted&&(draft.brand.trim().length<2||draft.line.trim().length<2||!Number.isInteger(capacity)||capacity<1000)
   const optionalPriceInvalid=attempted&&draft.price.trim()!==''&&parseMoney(draft.price)===null
@@ -374,10 +393,19 @@ function EquipmentEditor({draft,setDraft,attempted}:{draft:Draft;setDraft:(draft
     <div className="form-grid">
       <label><span>Formato da condensadora</span><select value={draft.condenserForm} onChange={event=>setDraft({...draft,condenserForm:event.target.value})}><option value="unknown">Não informado</option><option value="square">Quadrada/retangular</option><option value="round">Redonda/cilíndrica</option></select></label>
       <label><span className="field-label-row"><span>Preço (R$)</span><span className="optional-label">Opcional</span></span><input className={optionalPriceInvalid?'field-invalid':''} inputMode="decimal" value={draft.price} onChange={event=>setDraft({...draft,price:event.target.value})} placeholder="Confirmar com a empresa"/></label>
-      <label><span className="field-label-row"><span>Imagem HTTPS</span><span className="optional-label">Opcional</span></span><input value={draft.imageUrl} onChange={event=>setDraft({...draft,imageUrl:event.target.value})} placeholder="https://..."/></label>
+      <label className="equipment-image-upload"><span className="field-label-row"><span>Foto do equipamento</span><span className="optional-label">JPG, PNG ou WEBP</span></span><span className="equipment-image-upload__button"><ImagePlus size={17}/>{uploading?'Enviando foto…':selectedImageName||draft.imageUrl?'Trocar foto':'Adicionar foto'}<input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploading} onChange={event=>{const file=event.target.files?.[0];if(file&&onImageFile)onImageFile(file);event.currentTarget.value=''}}/></span>{selectedImageName&&<small>Selecionada: {selectedImageName}</small>}<small>Até 4 MB. A foto será usada pelo assistente quando este equipamento for recomendado.</small></label>
+      <label><span className="field-label-row"><span>URL HTTPS da foto</span><span className="optional-label">Alternativa</span></span><input value={draft.imageUrl} onChange={event=>setDraft({...draft,imageUrl:event.target.value})} placeholder="https://..."/></label>
       <label><span className="field-label-row"><span>Fonte/fabricante HTTPS</span><span className="optional-label">Opcional</span></span><input value={draft.sourceUrl} onChange={event=>setDraft({...draft,sourceUrl:event.target.value})} placeholder="https://..."/></label>
     </div>
   </>
+}
+
+function catalogImageError(file:File):string|null{
+  const allowed=new Set(['image/jpeg','image/png','image/webp'])
+  if(!allowed.has(file.type))return 'Use uma foto JPG, PNG ou WEBP.'
+  if(file.size>4*1024*1024)return 'A foto deve ter no máximo 4 MB.'
+  if(file.size===0)return 'A foto selecionada está vazia.'
+  return null
 }
 
 function emptyDraft():Draft{
