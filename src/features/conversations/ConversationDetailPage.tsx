@@ -310,16 +310,17 @@ function MediaAttachment({message}:{message:ConversationMessage}) {
     src={objectUrl}
     alt={label}
     loading="lazy"
+    onError={()=>setFailed(true)}
   />
   if(message.message_type==='audio')return <div className="conversation-media-wrap">
     <span className="conversation-media-label">{label}</span>
-    <audio className="conversation-media conversation-media--audio" controls preload="metadata" src={objectUrl}>
+    <audio className="conversation-media conversation-media--audio" controls preload="metadata" src={objectUrl} onError={()=>setFailed(true)}>
       Seu navegador não consegue reproduzir este áudio.
     </audio>
   </div>
   return <div className="conversation-media-wrap">
     <span className="conversation-media-label">{label}</span>
-    <video className="conversation-media conversation-media--video" controls playsInline preload="metadata" src={objectUrl}>
+    <video className="conversation-media conversation-media--video" controls playsInline preload="metadata" src={objectUrl} onError={()=>setFailed(true)}>
       Seu navegador não consegue reproduzir este vídeo.
     </video>
   </div>
