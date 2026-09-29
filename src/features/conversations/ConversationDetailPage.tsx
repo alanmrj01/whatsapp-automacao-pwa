@@ -276,6 +276,13 @@ function MediaAttachment({message}:{message:ConversationMessage}) {
 
   useEffect(()=>{
     if(!mediaUrl)return
+    const externalHttps=/^https:\/\//i.test(mediaUrl)
+    if(externalHttps){
+      setFailed(false)
+      setObjectUrl(mediaUrl)
+      return
+    }
+
     const controller=new AbortController()
     let localUrl:string|null=null
     setObjectUrl(null)
@@ -300,10 +307,11 @@ function MediaAttachment({message}:{message:ConversationMessage}) {
   </div>
   if(!objectUrl)return <div className="conversation-media-state" role="status">Carregando mídia…</div>
 
+  const sent=message.direction==='outbound'
   const label=message.media_filename?.trim()||(
-    message.message_type==='image'?'Imagem recebida':
-    message.message_type==='audio'?'Áudio recebido':
-    'Vídeo recebido'
+    message.message_type==='image'?(sent?'Imagem enviada':'Imagem recebida'):
+    message.message_type==='audio'?(sent?'Áudio enviado':'Áudio recebido'):
+    sent?'Vídeo enviado':'Vídeo recebido'
   )
   if(message.message_type==='image')return <img
     className="conversation-media conversation-media--image"
