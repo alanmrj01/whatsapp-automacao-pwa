@@ -62,6 +62,8 @@ test('conversation renders images audio and video with authenticated media loadi
   assert.match(types,/media_url:string\|null/)
   assert.match(detail,/function MediaAttachment/)
   assert.match(detail,/api\.requestBlob\(mediaUrl/)
+  assert.match(detail,/\^https:\\\/\\\//)
+  assert.match(detail,/setObjectUrl\(mediaUrl\)/)
   assert.match(detail,/<img[\s\S]*conversation-media--image/)
   assert.match(detail,/<audio[\s\S]*controls[\s\S]*preload="metadata"/)
   assert.match(detail,/<video[\s\S]*controls[\s\S]*playsInline[\s\S]*preload="metadata"/)
