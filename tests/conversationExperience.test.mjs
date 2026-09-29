@@ -70,5 +70,12 @@ test('conversation renders images audio and video with authenticated media loadi
   assert.match(client,/60_000/)
   assert.match(css,/\.conversation-media--video/)
   assert.match(css,/\.conversation-media--audio/)
+  assert.match(detail,/onError=\{\(\)=>setFailed\(true\)\}/)
+})
+
+test('content security policy allows authenticated media object URLs', () => {
+  const netlify = read('netlify.toml')
+  assert.match(netlify,/img-src[^;]*blob:/)
+  assert.match(netlify,/media-src[^;]*blob:/)
 })
 
