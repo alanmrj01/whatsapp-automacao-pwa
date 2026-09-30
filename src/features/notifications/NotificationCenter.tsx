@@ -17,6 +17,7 @@ export function NotificationCenter({backgroundOnly=false}:{backgroundOnly?:boole
   const [latest,setLatest]=useState<OperationalNotification|null>(null)
   const [permission,setPermission]=useState<NotificationPermission>(()=>notificationPermission())
   const knownIds=useRef<Set<string>|null>(null)
+  const permissionPrompted=useRef(false)
   const notificationItems=notifications.data?.items
   const items=notificationItems??[]
   const unreadMessages=(conversations.data?.items??[]).reduce((total,item)=>total+item.unread_count,0)
@@ -24,13 +25,9 @@ export function NotificationCenter({backgroundOnly=false}:{backgroundOnly?:boole
   useEffect(()=>{knownIds.current=null},[businessId])
 
   useEffect(()=>{
-    if(permission!=='default'||backgroundOnly)return
-    const key='alovia-notification-prompt:'+(businessId??'none')
-    if(window.localStorage.getItem(key)==='seen')return
-    const timer=window.setTimeout(()=>{
-      setOpen(true)
-      window.localStorage.setItem(key,'seen')
-    },1200)
+    if(permission!=='default'||backgroundOnly||permissionPrompted.current)return
+    permissionPrompted.current=true
+    const timer=window.setTimeout(()=>setOpen(true),1200)
     return ()=>window.clearTimeout(timer)
   },[backgroundOnly,businessId,permission])
 
@@ -86,8 +83,9 @@ export function NotificationCenter({backgroundOnly=false}:{backgroundOnly?:boole
       {unreadMessages>0&&<p className="notification-message-summary">{unreadMessages} mensagem(ns) não lida(s) nas conversas.</p>}
       {!notifications.isPending&&!notifications.isError&&!items.length&&unreadMessages===0&&<p>Nenhuma notificação nova.</p>}
       {items.map(item=><button className="notification-center__item" type="button" key={item.id} disabled={markRead.isPending} onClick={()=>void openItem(item)}><span><strong>{item.title}</strong><small>{item.body}</small></span>{entitlement.canMutateOperationalData&&<Check size={17}/>}</button>)}
-      {permission==='default'&&<div className="notification-permission-callout"><strong>Receba alertas mesmo fora desta tela</strong><small>Ative as notificações do aparelho para não perder novas mensagens e agendamentos.</small><button className="compact-button" type="button" onClick={()=>void enableBrowserNotifications()}>Permitir notificações</button></div>}
+      {permission==='default'&&<div className="notification-permission-callout"><strong>Ative os alertas do navegador</strong><small>Enquanto o ALOVIA estiver aberto ou ativo no navegador, você recebe avisos de novas mensagens e agendamentos.</small><button className="compact-button" type="button" onClick={()=>void enableBrowserNotifications()}>Permitir notificações</button></div>}
       {permission==='denied'&&<small>As notificações do aparelho estão bloqueadas. Você pode reativá-las nas configurações do navegador ou do sistema.</small>}
+      <small>Alertas em segundo plano exigem infraestrutura Web Push para funcionar com o app totalmente fechado.</small>
     </section>}
     {latest&&<button className="notification-toast" type="button" onClick={()=>void openItem(latest)}><strong>{latest.title}</strong><span>{latest.body}</span></button>}
   </div>
