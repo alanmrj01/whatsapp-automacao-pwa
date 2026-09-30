@@ -74,6 +74,36 @@ export type ConversationDetail = Conversation & {
   free_form_window_expires_at:string|null
 }
 
+export type ConversationMessageDelta = {
+  items:ConversationMessage[]
+  latest_at:string|null
+}
+
+export type ConversationBulkAction =
+  | 'mark_read'
+  | 'mark_unread'
+  | 'pin'
+  | 'unpin'
+  | 'delete'
+  | 'assistant_on'
+  | 'assistant_off'
+
+export type CustomerOutreach = {
+  id:string
+  customer_id:string
+  customer_name:string
+  customer_phone:string|null
+  outreach_type:'incomplete_24h'|'cleaning_6m'
+  status:'pending'|'sent'|'skipped'|'responded'|'accepted'|'declined'|'failed'
+  service_label:string|null
+  due_at:string
+  sent_at:string|null
+  responded_at:string|null
+  source_appointment_id:string|null
+  result_appointment_id:string|null
+  result_appointment_path:string|null
+}
+
 export type SetupStep = 'company'|'team'|'business_hours'|'services'|'materials'|'agenda'|'whatsapp'|'complete'
 export type SetupStatus = {
   company:boolean
@@ -118,6 +148,7 @@ export type Business = {
   preparation_minutes:number|null
   finishing_minutes:number|null
   minimum_booking_notice_minutes:number|null
+  equipment_delivery_fee_per_km:number|string
   materials_catalog_reviewed:boolean
   agenda_preferences_reviewed:boolean
   onboarding_completed_at:string|null
