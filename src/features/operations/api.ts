@@ -144,7 +144,8 @@ export function useUpdateBusiness() {
     'service_origin_postal_code'|'service_origin_street'|'service_origin_neighborhood'|
     'service_origin_number'|'service_origin_city'|'service_origin_state'|'slot_interval_minutes'|
     'interval_between_services_minutes'|'preparation_minutes'|'finishing_minutes'|
-    'minimum_booking_notice_minutes'|'materials_catalog_reviewed'|'agenda_preferences_reviewed'
+    'minimum_booking_notice_minutes'|'equipment_delivery_fee_per_km'|
+    'materials_catalog_reviewed'|'agenda_preferences_reviewed'
   >>)=>paidMutation(context,()=>api.request<Business>('/business',{method:'PATCH',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'business','setup')})
 }
 
