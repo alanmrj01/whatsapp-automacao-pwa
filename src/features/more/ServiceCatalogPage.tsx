@@ -41,8 +41,7 @@ export function ServiceCatalogPage(){
     setDeliveryFee(String(business.data.equipment_delivery_fee_per_km??2.4).replace('.',','))
   },[business.data])
 
-  if(services.isPending||business.isPending)return <Shell><LoadingState/></Shell>
-  if(services.isError||business.isError||!services.data||!business.data)return <Shell><ErrorState onRetry={()=>{void services.refetch();void business.refetch()}}/></Shell>
+  const businessDeliveryFee=business.data?.equipment_delivery_fee_per_km??2.4
 
   const newDurationNumber=Number(newDuration)
   const newPriceNumber=parseMoney(newPrice)
@@ -66,7 +65,7 @@ export function ServiceCatalogPage(){
     return draft.name.trim()!==item.name
       || Number(draft.duration)!==item.duration_minutes
       || Number(parseMoney(draft.price))!==Number(item.price)
-  }) || Number(deliveryFeeNumber)!==Number(business.data.equipment_delivery_fee_per_km)
+  }) || Number(deliveryFeeNumber)!==Number(businessDeliveryFee)
 
   const add=async()=>{
     setAddAttempted(true)
@@ -88,7 +87,7 @@ export function ServiceCatalogPage(){
           || Number(price)!==Number(item.price)
         if(changed)await update.mutateAsync({id:item.id,values:{name:draft.name.trim(),duration_minutes:duration,price:price!}})
       }
-      if(Number(deliveryFeeNumber)!==Number(business.data.equipment_delivery_fee_per_km)){
+      if(Number(deliveryFeeNumber)!==Number(businessDeliveryFee)){
         await updateBusiness.mutateAsync({equipment_delivery_fee_per_km:deliveryFeeNumber!})
       }
       setSaveAttempted(false)
@@ -106,6 +105,9 @@ export function ServiceCatalogPage(){
   // Autosave is intentionally driven only by the editable values.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[drafts,deliveryFee])
+
+  if(services.isPending||business.isPending)return <Shell><LoadingState/></Shell>
+  if(services.isError||business.isError||!services.data||!business.data)return <Shell><ErrorState onRetry={()=>{void services.refetch();void business.refetch()}}/></Shell>
 
   return <Shell>
     <section className="operational-heading"><div><span className="eyebrow">Empresa</span><h1>Catálogo de serviços</h1><p>{saveState==='saving'?'Salvamento automático…':saveState==='saved'?'Alterações salvas automaticamente.':saveState==='error'?'Falha no salvamento automático.':'Alterações válidas são salvas automaticamente.'}</p></div><div className="catalog-heading-actions"><InfoHelp title="Catálogo de serviços">Nome, preço e duração alimentam o Assistente Virtual e o agendamento automático. A taxa por KM é usada somente na entrega de equipamento sem prestação de serviço.</InfoHelp>{canEdit&&<button className="icon-save-button" type="button" aria-label="Salvar catálogo" title="Salvar agora" disabled={update.isPending||updateBusiness.isPending||catalogInvalid||deliveryFeeInvalid} onClick={()=>void save()}><Save size={19}/></button>}</div></section>
