@@ -1,4 +1,4 @@
-import { BotOff, Boxes, Save, Trash2 } from 'lucide-react'
+import { BotOff, ContactRound, Save, Smartphone, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { ErrorState } from '../../components/ErrorState'
 import { InfoHelp } from '../../components/InfoHelp'
@@ -12,26 +12,23 @@ import {
   useAutomationSettings,
   useCustomers,
   useRemoveAssistantExclusion,
-  useServices,
   useUpdateAutomation,
-  useUpdateService,
 } from '../operations/api'
-import type { AssistantExclusion, AutomationSettings, Customer, Service } from '../operations/types'
+import type { AssistantExclusion, AutomationSettings, Customer } from '../operations/types'
 
 const windowOptions=[5,10,20,30,60,120,240,360,720,1440,2160]
 
 export function AutomationSettingsPage(){
-  const settings=useAutomationSettings(),customers=useCustomers(),exclusions=useAssistantExclusions(),services=useServices()
+  const settings=useAutomationSettings(),customers=useCustomers(),exclusions=useAssistantExclusions()
   const canEdit=canConfigureWhatsApp(useAuth().membership?.role)
-  const pending=settings.isPending||customers.isPending||exclusions.isPending||services.isPending
-  const error=settings.isError||customers.isError||exclusions.isError||services.isError
+  const pending=settings.isPending||customers.isPending||exclusions.isPending
+  const error=settings.isError||customers.isError||exclusions.isError
   return <Shell>
-    <section className="operational-heading"><div><span className="eyebrow">Atendimento</span><h1>Assistente Virtual</h1></div><InfoHelp title="Assistente Virtual">O ALOVIA usa contexto, exemplos e similaridade semântica para reconhecer pedidos. Você pode ajustar exemplos e contatos que nunca devem receber resposta automática.</InfoHelp></section>
+    <section className="operational-heading"><div><span className="eyebrow">Atendimento</span><h1>Assistente Virtual</h1></div><InfoHelp title="Assistente Virtual">Ajuste apenas o comportamento visível do Assistente e os contatos que não devem receber respostas automáticas. O reconhecimento técnico dos serviços é gerenciado automaticamente pelo ALOVIA.</InfoHelp></section>
     {pending&&<LoadingState/>}
-    {error&&<ErrorState onRetry={()=>{void settings.refetch();void customers.refetch();void exclusions.refetch();void services.refetch()}}/>}
-    {settings.data&&customers.data&&exclusions.data&&services.data&&<>
+    {error&&<ErrorState onRetry={()=>{void settings.refetch();void customers.refetch();void exclusions.refetch()}}/>}
+    {settings.data&&customers.data&&exclusions.data&&<>
       <AutomationForm settings={settings.data} canEdit={canEdit}/>
-      <Recognition services={services.data.items} canEdit={canEdit}/>
       <Exclusions customers={customers.data.items} exclusions={exclusions.data.items} canEdit={canEdit}/>
     </>}
   </Shell>
@@ -56,39 +53,45 @@ function AutomationForm({settings,canEdit}:{settings:AutomationSettings;canEdit:
   </form>
 }
 
-function Recognition({services,canEdit}:{services:Service[];canEdit:boolean}){
-  return <section aria-labelledby="recognition-title">
-    <div className="section-title-row"><div><span className="eyebrow">Entendimento do cliente</span><h2 id="recognition-title">Como o ALOVIA reconhece seus serviços</h2></div><InfoHelp title="Reconhecimento de serviços">Essas frases são geradas automaticamente. O Assistente também considera palavras equivalentes e o contexto da pergunta anterior.</InfoHelp></div>
-    <div className="settings-list">{services.filter(item=>item.active).map(item=><RecognitionEditor service={item} canEdit={canEdit} key={item.id}/>)}</div>
-  </section>
-}
-
-function RecognitionEditor({service,canEdit}:{service:Service;canEdit:boolean}){
-  const update=useUpdateService()
-  const [text,setText]=useState(service.intent_examples.join('\n'))
-  const [saved,setSaved]=useState(false)
-  const examples=text.split('\n').map(item=>item.trim()).filter(Boolean)
-  return <article className="settings-editor">
-    <div className="settings-editor__heading"><Boxes/><strong>{service.name}</strong><StatusBadge tone="info">{service.intent_examples.length} exemplos</StatusBadge></div>
-    <label>Frases de referência<textarea rows={7} value={text} disabled={!canEdit} onChange={event=>setText(event.target.value)} placeholder="Uma frase por linha"/></label>
-    <p className="settings-note">Você não precisa listar todas as formas possíveis. Essas frases ajudam o ALOVIA a reconhecer intenções parecidas.</p>
-    {update.isError&&<MutationError/>}{saved&&<p className="form-success">Exemplos salvos.</p>}
-    {canEdit&&<button className="compact-button" type="button" disabled={update.isPending||!examples.length} onClick={()=>{setSaved(false);update.mutate({id:service.id,values:{intent_examples:examples}},{onSuccess:()=>setSaved(true)})}}><Save size={16}/>{update.isPending?'Salvando…':'Salvar exemplos'}</button>}
-  </article>
+type DeviceContact = {name?:string[];tel?:string[]}
+type ContactNavigator = Navigator & {
+  contacts?: {
+    select:(properties:Array<'name'|'tel'>,options:{multiple:boolean})=>Promise<DeviceContact[]>
+  }
 }
 
 function Exclusions({customers,exclusions,canEdit}:{customers:Customer[];exclusions:AssistantExclusion[];canEdit:boolean}){
   const add=useAddAssistantExclusion(),remove=useRemoveAssistantExclusion()
-  const [source,setSource]=useState<'customer'|'manual'>('customer')
+  const [source,setSource]=useState<'device'|'customer'|'manual'>('device')
   const [customerId,setCustomerId]=useState('')
   const [manualPhone,setManualPhone]=useState('')
   const [manualLabel,setManualLabel]=useState('')
   const [reason,setReason]=useState('')
+  const [contactError,setContactError]=useState(false)
   const selected=customers.find(item=>item.id===customerId)
   const excluded=new Set(exclusions.map(item=>item.whatsapp_id))
   const available=customers.filter(item=>item.phone&&!excluded.has(item.phone.replace(/\D/g,'')))
   const normalizedManualPhone=manualPhone.replace(/\D/g,'')
   const manualValid=/^[1-9]\d{6,14}$/.test(normalizedManualPhone)&&!excluded.has(normalizedManualPhone)
+  const contactNavigator=navigator as ContactNavigator
+  const canPickDeviceContact=typeof contactNavigator.contacts?.select==='function'
+
+  const pickDeviceContact=async()=>{
+    if(!canPickDeviceContact)return
+    setContactError(false)
+    try{
+      const [contact]=await contactNavigator.contacts!.select(['name','tel'],{multiple:false})
+      const phone=contact?.tel?.[0]??''
+      const label=contact?.name?.[0]??''
+      if(!phone)return
+      setManualPhone(phone)
+      setManualLabel(label)
+      setSource('device')
+    }catch{
+      setContactError(true)
+    }
+  }
+
   const submit=()=>{
     const whatsappId=source==='customer'?selected?.phone?.replace(/\D/g,''):normalizedManualPhone
     if(!whatsappId)return
@@ -98,15 +101,21 @@ function Exclusions({customers,exclusions,canEdit}:{customers:Customer[];exclusi
   return <section aria-labelledby="exclusions-title">
     <div className="section-title-row"><div><span className="eyebrow">Exceções permanentes</span><h2 id="exclusions-title">Contatos sem resposta automática</h2></div><InfoHelp title="Contatos sem resposta automática">As mensagens continuam aparecendo normalmente, mas o Assistente Virtual não responde sozinho.</InfoHelp></div>
     {canEdit&&<form className="settings-form settings-form--inline" onSubmit={event=>{event.preventDefault();submit()}}>
-      <label>Como adicionar<select value={source} onChange={event=>setSource(event.target.value as 'customer'|'manual')}><option value="customer">Selecionar contato existente</option><option value="manual">Adicionar por número</option></select></label>
+      <label>Como adicionar<select value={source} onChange={event=>setSource(event.target.value as 'device'|'customer'|'manual')}><option value="device">Contato do celular</option><option value="customer">Contato já cadastrado no ALOVIA</option><option value="manual">Adicionar por número</option></select></label>
+      {source==='device'&&<>
+        {canPickDeviceContact?<button className="secondary-button contact-picker-button" type="button" onClick={()=>void pickDeviceContact()}><Smartphone size={18}/>Procurar na lista de contatos</button>:<p className="settings-note">Este navegador não permite abrir a agenda do aparelho. Use “Contato já cadastrado” ou “Adicionar por número”.</p>}
+        {!!manualPhone&&<div className="settings-contact-preview"><ContactRound size={18}/><div><strong>{manualLabel||'Contato selecionado'}</strong><span>{manualPhone}</span></div></div>}
+        {contactError&&<p className="form-error" role="alert">Não foi possível abrir ou ler o contato selecionado.</p>}
+      </>}
       {source==='customer'&&<label>Contato<select required value={customerId} onChange={event=>setCustomerId(event.target.value)}><option value="">Selecione</option>{available.map(item=><option value={item.id} key={item.id}>{item.name}{item.phone?' · '+item.phone:''}</option>)}</select></label>}
       {source==='manual'&&<>
         <label>Telefone<input required inputMode="tel" autoComplete="tel" value={manualPhone} onChange={event=>setManualPhone(event.target.value)} placeholder="Ex.: 5511999999999"/><small>Informe país e DDD. O número é normalizado antes de salvar.</small></label>
         <label>Nome ou rótulo <span className="optional-label">opcional</span><input maxLength={255} value={manualLabel} onChange={event=>setManualLabel(event.target.value)} placeholder="Ex.: Fornecedor"/></label>
       </>}
+      {source==='device'&&manualPhone&&<label>Nome do contato <span className="optional-label">opcional</span><input maxLength={255} value={manualLabel} onChange={event=>setManualLabel(event.target.value)}/></label>}
       <label>Motivo <span className="optional-label">opcional</span><input maxLength={2000} value={reason} onChange={event=>setReason(event.target.value)} placeholder="Ex.: fornecedor, cliente que prefere atendimento humano"/></label>
       {add.isError&&<MutationError/>}
-      {source==='manual'&&normalizedManualPhone&&excluded.has(normalizedManualPhone)&&<p className="settings-warning">Este número já está na lista.</p>}
+      {source!=='customer'&&normalizedManualPhone&&excluded.has(normalizedManualPhone)&&<p className="settings-warning">Este número já está na lista.</p>}
       <button className="primary-button" disabled={add.isPending||(source==='customer'?!selected?.phone:!manualValid)}><BotOff size={18}/>{add.isPending?'Salvando…':'Nunca responder automaticamente'}</button>
     </form>}
     <div className="settings-list">{exclusions.map(item=><article className="settings-row" key={item.id}><BotOff/><div><strong>{item.label??item.whatsapp_id}</strong><span>+{item.whatsapp_id}{item.reason?' · '+item.reason:''}</span></div>{canEdit&&<button className="danger-button" type="button" disabled={remove.isPending} onClick={()=>remove.mutate(item.id)}><Trash2 size={16}/>Remover</button>}</article>)}{!exclusions.length&&<p className="settings-empty">Nenhum contato nesta lista.</p>}</div>
