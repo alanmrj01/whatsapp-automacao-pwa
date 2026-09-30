@@ -1067,3 +1067,98 @@
   }
 }
 
+.conversation-selection-bar {
+  display: grid;
+  gap: 8px;
+}
+
+.conversation-select-button {
+  justify-self: start;
+}
+
+.conversation-selection-summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.conversation-selection-summary strong {
+  font-size: .8rem;
+}
+
+.conversation-selection-close {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--color-text-soft);
+  background: var(--color-surface-subtle);
+}
+
+.conversation-selection-all {
+  margin-left: auto;
+  min-height: 38px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  color: var(--color-primary-700);
+  background: var(--color-primary-50);
+  font: inherit;
+  font-size: .72rem;
+  font-weight: 750;
+}
+
+.conversation-bulk-actions {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.conversation-bulk-actions button {
+  min-height: 40px;
+  padding: 7px 10px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 10px;
+  color: var(--color-primary-700);
+  background: var(--color-primary-50);
+  font: inherit;
+  font-size: .71rem;
+  font-weight: 750;
+}
+
+.conversation-bulk-actions button.is-danger {
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+
+.conversation-bulk-actions button:disabled {
+  opacity: .45;
+}
+
+.conversation-row.is-selecting {
+  grid-template-columns: 32px 44px minmax(0,1fr) auto;
+}
+
+.conversation-selection-toggle {
+  width: 32px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  align-self: start;
+  border: 0;
+  color: var(--color-primary-600);
+  background: transparent;
+}
+
+@media (max-width: 430px) {
+  .conversation-row.is-selecting {
+    grid-template-columns: 30px 40px minmax(0,1fr) auto;
+    gap: 8px;
+  }
+}
+
