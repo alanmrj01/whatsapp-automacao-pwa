@@ -12,6 +12,7 @@ import {
   useAssistantExclusions,
   useBusiness,
   useConversation,
+  useConversationMessages,
   useRemoveAssistantExclusion,
   useSendConversationMessage,
   useSetConversationPinned,
@@ -59,14 +60,25 @@ export function ConversationDetailPage() {
   const [text,setText]=useState('')
   const [idempotencyKey,setIdempotencyKey]=useState(()=>crypto.randomUUID())
   const [copiedId,setCopiedId]=useState<string|null>(null)
+  const [liveMessages,setLiveMessages]=useState<ConversationMessage[]>([])
   const threadEndRef=useRef<HTMLDivElement|null>(null)
   const canMutate=membership?.access_mode==='paid'&&membership.role!=='viewer'
   const timezone=business.data?.timezone
 
-  const orderedMessages=useMemo(
-    ()=>detail.data?.messages??[],
-    [detail.data?.messages],
-  )
+  useEffect(()=>{
+    if(!detail.data?.messages)return
+    setLiveMessages(current=>mergeMessages(detail.data!.messages,current))
+  },[detail.data?.messages])
+
+  const latestMessageAt=liveMessages.length?liveMessages[liveMessages.length-1].created_at:null
+  const messageDelta=useConversationMessages(conversationId||null,latestMessageAt)
+
+  useEffect(()=>{
+    if(!messageDelta.data?.items.length)return
+    setLiveMessages(current=>mergeMessages(current,messageDelta.data!.items))
+  },[messageDelta.data])
+
+  const orderedMessages=useMemo(()=>liveMessages,[liveMessages])
 
   useEffect(()=>{
     threadEndRef.current?.scrollIntoView({block:'end'})
@@ -131,6 +143,17 @@ export function ConversationDetailPage() {
       </button>
 
       <div className="conversation-detail-header__actions" aria-label="Ações da conversa">
+        <button
+          type="button"
+          className={`conversation-assistant-toggle ${conversation.assistant_enabled?'is-active':'is-paused'}`}
+          aria-label={conversation.assistant_enabled?'Desativar respostas automáticas':'Reativar respostas automáticas'}
+          title={conversation.assistant_enabled?'Assistente ativo — tocar para pausar':'Assistente pausado — tocar para reativar'}
+          disabled={!canMutate||assistant.isPending}
+          onClick={()=>assistant.mutate({id:conversation.id,enabled:!conversation.assistant_enabled})}
+        >
+          <Bot size={18}/>
+          <span>{conversation.assistant_enabled?'Auto':'Pausado'}</span>
+        </button>
         <button
           type="button"
           className="conversation-header-action"
@@ -225,16 +248,18 @@ export function ConversationDetailPage() {
             <label>Nome<input maxLength={255} value={name} onChange={event=>setName(event.target.value)} autoFocus/></label>
             <div><button className="secondary-button" type="button" onClick={()=>setEditingName(false)}>Cancelar</button><button className="primary-button" disabled={rename.isPending}>Salvar</button></div>
           </form> : <button className="conversation-contact-row" type="button" disabled={!canMutate} onClick={()=>{setName(conversation.customer_name);setEditingName(true)}}><div><span>Nome</span><strong>{conversation.customer_name}</strong></div><Pencil size={18}/></button>}
-          <div className="conversation-contact-row is-static"><div><span>WhatsApp</span><strong>{conversation.customer_phone??'Não informado'}</strong></div></div>
+          <div className="conversation-contact-row is-static"><div><span>WhatsApp</span><strong>{conversation.customer_phone??'Não informado'}</strong></div>{conversation.customer_phone&&<button className="conversation-contact-copy" type="button" aria-label="Copiar número do WhatsApp" title="Copiar número" onClick={async()=>{try{await navigator.clipboard.writeText(conversation.customer_phone??'');setCopiedId('contact-phone');window.setTimeout(()=>setCopiedId(null),1500)}catch{setCopiedId(null)}}}>{copiedId==='contact-phone'?<Check size={18}/>:<Copy size={18}/>}</button>}</div>
           {rename.isError&&<p className="form-error" role="alert">Não foi possível alterar o nome.</p>}
         </section>
 
         <section className="conversation-contact-section">
           <h3>Atendimento</h3>
-          <button className="conversation-contact-row" type="button" disabled={!canMutate||assistant.isPending} onClick={()=>assistant.mutate({id:conversation.id,enabled:!conversation.assistant_enabled})}>
-            <div><span>Assistente nesta conversa</span><strong>{conversation.assistant_enabled?'Ativo':'Pausado temporariamente'}</strong></div>
-            <Bot size={19}/>
-          </button>
+          <div className={`conversation-assistant-card ${conversation.assistant_enabled?'is-active':'is-paused'}`}>
+            <div><Bot size={20}/><div><span>Assistente nesta conversa</span><strong>{conversation.assistant_enabled?'Assistente ativo':'Assistente pausado'}</strong></div></div>
+            <button className="primary-button" type="button" disabled={!canMutate||assistant.isPending} onClick={()=>assistant.mutate({id:conversation.id,enabled:!conversation.assistant_enabled})}>
+              {assistant.isPending?'Atualizando…':conversation.assistant_enabled?'Desativar':'Reativar assistente'}
+            </button>
+          </div>
           <button className="conversation-contact-row" type="button" disabled={!canMutate||!whatsappId||addExclusion.isPending||removeExclusion.isPending||exclusions.isPending} onClick={()=>{
             if(permanentExclusion){
               removeExclusion.mutate(permanentExclusion.id)
@@ -331,6 +356,16 @@ function MediaAttachment({message}:{message:ConversationMessage}) {
       Seu navegador não consegue reproduzir este vídeo.
     </video>
   </div>
+}
+
+function mergeMessages(base:ConversationMessage[],incoming:ConversationMessage[]) {
+  const byId=new Map(base.map(item=>[item.id,item]))
+  const order=base.map(item=>item.id)
+  for(const item of incoming){
+    if(!byId.has(item.id))order.push(item.id)
+    byId.set(item.id,item)
+  }
+  return order.map(id=>byId.get(id)!).filter(Boolean)
 }
 
 function initials(name:string) {

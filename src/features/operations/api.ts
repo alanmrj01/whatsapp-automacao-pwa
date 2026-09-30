@@ -11,10 +11,13 @@ import type {
   Business,
   BusinessHours,
   CatalogItem,
+  ConversationBulkAction,
   ConversationDetail,
   ConversationList,
   ConversationMessage,
+  ConversationMessageDelta,
   Customer,
+  CustomerOutreach,
   DashboardToday,
   Employee,
   OperationalRole,
@@ -68,6 +71,18 @@ export function useNotifications(unreadOnly=true) {
     refetchIntervalInBackground:true,
   })
 }
+export function useCustomerOutreach(outreachType:'incomplete_24h'|'cleaning_6m') {
+  const context=usePaidContext()
+  const params=new URLSearchParams({outreach_type:outreachType,limit:'200'})
+  return useQuery({
+    queryKey:[...root(context.businessId),'customer-outreach',outreachType],
+    queryFn:({signal})=>api.request<{items:CustomerOutreach[]}>(`/customer-outreach?${params}`,{signal}),
+    enabled:context.enabled,
+    retry:false,
+    refetchInterval:60_000,
+    refetchIntervalInBackground:false,
+  })
+}
 export function useMarkNotificationRead() {
   const context=usePaidContext()
   return useMutation({
@@ -98,11 +113,48 @@ export function useConversations(search:string,status:string) {
   const params=new URLSearchParams({page:'1',page_size:'50'})
   if(search.trim())params.set('search',search.trim())
   if(status)params.set('status',status)
-  return useQuery({queryKey:[...root(context.businessId),'conversations',search,status],queryFn:({signal})=>api.request<ConversationList>(`/conversations?${params}`,{signal}),enabled:context.enabled,retry:false})
+  return useQuery({
+    queryKey:[...root(context.businessId),'conversations',search,status],
+    queryFn:({signal})=>api.request<ConversationList>(`/conversations?${params}`,{signal}),
+    enabled:context.enabled,
+    retry:false,
+    refetchInterval:context.enabled?10_000:false,
+    refetchIntervalInBackground:false,
+  })
 }
 export function useConversation(id:string|null) {
   const context=usePaidContext()
-  return useQuery({queryKey:[...root(context.businessId),'conversation',id],queryFn:({signal})=>api.request<ConversationDetail>(`/conversations/${id}`,{signal}),enabled:context.enabled&&!!id,retry:false,refetchInterval:context.enabled&&id?5_000:false})
+  return useQuery({
+    queryKey:[...root(context.businessId),'conversation',id],
+    queryFn:({signal})=>api.request<ConversationDetail>(`/conversations/${id}`,{signal}),
+    enabled:context.enabled&&!!id,
+    retry:false,
+    refetchInterval:context.enabled&&id?15_000:false,
+    refetchIntervalInBackground:false,
+  })
+}
+export function useConversationMessages(id:string|null,after:string|null) {
+  const context=usePaidContext()
+  const params=new URLSearchParams({limit:'100'})
+  if(after)params.set('after',after)
+  return useQuery({
+    queryKey:[...root(context.businessId),'conversation-messages',id,after],
+    queryFn:({signal})=>api.request<ConversationMessageDelta>(`/conversations/${id}/messages?${params}`,{signal}),
+    enabled:context.enabled&&!!id,
+    retry:false,
+    refetchInterval:context.enabled&&id?4_000:false,
+    refetchIntervalInBackground:false,
+  })
+}
+export function useBulkConversationAction() {
+  const context=usePaidContext()
+  return useMutation({
+    mutationFn:({conversation_ids,action}:{conversation_ids:string[];action:ConversationBulkAction})=>paidMutation(
+      context,
+      ()=>api.request<{affected:number}>('/conversations/bulk',{method:'POST',body:json({conversation_ids,action})}),
+    ),
+    onSuccess:()=>invalidate(context.businessId,'conversations','conversation','dashboard'),
+  })
 }
 export function useSetConversationPinned() {
   const context=usePaidContext()
@@ -144,7 +196,8 @@ export function useUpdateBusiness() {
     'service_origin_postal_code'|'service_origin_street'|'service_origin_neighborhood'|
     'service_origin_number'|'service_origin_city'|'service_origin_state'|'slot_interval_minutes'|
     'interval_between_services_minutes'|'preparation_minutes'|'finishing_minutes'|
-    'minimum_booking_notice_minutes'|'materials_catalog_reviewed'|'agenda_preferences_reviewed'
+    'minimum_booking_notice_minutes'|'equipment_delivery_fee_per_km'|
+    'materials_catalog_reviewed'|'agenda_preferences_reviewed'
   >>)=>paidMutation(context,()=>api.request<Business>('/business',{method:'PATCH',body:json(values)})),onSuccess:()=>invalidate(context.businessId,'business','setup')})
 }
 

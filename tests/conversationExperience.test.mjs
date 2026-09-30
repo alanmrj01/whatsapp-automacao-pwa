@@ -35,11 +35,16 @@ test('outbound statuses are presented in Portuguese', () => {
   }
 })
 
-test('conversation history refreshes even when enqueue confirmation fails', () => {
+test('conversation history refreshes incrementally even when enqueue confirmation fails', () => {
   const operations = read('src/features/operations/api.ts')
+  const detail = read('src/features/conversations/ConversationDetailPage.tsx')
   assert.match(operations,/useSendConversationMessage/)
   assert.match(operations,/onSettled:\(\)=>invalidate\(context\.businessId,'conversations','conversation','dashboard'\)/)
-  assert.match(operations,/refetchInterval:context\.enabled&&id\?5_000:false/)
+  assert.match(operations,/useConversationMessages/)
+  assert.match(operations,/refetchInterval:context\.enabled&&id\?4_000:false/)
+  assert.match(operations,/refetchIntervalInBackground:false/)
+  assert.match(detail,/mergeMessages/)
+  assert.match(detail,/latestMessageAt/)
 })
 
 test('conversation layout owns the full viewport without duplicated navigation', () => {
