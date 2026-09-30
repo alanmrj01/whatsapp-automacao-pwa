@@ -6,14 +6,16 @@ import { LoadingState } from '../../components/LoadingState'
 import { RequiredLabel } from '../../components/RequiredLabel'
 import { canConfigureWhatsApp } from '../auth/types'
 import { useAuth } from '../auth/useAuth'
-import { useCreateService, useDeleteService, useServices, useUpdateService } from '../operations/api'
+import { useBusiness, useCreateService, useDeleteService, useServices, useUpdateBusiness, useUpdateService } from '../operations/api'
 
 type Draft={name:string;duration:string;price:string}
 
 export function ServiceCatalogPage(){
   const services=useServices()
+  const business=useBusiness()
   const create=useCreateService()
   const update=useUpdateService()
+  const updateBusiness=useUpdateBusiness()
   const remove=useDeleteService()
   const canEdit=canConfigureWhatsApp(useAuth().membership?.role)
   const [drafts,setDrafts]=useState<Record<string,Draft>>({})
@@ -23,6 +25,7 @@ export function ServiceCatalogPage(){
   const [newPrice,setNewPrice]=useState('')
   const [addAttempted,setAddAttempted]=useState(false)
   const [saveAttempted,setSaveAttempted]=useState(false)
+  const [deliveryFee,setDeliveryFee]=useState('2,40')
   const active=useMemo(()=>services.data?.items.filter(item=>item.active)??[],[services.data])
 
   useEffect(()=>{
@@ -30,8 +33,13 @@ export function ServiceCatalogPage(){
     setDrafts(Object.fromEntries(services.data.items.filter(item=>item.active).map(item=>[item.id,{name:item.name,duration:String(item.duration_minutes),price:item.price==null?'':String(item.price)}])))
   },[services.data])
 
-  if(services.isPending)return <Shell><LoadingState/></Shell>
-  if(services.isError||!services.data)return <Shell><ErrorState onRetry={()=>void services.refetch()}/></Shell>
+  useEffect(()=>{
+    if(!business.data)return
+    setDeliveryFee(String(business.data.equipment_delivery_fee_per_km).replace('.',','))
+  },[business.data])
+
+  if(services.isPending||business.isPending)return <Shell><LoadingState/></Shell>
+  if(services.isError||!services.data||business.isError||!business.data)return <Shell><ErrorState onRetry={()=>{void services.refetch();void business.refetch()}}/></Shell>
 
   const newDurationNumber=Number(newDuration)
   const newPriceNumber=parseMoney(newPrice)
@@ -46,7 +54,9 @@ export function ServiceCatalogPage(){
     const duration=Number(draft.duration)
     return draft.name.trim().length<2||!Number.isFinite(duration)||duration<=0||parseMoney(draft.price)===null
   }
-  const catalogInvalid=active.some(item=>draftInvalid(item.id))
+  const deliveryFeeNumber=parseMoney(deliveryFee)
+  const deliveryFeeInvalid=deliveryFeeNumber===null
+  const catalogInvalid=active.some(item=>draftInvalid(item.id))||deliveryFeeInvalid
 
   const add=async()=>{
     setAddAttempted(true)
@@ -62,11 +72,27 @@ export function ServiceCatalogPage(){
       const duration=Number(draft.duration),price=parseMoney(draft.price)
       await update.mutateAsync({id:item.id,values:{name:draft.name.trim(),duration_minutes:duration,price:price!}})
     }
+    await updateBusiness.mutateAsync({equipment_delivery_fee_per_km:deliveryFeeNumber!})
     setSaveAttempted(false)
   }
 
   return <Shell>
     <section className="operational-heading"><div><span className="eyebrow">Empresa</span><h1>Catálogo de serviços</h1></div><InfoHelp title="Catálogo de serviços">Nome, preço e duração alimentam o Assistente Virtual e o agendamento automático. Itens excluídos deixam de ser oferecidos sem apagar o histórico de atendimentos.</InfoHelp></section>
+    <section className="settings-form">
+      <label>
+        <RequiredLabel>Taxa de entrega de equipamento (R$ por KM)</RequiredLabel>
+        <input
+          className={saveAttempted&&deliveryFeeInvalid?'field-invalid':''}
+          inputMode="decimal"
+          value={deliveryFee}
+          disabled={!canEdit}
+          onChange={event=>setDeliveryFee(event.target.value)}
+          placeholder="2,40"
+        />
+        <small className="settings-field-help">Aplicada somente quando o cliente compra o equipamento sem instalação e escolhe entrega. O padrão é R$ 2,40 por KM e pode ser alterado.</small>
+        {saveAttempted&&deliveryFeeInvalid&&<small className="field-error">Informe uma taxa válida por KM.</small>}
+      </label>
+    </section>
     {canEdit&&<div className="catalog-toolbar"><button className="compact-button" type="button" onClick={()=>{setAdding(value=>!value);setAddAttempted(false)}}><Plus size={16}/>Adicionar serviço</button></div>}
     {canEdit&&adding&&<div className="settings-form settings-form--inline">
       <label><RequiredLabel>Serviço</RequiredLabel><input className={addAttempted&&newInvalid.name?'field-invalid':''} value={newName} onChange={event=>setNewName(event.target.value)} placeholder="Ex.: Limpeza de ar-condicionado"/>{addAttempted&&newInvalid.name&&<small className="field-error">Informe o nome do serviço.</small>}</label>
@@ -89,9 +115,9 @@ export function ServiceCatalogPage(){
       {!active.length&&<p className="settings-empty">Nenhum serviço cadastrado. Adicione o primeiro serviço acima.</p>}
     </div>
     {saveAttempted&&catalogInvalid&&<p className="form-error" role="alert">Preencha todos os campos obrigatórios de todos os serviços antes de salvar.</p>}
-    {(create.isError||update.isError||remove.isError)&&<MutationError/>}
-    {update.isSuccess&&!catalogInvalid&&<p className="form-success">Serviços salvos.</p>}
-    {canEdit&&!!active.length&&<button className="primary-button" type="button" disabled={update.isPending} onClick={()=>void save()}><Save size={17}/>{update.isPending?'Salvando…':'Salvar serviços'}</button>}
+    {(create.isError||update.isError||updateBusiness.isError||remove.isError)&&<MutationError/>}
+    {(update.isSuccess||updateBusiness.isSuccess)&&!catalogInvalid&&<p className="form-success">Serviços e taxa de entrega salvos.</p>}
+    {canEdit&&<button className="primary-button" type="button" disabled={update.isPending||updateBusiness.isPending} onClick={()=>void save()}><Save size={17}/>{update.isPending||updateBusiness.isPending?'Salvando…':'Salvar serviços e taxa'}</button>}
   </Shell>
 }
 
