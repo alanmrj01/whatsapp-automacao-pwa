@@ -20,6 +20,7 @@ const SecuritySettingsPage = lazy(async () => ({default:(await AccountPages()).S
 const PrivacySettingsPage = lazy(async () => ({default:(await AccountPages()).PrivacySettingsPage}))
 const AgendaSettingsPage = lazy(async () => ({default:(await import('../features/more/AgendaSettingsPage')).AgendaSettingsPage}))
 const AutomationSettingsPage = lazy(async () => ({default:(await import('../features/more/AutomationSettingsPage')).AutomationSettingsPage}))
+const CustomerOutreachPage = lazy(async () => ({default:(await import('../features/more/CustomerOutreachPage')).CustomerOutreachPage}))
 const CompanySettingsPage = lazy(async () => ({default:(await import('../features/more/CompanySettingsPage')).CompanySettingsPage}))
 const ServiceCatalogPage = lazy(async () => ({default:(await import('../features/more/ServiceCatalogPage')).ServiceCatalogPage}))
 const MaterialsCatalogPage = lazy(async () => ({default:(await import('../features/more/MaterialsCatalogPage')).MaterialsCatalogPage}))
@@ -88,6 +89,7 @@ export function AppRouter() {
             <Route path="mais/catalogo" element={<PaidOperationalGuard><MaterialsCatalogPage /></PaidOperationalGuard>} />
             <Route path="mais/horarios" element={<PaidOperationalGuard><WorkingHoursSettingsPage /></PaidOperationalGuard>} />
             <Route path="mais/automacao" element={<PaidOperationalGuard><AutomationSettingsPage /></PaidOperationalGuard>} />
+            <Route path="mais/relacionamento" element={<PaidOperationalGuard><CustomerOutreachPage /></PaidOperationalGuard>} />
             <Route path="mais/equipe" element={<PaidOperationalGuard><TeamSettingsPage /></PaidOperationalGuard>} />
             <Route path="mais/agenda" element={<PaidOperationalGuard><AgendaSettingsPage /></PaidOperationalGuard>} />
           </Route>
