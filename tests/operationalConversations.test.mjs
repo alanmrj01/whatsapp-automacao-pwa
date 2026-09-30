@@ -27,7 +27,7 @@ test('real conversations use a full paid route with human reply controls', () =>
   assert.match(api,/onSettled:\(\)=>invalidate\(context\.businessId,'conversations','conversation','dashboard'\)/)
 })
 
-test('assistant settings expose semantic recognition and permanent human-only contacts', () => {
+test('assistant settings hide internal recognition and keep permanent human-only contacts', () => {
   const settings = read('src/features/more/AutomationSettingsPage.tsx')
   const team = read('src/features/more/TeamSettingsPage.tsx')
   const types = read('src/features/operations/types.ts')
@@ -35,9 +35,12 @@ test('assistant settings expose semantic recognition and permanent human-only co
 
   assert.match(settings,/Assistente Virtual ativo/)
   assert.match(settings,/Mensagem inicial/)
-  assert.match(settings,/Como o ALOVIA reconhece seus serviços/)
-  assert.match(settings,/Frases de referência/)
+  assert.doesNotMatch(settings,/Como o ALOVIA reconhece seus serviços/)
+  assert.doesNotMatch(settings,/Frases de referência/)
+  assert.match(settings,/reconhecimento técnico dos serviços é gerenciado automaticamente/i)
   assert.match(settings,/Contatos sem resposta automática/)
+  assert.match(settings,/Contato do celular/)
+  assert.match(settings,/contacts\?\.select/)
   assert.match(settings,/Nunca responder automaticamente/)
   assert.match(team,/Técnico/)
   assert.match(team,/Auxiliar/)
@@ -55,6 +58,19 @@ test('conversation layout remains mobile-safe and composer stays inside the full
   assert.match(css,/overflow:\s*hidden/)
   assert.match(css,/\.conversation-route-shell \.conversation-composer/)
   assert.match(css,/@media \(max-width: 430px\)/)
+})
+
+test('conversation inbox supports safe bulk editing', () => {
+  const list = read('src/features/conversations/ConversationsPage.tsx')
+  const api = read('src/features/operations/api.ts')
+
+  assert.match(list,/Selecionar conversas/)
+  assert.match(list,/Selecionar todas/)
+  assert.match(list,/assistant_on/)
+  assert.match(list,/assistant_off/)
+  assert.match(list,/conversation_ids:selected/)
+  assert.match(api,/\/conversations\/bulk/)
+  assert.match(api,/useBulkConversationAction/)
 })
 
 test('conversation inbox exposes pin, read state and safe logical deletion', () => {
