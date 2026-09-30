@@ -1,4 +1,4 @@
-import { CheckCheck, ChevronLeft, ChevronRight, LockKeyhole, MessageCircleMore, MoreVertical, Pin, PinOff, Search, Trash2 } from 'lucide-react'
+import { Bot, BotOff, CheckCheck, CheckSquare, ChevronLeft, ChevronRight, LockKeyhole, MessageCircleMore, MoreVertical, Pin, PinOff, Search, Square, Trash2, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { EmptyState } from '../../components/EmptyState'
@@ -11,7 +11,7 @@ import { demoConversations } from '../../demo/operationalDemo'
 import { DemoDataNotice } from '../access/DemoDataNotice'
 import { useEntitlements } from '../access/useEntitlements'
 import { useUpgradePrompt } from '../access/upgradePromptContext'
-import { useDeleteConversation, useBusiness, useConversations, useSetConversationPinned, useSetConversationRead } from '../operations/api'
+import { useBulkConversationAction, useDeleteConversation, useBusiness, useConversations, useSetConversationPinned, useSetConversationRead } from '../operations/api'
 import type { Conversation, ConversationStatus } from '../operations/types'
 
 const labels = {waiting:'Aguardando',in_progress:'Em atendimento',answered:'Respondida'} as const
@@ -98,23 +98,64 @@ function formatMoment(value:string|null,timeZone?:string) {
 function RealConversationList({items,timezone}:{items:Conversation[];timezone:string}) {
   const [menuId,setMenuId]=useState<string|null>(null)
   const [deleteTarget,setDeleteTarget]=useState<Conversation|null>(null)
+  const [selectionMode,setSelectionMode]=useState(false)
+  const [selectedIds,setSelectedIds]=useState<Set<string>>(()=>new Set())
+  const [bulkDeleteOpen,setBulkDeleteOpen]=useState(false)
   const pin=useSetConversationPinned()
   const read=useSetConversationRead()
   const archive=useDeleteConversation()
+  const bulk=useBulkConversationAction()
   if(!items.length)return <EmptyState icon={MessageCircleMore} title="Nenhuma conversa" description="A fila não possui itens para este filtro."/>
+
+  const selected=[...selectedIds]
+  const toggleSelected=(id:string)=>setSelectedIds(current=>{
+    const next=new Set(current)
+    if(next.has(id))next.delete(id)
+    else next.add(id)
+    return next
+  })
+  const closeSelection=()=>{setSelectionMode(false);setSelectedIds(new Set())}
+  const runBulk=(action:'mark_read'|'mark_unread'|'pin'|'unpin'|'assistant_on'|'assistant_off')=>{
+    if(!selected.length)return
+    bulk.mutate({conversation_ids:selected,action},{onSuccess:()=>closeSelection()})
+  }
+
   return <>
+    <div className="conversation-selection-bar">
+      {!selectionMode?<button className="compact-button conversation-select-button" type="button" onClick={()=>setSelectionMode(true)}><CheckSquare size={17}/>Selecionar conversas</button>:<>
+        <div className="conversation-selection-summary">
+          <button type="button" className="conversation-selection-close" onClick={closeSelection} aria-label="Sair da seleção"><X size={18}/></button>
+          <strong>{selected.length} selecionada(s)</strong>
+          <button type="button" className="conversation-selection-all" onClick={()=>setSelectedIds(selected.length===items.length?new Set():new Set(items.map(item=>item.id)))}>{selected.length===items.length?'Limpar':'Selecionar todas'}</button>
+        </div>
+        <div className="conversation-bulk-actions" aria-label="Ações em massa">
+          <button type="button" disabled={!selected.length||bulk.isPending} onClick={()=>runBulk('mark_read')}><CheckCheck size={16}/>Lidas</button>
+          <button type="button" disabled={!selected.length||bulk.isPending} onClick={()=>runBulk('pin')}><Pin size={16}/>Fixar</button>
+          <button type="button" disabled={!selected.length||bulk.isPending} onClick={()=>runBulk('assistant_on')}><Bot size={16}/>Ativar auto</button>
+          <button type="button" disabled={!selected.length||bulk.isPending} onClick={()=>runBulk('assistant_off')}><BotOff size={16}/>Pausar auto</button>
+          <button type="button" className="is-danger" disabled={!selected.length||bulk.isPending} onClick={()=>setBulkDeleteOpen(true)}><Trash2 size={16}/>Excluir</button>
+        </div>
+      </>}
+      {bulk.isError&&<p className="form-error" role="alert">Não foi possível aplicar a ação às conversas selecionadas.</p>}
+    </div>
+
     <section className="conversation-list" aria-live="polite">
-      {items.map(item=><article className={`conversation-row ${item.priority?'is-priority':''} ${item.pinned?'is-pinned':''}`} key={item.id}>
+      {items.map(item=><article className={`conversation-row ${item.priority?'is-priority':''} ${item.pinned?'is-pinned':''} ${selectionMode?'is-selecting':''}`} key={item.id}>
+        {selectionMode&&<button className="conversation-selection-toggle" type="button" aria-label={selectedIds.has(item.id)?`Desmarcar ${item.customer_name}`:`Selecionar ${item.customer_name}`} onClick={()=>toggleSelected(item.id)}>{selectedIds.has(item.id)?<CheckSquare size={22}/>:<Square size={22}/>}</button>}
         <div className="conversation-avatar" aria-hidden="true">{item.customer_name.split(' ').map(value=>value[0]).join('').slice(0,2)}</div>
-        <Link className="conversation-copy conversation-copy--button" to={`/app/conversas/${item.id}`} aria-label={`Abrir conversa com ${item.customer_name}`}>
+        {selectionMode?<button type="button" className="conversation-copy conversation-copy--button" onClick={()=>toggleSelected(item.id)} aria-label={`Selecionar conversa com ${item.customer_name}`}>
           <div><strong>{item.customer_name}{item.pinned&&<Pin size={13} aria-label="Conversa fixada"/>}</strong><time>{formatMoment(item.last_message_at,timezone)}</time></div>
           <p>{item.last_content??'Sem conteúdo textual'}</p>
           <footer><span>{item.assignee_name??'Sem responsável'}</span><StatusBadge tone={item.status==='waiting'?'warning':item.status==='answered'?'success':'info'}>{labels[item.status]}</StatusBadge></footer>
-        </Link>
+        </button>:<Link className="conversation-copy conversation-copy--button" to={`/app/conversas/${item.id}`} aria-label={`Abrir conversa com ${item.customer_name}`}>
+          <div><strong>{item.customer_name}{item.pinned&&<Pin size={13} aria-label="Conversa fixada"/>}</strong><time>{formatMoment(item.last_message_at,timezone)}</time></div>
+          <p>{item.last_content??'Sem conteúdo textual'}</p>
+          <footer><span>{item.assignee_name??'Sem responsável'}</span><StatusBadge tone={item.status==='waiting'?'warning':item.status==='answered'?'success':'info'}>{labels[item.status]}</StatusBadge></footer>
+        </Link>}
         <div className="conversation-row__trailing">
           {item.unread_count>0&&<span className="unread-count" aria-label={`${item.unread_count} mensagens não lidas`}>{item.unread_count}</span>}
-          <button className="conversation-menu-trigger" type="button" aria-label={`Opções de ${item.customer_name}`} aria-expanded={menuId===item.id} onClick={()=>setMenuId(value=>value===item.id?null:item.id)}><MoreVertical size={19}/></button>
-          {menuId===item.id&&<div className="conversation-menu" role="menu">
+          {!selectionMode&&<button className="conversation-menu-trigger" type="button" aria-label={`Opções de ${item.customer_name}`} aria-expanded={menuId===item.id} onClick={()=>setMenuId(value=>value===item.id?null:item.id)}><MoreVertical size={19}/></button>}
+          {!selectionMode&&menuId===item.id&&<div className="conversation-menu" role="menu">
             <button type="button" role="menuitem" disabled={pin.isPending} onClick={()=>{pin.mutate({id:item.id,pinned:!item.pinned});setMenuId(null)}}>{item.pinned?<PinOff size={17}/>:<Pin size={17}/>} {item.pinned?'Desafixar conversa':'Fixar conversa'}</button>
             <button type="button" role="menuitem" disabled={read.isPending} onClick={()=>{read.mutate({id:item.id,read:item.unread_count>0});setMenuId(null)}}><CheckCheck size={17}/> {item.unread_count>0?'Marcar como lida':'Marcar como não lida'}</button>
             <button className="is-danger" type="button" role="menuitem" onClick={()=>{setDeleteTarget(item);setMenuId(null)}}><Trash2 size={17}/>Excluir conversa</button>
@@ -128,6 +169,12 @@ function RealConversationList({items,timezone}:{items:Conversation[];timezone:st
         <button className="danger-button" type="button" disabled={archive.isPending} onClick={()=>{if(!deleteTarget)return;archive.mutate(deleteTarget.id,{onSuccess:()=>setDeleteTarget(null)})}}>{archive.isPending?'Excluindo…':'Excluir conversa'}</button>
       </div>
       {archive.isError&&<p className="form-error" role="alert">Não foi possível excluir a conversa.</p>}
+    </BottomSheet>
+    <BottomSheet open={bulkDeleteOpen} title="Excluir conversas selecionadas?" description="O histórico fica preservado e qualquer contato volta à lista se enviar uma nova mensagem." onClose={()=>setBulkDeleteOpen(false)}>
+      <div className="conversation-delete-confirm">
+        <button className="secondary-button" type="button" onClick={()=>setBulkDeleteOpen(false)}>Cancelar</button>
+        <button className="danger-button" type="button" disabled={!selected.length||bulk.isPending} onClick={()=>bulk.mutate({conversation_ids:selected,action:'delete'},{onSuccess:()=>{setBulkDeleteOpen(false);closeSelection()}})}>{bulk.isPending?'Excluindo…':`Excluir ${selected.length} conversa(s)`}</button>
+      </div>
     </BottomSheet>
   </>
 }
