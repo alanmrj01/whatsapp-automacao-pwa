@@ -255,7 +255,7 @@ export function ConversationDetailPage() {
         <section className="conversation-contact-section">
           <h3>Atendimento</h3>
           <div className={`conversation-assistant-card ${conversation.assistant_enabled?'is-active':'is-paused'}`}>
-            <div><Bot size={20}/><div><span>Respostas automáticas</span><strong>{conversation.assistant_enabled?'Assistente ativo':'Assistente pausado'}</strong></div></div>
+            <div><Bot size={20}/><div><span>Assistente nesta conversa</span><strong>{conversation.assistant_enabled?'Assistente ativo':'Assistente pausado'}</strong></div></div>
             <button className="primary-button" type="button" disabled={!canMutate||assistant.isPending} onClick={()=>assistant.mutate({id:conversation.id,enabled:!conversation.assistant_enabled})}>
               {assistant.isPending?'Atualizando…':conversation.assistant_enabled?'Desativar':'Reativar assistente'}
             </button>
