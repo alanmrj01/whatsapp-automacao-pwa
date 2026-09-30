@@ -1,4 +1,4 @@
-import { Bot, Boxes, Building2, CalendarCog, CircleUserRound, Clock3, CreditCard, LockKeyhole, MessageCircleMore, PackageOpen, ShieldCheck, UsersRound } from 'lucide-react'
+import { Bot, Boxes, Building2, CalendarCog, CircleUserRound, Clock3, CreditCard, HeartHandshake, LockKeyhole, MessageCircleMore, PackageOpen, ShieldCheck, UsersRound } from 'lucide-react'
 import { ListRow } from '../../components/ListRow'
 import { Section } from '../../components/Section'
 import { StatusBadge } from '../../components/StatusBadge'
@@ -30,7 +30,10 @@ export function MorePage(){
     </Section>
 
     <Section title="Atendimento">
-      <div className="list-surface"><ListRow icon={Bot} title="Assistente Virtual" subtitle="Mensagens, reconhecimento e contatos sem resposta automática" to={paid?'/app/mais/automacao':undefined} onClick={!paid?gated('Configurar o Assistente Virtual'):undefined}/></div>
+      <div className="list-surface">
+        <ListRow icon={Bot} title="Assistente Virtual" subtitle="Mensagens e contatos sem resposta automática" to={paid?'/app/mais/automacao':undefined} onClick={!paid?gated('Configurar o Assistente Virtual'):undefined}/>
+        <ListRow icon={HeartHandshake} title="Limpeza preventiva" subtitle="Próximos contatos automáticos e histórico de resultados" to={paid?'/app/mais/relacionamento':undefined} onClick={!paid?gated('Acompanhar relacionamento com clientes'):undefined}/>
+      </div>
     </Section>
 
     <Section title="Empresa">
