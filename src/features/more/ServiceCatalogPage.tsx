@@ -76,7 +76,8 @@ export function ServiceCatalogPage(){
   }
   const save=async()=>{
     setSaveAttempted(true)
-    if(catalogInvalid||deliveryFeeInvalid)return
+    if(catalogInvalid)return
+    if(deliveryFeeInvalid)return
     setSaveState('saving')
     try{
       for(const item of active){
