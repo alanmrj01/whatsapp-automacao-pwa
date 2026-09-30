@@ -3,7 +3,6 @@ import { useState } from 'react'
 import { ErrorState } from '../../components/ErrorState'
 import { InfoHelp } from '../../components/InfoHelp'
 import { LoadingState } from '../../components/LoadingState'
-import { StatusBadge } from '../../components/StatusBadge'
 import { canConfigureWhatsApp } from '../auth/types'
 import { useAuth } from '../auth/useAuth'
 import {
