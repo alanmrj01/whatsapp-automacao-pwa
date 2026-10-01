@@ -250,3 +250,102 @@
     font-size: .62rem;
   }
 }
+
+
+.reschedule-pending-section {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #f3cf72;
+  border-radius: 16px;
+  background: #fff9df;
+}
+
+.reschedule-pending-section > p {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.reschedule-pending-count {
+  min-width: 28px;
+  min-height: 28px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #f3c64e;
+  font-weight: 800;
+}
+
+.reschedule-pending-list {
+  display: grid;
+  gap: 8px;
+}
+
+.reschedule-pending-list > button {
+  width: 100%;
+  padding: 11px 12px;
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr) auto;
+  gap: 10px;
+  align-items: center;
+  text-align: left;
+  border: 1px solid #efd27d;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.reschedule-pending-list > button > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.reschedule-pending-list small {
+  color: var(--color-text-muted);
+}
+
+.agenda-calendar__event.is-rescheduled,
+.agenda-row.is-rescheduled {
+  box-shadow: inset 4px 0 0 #8a5cf5;
+}
+
+.agenda-row__status {
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+}
+
+.rescheduled-badge {
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #eee8ff;
+  color: #5d3fbd;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.reschedule-form {
+  display: grid;
+  gap: 14px;
+}
+
+.priority-conflict-card {
+  display: grid;
+  gap: 9px;
+  padding: 13px;
+  border: 1px solid #efb2ac;
+  border-radius: 13px;
+  background: #fff2f0;
+}
+
+.priority-conflict-card > span {
+  color: var(--color-text-muted);
+}
+
+.priority-conflict-card ul {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 4px;
+}
