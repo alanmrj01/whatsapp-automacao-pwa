@@ -92,7 +92,7 @@ export function useMarkNotificationRead() {
 }
 export function useAppointments(date:string) {
   const context=usePaidContext()
-  return useQuery({queryKey:[...root(context.businessId),'appointments',date],queryFn:({signal})=>api.request<{items:Appointment[]}>(`/appointments?date=${encodeURIComponent(date)}`,{signal}),enabled:context.enabled,retry:false})
+  return useQuery({queryKey:[...root(context.businessId),'appointments',date],queryFn:({signal})=>api.request<{items:Appointment[]}>(`/appointments?date=${encodeURIComponent(date)}`,{signal}),enabled:context.enabled,retry:false,placeholderData:previous=>previous})
 }
 export function useAppointment(id:string|null) {
   const context=usePaidContext()
@@ -106,7 +106,7 @@ export function useAppointment(id:string|null) {
 export function useAppointmentsRange(startsAt:string,endsBefore:string,enabled=true) {
   const context=usePaidContext()
   const params=new URLSearchParams({starts_at:startsAt,ends_before:endsBefore})
-  return useQuery({queryKey:[...root(context.businessId),'appointments-range',startsAt,endsBefore],queryFn:({signal})=>api.request<{items:Appointment[]}>(`/appointments?${params}`,{signal}),enabled:context.enabled&&enabled&&!!startsAt&&!!endsBefore,retry:false})
+  return useQuery({queryKey:[...root(context.businessId),'appointments-range',startsAt,endsBefore],queryFn:({signal})=>api.request<{items:Appointment[]}>(`/appointments?${params}`,{signal}),enabled:context.enabled&&enabled&&!!startsAt&&!!endsBefore,retry:false,placeholderData:previous=>previous})
 }
 export function useSaveAppointment() {
   const context=usePaidContext()
@@ -127,6 +127,7 @@ export function useConversations(search:string,status:string) {
     queryFn:({signal})=>api.request<ConversationList>(`/conversations?${params}`,{signal}),
     enabled:context.enabled,
     retry:false,
+    placeholderData:previous=>previous,
     refetchInterval:context.enabled?10_000:false,
     refetchIntervalInBackground:false,
   })
@@ -138,6 +139,7 @@ export function useConversation(id:string|null) {
     queryFn:({signal})=>api.request<ConversationDetail>(`/conversations/${id}`,{signal}),
     enabled:context.enabled&&!!id,
     retry:false,
+    placeholderData:previous=>previous,
     refetchInterval:context.enabled&&id?15_000:false,
     refetchIntervalInBackground:false,
   })
@@ -151,6 +153,7 @@ export function useConversationMessages(id:string|null,after:string|null) {
     queryFn:({signal})=>api.request<ConversationMessageDelta>(`/conversations/${id}/messages?${params}`,{signal}),
     enabled:context.enabled&&!!id,
     retry:false,
+    placeholderData:previous=>previous,
     refetchInterval:context.enabled&&id?4_000:false,
     refetchIntervalInBackground:false,
   })
