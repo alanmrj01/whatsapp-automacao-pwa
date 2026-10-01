@@ -145,6 +145,12 @@ export function AuthProvider({children}: {children:ReactNode}) {
     await revokePendingLogout(true)
   }
 
+  const reconnect = useCallback(async () => {
+    if (logoutBlocked.current) return
+    api.resume()
+    await bootstrap()
+  }, [bootstrap])
+
   async function selectBusiness(id:string) {
     if (!user?.memberships.some(m => m.business_id === id)) throw new ApiError(403)
     const expected = ++operation.current
@@ -170,6 +176,6 @@ export function AuthProvider({children}: {children:ReactNode}) {
 
   return <AuthContext.Provider value={{state,user,
     membership:user?.memberships.find(m=>m.business_id===user.active_business_id),
-    login,signup,logout,selectBusiness,bootstrap,reconnect:bootstrap,
+    login,signup,logout,selectBusiness,bootstrap,reconnect,
     retryPendingLogout,continueToLogin}}>{children}</AuthContext.Provider>
 }
