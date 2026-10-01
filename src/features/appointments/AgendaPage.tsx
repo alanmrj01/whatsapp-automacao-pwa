@@ -13,7 +13,7 @@ import { DemoDataNotice } from '../access/DemoDataNotice'
 import { useEntitlements } from '../access/useEntitlements'
 import { useUpgradePrompt } from '../access/upgradePromptContext'
 import { useAuth } from '../auth/useAuth'
-import { useAppointments, useAppointmentsRange, useBusiness, useCancelAppointment, useCreateCustomer, useCustomers, useEmployees, useSaveAppointment, useServices } from '../operations/api'
+import { useAppointment, useAppointments, useAppointmentsRange, useBusiness, useCancelAppointment, useCreateCustomer, useCustomers, useEmployees, useSaveAppointment, useServices } from '../operations/api'
 import type { Appointment, AppointmentStatus } from '../operations/types'
 import { zonedDateTimeToIso } from '../operations/timezone'
 import './agenda-calendar.css'
@@ -251,6 +251,8 @@ function RealAgenda({selectedDate,setSelectedDate,canMutate,initialView,setOuter
   const rangeEnds=business.data?zonedDateTimeToIso(range.end,'00:00',timezone):''
   const calendarAppointments=useAppointmentsRange(rangeStarts,rangeEnds,view!=='day'&&!!business.data)
   const appointments=useAppointments(selectedDate)
+  const requestedAppointmentId=searchParams.get('appointment')
+  const requestedAppointment=useAppointment(requestedAppointmentId)
   const customers=useCustomers()
   const services=useServices()
   const employees=useEmployees()
@@ -259,6 +261,18 @@ function RealAgenda({selectedDate,setSelectedDate,canMutate,initialView,setOuter
   const createCustomer=useCreateCustomer()
   const [draft,setDraft]=useState<RealDraft|null>(null)
   const [error,setError]=useState('')
+
+  useEffect(()=>{
+    if(!requestedAppointmentId||!requestedAppointment.data||!business.data)return
+    const appointment=requestedAppointment.data
+    const date=dateValue(appointment.starts_at,timezone)
+    setSelectedDate(date)
+    setView('day')
+    setOuterView('day')
+    setDraft(realDraft(date,timezone,appointment))
+    setSearchParams({}, {replace:true})
+  },[requestedAppointmentId,requestedAppointment.data,business.data,timezone,setOuterView,setSearchParams,setSelectedDate])
+
   const items=appointments.data?.items??[]
   const requestedNew=canEdit&&searchParams.get('action')==='new'
   const requestedCustomer=searchParams.get('customer')??''
