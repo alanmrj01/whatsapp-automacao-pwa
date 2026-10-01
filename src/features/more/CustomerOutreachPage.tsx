@@ -29,7 +29,7 @@ export function CustomerOutreachPage(){
 
   return <Shell>
     <section className="operational-heading">
-      <div><span className="eyebrow">Relacionamento</span><h1>Limpeza preventiva</h1><p>Contato automático após 6 meses de um serviço concluído</p></div>
+      <div><span className="eyebrow">Relacionamento</span><h1>Preventivas</h1><p>Contatos automáticos de manutenção preventiva após serviços concluídos</p></div>
       <HeartHandshake size={28}/>
     </section>
 
@@ -37,7 +37,7 @@ export function CustomerOutreachPage(){
       <div className="section-title-row"><div><span className="eyebrow">Próximos contatos</span><h2>Clientes programados</h2></div><StatusBadge tone="info">{upcoming.length}</StatusBadge></div>
       <div className="settings-list outreach-list">
         {upcoming.map(item=><OutreachRow item={item} timezone={timezone} key={item.id}/>)}
-        {!upcoming.length&&<p className="settings-empty">Nenhum contato de limpeza programado no momento.</p>}
+        {!upcoming.length&&<p className="settings-empty">Nenhuma preventiva programada no momento.</p>}
       </div>
     </section>
 
@@ -45,7 +45,7 @@ export function CustomerOutreachPage(){
       <div className="section-title-row"><div><span className="eyebrow">Histórico</span><h2>Ofertas automáticas</h2></div><History size={20}/></div>
       <div className="settings-list outreach-list">
         {history.map(item=><OutreachRow item={item} timezone={timezone} key={item.id}/>)}
-        {!history.length&&<p className="settings-empty">O histórico aparecerá aqui após os primeiros contatos automáticos.</p>}
+        {!history.length&&<p className="settings-empty">O histórico aparecerá aqui após os primeiros contatos de preventiva.</p>}
       </div>
     </section>
   </Shell>
