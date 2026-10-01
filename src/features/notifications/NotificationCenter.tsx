@@ -1,4 +1,4 @@
-import { Bell, BellRing, Check } from 'lucide-react'
+import { Bell, Check } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useEntitlements } from '../access/useEntitlements'
@@ -10,7 +10,7 @@ import { useWebPush } from './useWebPush'
 export function NotificationCenter({backgroundOnly=false}:{backgroundOnly?:boolean}){
   const entitlement=useEntitlements()
   const businessId=useAuth().membership?.business_id
-  const notifications=useNotifications(true)
+  const notifications=useNotifications(false)
   const conversations=useConversations('','')
   const markRead=useMarkNotificationRead()
   const navigate=useNavigate()
@@ -21,6 +21,8 @@ export function NotificationCenter({backgroundOnly=false}:{backgroundOnly?:boole
   const permissionPrompted=useRef(false)
   const notificationItems=notifications.data?.items
   const items=notificationItems??[]
+  const unreadItems=items.filter(item=>!item.read)
+  const unreadCount=unreadItems.length
   const unreadMessages=(conversations.data?.items??[]).reduce((total,item)=>total+item.unread_count,0)
 
   useEffect(()=>{knownIds.current=null},[businessId])
@@ -63,10 +65,16 @@ export function NotificationCenter({backgroundOnly=false}:{backgroundOnly?:boole
   if(backgroundOnly)return latest?<button className="notification-toast" type="button" onClick={()=>void openItem(latest)}><strong>{latest.title}</strong><span>{latest.body}</span></button>:null
 
   return <div className="notification-center">
-    <button className="notification-center__trigger" type="button" aria-label={unreadMessages?'Notificações — '+unreadMessages+' mensagem(ns) não lida(s)':'Notificações'} aria-expanded={open} onClick={()=>setOpen(value=>!value)}>
-      {items.length||unreadMessages?<BellRing size={21}/>:<Bell size={21}/>}
-      {unreadMessages>0&&<i className="notification-unread-dot" aria-hidden="true"/>}
-      {items.length>0&&<span>{items.length>99?'99+':items.length}</span>}
+    <button className="notification-center__trigger" type="button" aria-label={unreadCount?`Notificações — ${unreadCount} não lida(s)`:'Notificações'} aria-expanded={open} onClick={()=>{
+      const next=!open
+      setOpen(next)
+      if(next&&entitlement.canMutateOperationalData&&unreadItems.length){
+        void Promise.allSettled(unreadItems.map(item=>markRead.mutateAsync(item.id)))
+      }
+    }}>
+      <Bell size={21}/>
+      {unreadCount>0&&<i className="notification-unread-dot" aria-hidden="true"/>}
+      {unreadCount>0&&<span>{unreadCount>99?'99+':unreadCount}</span>}
     </button>
     {open&&<section className="notification-center__panel" aria-label="Notificações recentes">
       <header><strong>Notificações</strong><button type="button" onClick={()=>setOpen(false)} aria-label="Fechar notificações">×</button></header>
@@ -74,7 +82,7 @@ export function NotificationCenter({backgroundOnly=false}:{backgroundOnly?:boole
       {notifications.isError&&<p className="form-error" role="alert">Não foi possível atualizar as notificações.</p>}
       {markRead.isError&&<p className="form-error" role="alert">Não foi possível marcar a notificação como lida.</p>}
       {unreadMessages>0&&<p className="notification-message-summary">{unreadMessages} mensagem(ns) não lida(s) nas conversas.</p>}
-      {!notifications.isPending&&!notifications.isError&&!items.length&&unreadMessages===0&&<p>Nenhuma notificação nova.</p>}
+      {!notifications.isPending&&!notifications.isError&&!items.length&&unreadMessages===0&&<p>Nenhuma notificação recente.</p>}
       {items.map(item=><button className="notification-center__item" type="button" key={item.id} disabled={markRead.isPending} onClick={()=>void openItem(item)}><span><strong>{item.title}</strong><small>{item.body}</small></span>{entitlement.canMutateOperationalData&&<Check size={17}/>}</button>)}
       {webPush.state==='default'&&<div className="notification-permission-callout"><strong>Ative os alertas do navegador</strong><small>Receba avisos de novas mensagens e agendamentos mesmo com o Alovia fechado.</small><button className="compact-button" type="button" disabled={webPush.busy} onClick={()=>void webPush.enable()}>Permitir notificações</button></div>}
       {webPush.state==='active'&&<div className="notification-permission-callout"><strong>Alertas em segundo plano ativos</strong><small>Este aparelho receberá avisos seguros desta empresa.</small><button className="compact-button" type="button" disabled={webPush.busy} onClick={()=>void webPush.disable()}>Desativar neste aparelho</button></div>}
