@@ -389,12 +389,15 @@ function HoursStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
 
 type ServiceDraft={name:string;duration:string;price:string}
 function ServicesStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
-  const services=useServices(),create=useCreateService(),update=useUpdateService(),remove=useDeleteService(),setup=useSetupStatus()
+  const services=useServices(),business=useBusiness(),create=useCreateService(),update=useUpdateService(),updateBusiness=useUpdateBusiness(),remove=useDeleteService(),setup=useSetupStatus()
   const [drafts,setDrafts]=useState<Record<string,ServiceDraft>>({})
   const [adding,setAdding]=useState(false)
   const [newName,setNewName]=useState('')
   const [newDuration,setNewDuration]=useState('60')
   const [newPrice,setNewPrice]=useState('')
+  const [serviceRadius,setServiceRadius]=useState('')
+  const [includedDistance,setIncludedDistance]=useState('15')
+  const [distanceFee,setDistanceFee]=useState('2,40')
   const [addAttempted,setAddAttempted]=useState(false)
   const [saveAttempted,setSaveAttempted]=useState(false)
   const activeServices=useMemo(()=>services.data?.items.filter(item=>item.active)??[],[services.data])
@@ -404,11 +407,22 @@ function ServicesStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
     setDrafts(Object.fromEntries(services.data.items.filter(item=>item.active).map(item=>[item.id,{name:item.name,duration:String(item.duration_minutes),price:item.price==null?'':String(item.price)}])))
   },[services.data])
 
-  if(services.isPending)return <LoadingState/>
-  if(services.isError||!services.data)return <ErrorState onRetry={()=>void services.refetch()}/>
+  useEffect(()=>{
+    if(!business.data)return
+    setServiceRadius(business.data.service_radius_km==null?'':String(business.data.service_radius_km).replace('.',','))
+    setIncludedDistance(String(business.data.service_distance_included_km??15).replace('.',','))
+    setDistanceFee(String(business.data.service_distance_fee_per_km??2.4).replace('.',','))
+  },[business.data])
+
+  if(services.isPending||business.isPending)return <LoadingState/>
+  if(services.isError||business.isError||!services.data||!business.data)return <ErrorState onRetry={()=>{void services.refetch();void business.refetch()}}/>
 
   const newDurationNumber=Number(newDuration)
   const newPriceNumber=parseMoney(newPrice)
+  const radiusNumber=parseOptionalMoney(serviceRadius)
+  const includedDistanceNumber=parseMoney(includedDistance)
+  const distanceFeeNumber=parseMoney(distanceFee)
+  const distanceInvalid=radiusNumber===undefined||includedDistanceNumber===null||distanceFeeNumber===null
   const newInvalid={name:newName.trim().length<2,duration:!Number.isFinite(newDurationNumber)||newDurationNumber<=0,price:newPriceNumber===null}
   const serviceDraftInvalid=(serviceId:string)=>{
     const draft=drafts[serviceId]
@@ -428,25 +442,35 @@ function ServicesStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
   }
   const save=async()=>{
     setSaveAttempted(true)
-    if(catalogInvalid)return false
+    if(catalogInvalid||distanceInvalid)return false
     for(const service of activeServices){
       const draft=drafts[service.id]
       const duration=Number(draft.duration),price=parseMoney(draft.price)
       await update.mutateAsync({id:service.id,values:{name:draft.name.trim(),duration_minutes:duration,price:price!}})
     }
+    await updateBusiness.mutateAsync({
+      service_radius_km:radiusNumber,
+      service_distance_included_km:includedDistanceNumber!,
+      service_distance_fee_per_km:distanceFeeNumber!,
+    })
     await setup.refetch()
     setSaveAttempted(false)
     return true
   }
   const continueStep=async()=>{
-    if(adding){
-      setAddAttempted(true)
-      return
-    }
+    if(adding){setAddAttempted(true);return}
     if(await save())onNext()
   }
 
-  return <StepCard number={4} title="Catálogo de serviços" description="Revise os serviços que sua empresa realmente oferece. Nome, preço e duração média ajudam o ALOVIA a entender o pedido e montar a agenda corretamente.">
+  return <StepCard number={4} title="Catálogo de serviços" description="Revise os serviços que sua empresa oferece e defina a área de atendimento. O raio pode ficar vazio; o padrão de deslocamento cobra R$ 2,40 por KM excedente acima de 15 KM.">
+    <section className="onboarding-distance-card">
+      <div className="form-grid">
+        <label>Raio de atendimento (KM) <span className="optional-label">opcional</span><input className={saveAttempted&&radiusNumber===undefined?'field-invalid':''} inputMode="decimal" value={serviceRadius} onChange={event=>setServiceRadius(event.target.value)} placeholder="Sem limite"/><small>Deixe vazio para não limitar a distância máxima.</small></label>
+        <label><RequiredLabel>Distância incluída no serviço (KM)</RequiredLabel><input className={saveAttempted&&includedDistanceNumber===null?'field-invalid':''} inputMode="decimal" value={includedDistance} onChange={event=>setIncludedDistance(event.target.value)} placeholder="15"/></label>
+      </div>
+      <label><RequiredLabel>Taxa adicional de distância (R$/KM)</RequiredLabel><input className={saveAttempted&&distanceFeeNumber===null?'field-invalid':''} inputMode="decimal" value={distanceFee} onChange={event=>setDistanceFee(event.target.value)} placeholder="2,40"/><small>A taxa é aplicada somente sobre os quilômetros que excederem a distância incluída.</small></label>
+      {saveAttempted&&distanceInvalid&&<FieldError>Revise os valores de raio, distância incluída e taxa por KM.</FieldError>}
+    </section>
     <div className="catalog-toolbar"><button className="compact-button" type="button" onClick={()=>{setAdding(value=>!value);setAddAttempted(false)}}><Plus size={16}/>Adicionar serviço</button></div>
     {adding&&<div className="catalog-add-card">
       <label><RequiredLabel>Serviço</RequiredLabel><input className={addAttempted&&newInvalid.name?'field-invalid':''} value={newName} onChange={event=>setNewName(event.target.value)} placeholder="Ex.: Instalação de split"/>{addAttempted&&newInvalid.name&&<FieldError>Informe o nome do serviço.</FieldError>}</label>
@@ -472,9 +496,9 @@ function ServicesStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
     </div>
     {saveAttempted&&catalogInvalid&&<p className="form-error" role="alert">Preencha todos os campos obrigatórios de todos os serviços antes de salvar ou continuar.</p>}
     {addAttempted&&adding&&(newInvalid.name||newInvalid.duration||newInvalid.price)&&<p className="form-error" role="alert">Conclua o novo serviço ou feche o formulário de adição antes de continuar.</p>}
-    {(create.isError||update.isError||remove.isError)&&<MutationError/>}
-    <button className="primary-button onboarding-save-all" type="button" disabled={update.isPending||!activeServices.length} onClick={()=>void save()}><Save size={17}/>{update.isPending?'Salvando…':'Salvar serviços'}</button>
-    <StepActions onBack={onBack} onNext={()=>void continueStep()} nextDisabled={update.isPending||create.isPending||remove.isPending||!activeServices.length}/>
+    {(create.isError||update.isError||updateBusiness.isError||remove.isError)&&<MutationError/>}
+    <button className="primary-button onboarding-save-all" type="button" disabled={update.isPending||updateBusiness.isPending||!activeServices.length} onClick={()=>void save()}><Save size={17}/>{update.isPending||updateBusiness.isPending?'Salvando…':'Salvar serviços'}</button>
+    <StepActions onBack={onBack} onNext={()=>void continueStep()} nextDisabled={update.isPending||updateBusiness.isPending||create.isPending||remove.isPending||!activeServices.length}/>
   </StepCard>
 }
 
@@ -679,6 +703,7 @@ function AutoInput({label,value,setValue,unit,step='1'}:{label:string;value:stri
 
 function materialDraft(item:CatalogItem):MaterialDraft{return {name:item.name,description:item.description??'',price:item.price==null?'':String(item.price),unit:item.unit_label??'unidade',kind:item.kind}}
 function parseMoney(value:string){if(!value.trim())return null;const parsed=Number(value.replace(',','.'));return Number.isFinite(parsed)&&parsed>=0?parsed:null}
+function parseOptionalMoney(value:string){if(!value.trim())return null;const parsed=Number(value.replace(',','.'));return Number.isFinite(parsed)&&parsed>=0?parsed:undefined}
 function optionalNumber(value:string){if(value.trim()==='')return null;const parsed=Number(value);return Number.isFinite(parsed)&&parsed>=0?parsed:null}
 function numberOrBlank(value:number|null){return value==null?'':String(value)}
 function MutationError(){return <p className="form-error" role="alert">Não foi possível concluir esta ação. Revise os dados e tente novamente.</p>}
