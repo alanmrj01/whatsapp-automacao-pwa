@@ -29,6 +29,7 @@ export type DemoAppointment = {
   service: string
   technician: string
   status: DemoAppointmentStatus
+  rescheduled?: boolean
   notes: string
   conversationId: string
 }
@@ -109,7 +110,7 @@ export const demoConversations: DemoConversation[] = [
 export const demoAppointments: DemoAppointment[] = [
   {id:'appointment-1',date:demoToday,time:'11:30',customer:'Loja Centro',phone:'(12) 99999-0101',service:'Manutenção preventiva',technician:'Marina',status:'confirmed',notes:'Revisar três aparelhos no endereço informado.',conversationId:'conversation-1'},
   {id:'appointment-2',date:demoToday,time:'14:30',customer:'Ana Paula',phone:'(12) 99999-0202',service:'Limpeza completa',technician:'João',status:'confirmed',notes:'Atendimento confirmado na Rua das Flores, 45.',conversationId:'conversation-4'},
-  {id:'appointment-3',date:demoTomorrow,time:'10:00',customer:'Juliana Rocha',phone:'(12) 99999-0303',service:'Visita técnica',technician:'Marina',status:'confirmed',notes:'Reagendado a pedido da cliente; endereço mantido.',conversationId:'conversation-5'},
+  {id:'appointment-3',date:demoTomorrow,time:'10:00',customer:'Juliana Rocha',phone:'(12) 99999-0303',service:'Visita técnica',technician:'Marina',status:'confirmed',rescheduled:true,notes:'Reagendado a pedido da cliente; endereço mantido.',conversationId:'conversation-5'},
 ]
 
 export const demoOverview = {
