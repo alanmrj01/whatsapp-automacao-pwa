@@ -1,4 +1,4 @@
-import { CalendarDays, CalendarPlus2, ChevronLeft, ChevronRight, Clock3, List, UserRound } from 'lucide-react'
+import { CalendarDays, CalendarPlus2, ChevronLeft, ChevronRight, Clock3, List, RotateCcw, UserRound } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { BottomSheet } from '../../components/BottomSheet'
@@ -13,8 +13,8 @@ import { DemoDataNotice } from '../access/DemoDataNotice'
 import { useEntitlements } from '../access/useEntitlements'
 import { useUpgradePrompt } from '../access/upgradePromptContext'
 import { useAuth } from '../auth/useAuth'
-import { useAppointment, useAppointments, useAppointmentsRange, useBusiness, useCancelAppointment, useCreateCustomer, useCustomers, useEmployees, useSaveAppointment, useServices } from '../operations/api'
-import type { Appointment, AppointmentStatus } from '../operations/types'
+import { useAppointment, useAppointments, useAppointmentsRange, useBusiness, useCancelAppointment, useCreateCustomer, useCustomers, useEmployees, usePendingReschedules, useRequestAppointmentReschedule, useSaveAppointment, useServices } from '../operations/api'
+import type { Appointment, AppointmentRescheduleResult, AppointmentStatus } from '../operations/types'
 import { zonedDateTimeToIso } from '../operations/timezone'
 import './agenda-calendar.css'
 
@@ -133,7 +133,7 @@ export function AgendaPage() {
       <DayHeader selectedDate={selectedDate} onBack={()=>setView(calendarMode)} onPrevious={()=>setSelectedDate(value=>moveDate(value,-1))} onNext={()=>setSelectedDate(value=>moveDate(value,1))}/>
       <div className="section-title-row"><h2>{dayAppointments.length} {dayAppointments.length===1?'atendimento':'atendimentos'}</h2><InfoHelp title="Agenda de demonstração">Os exemplos são somente leitura e nunca são enviados ao backend.</InfoHelp></div>
       {dayAppointments.length ? <section className="agenda-list">
-        {dayAppointments.map(item=><article className={item.status==='cancelled'?'agenda-row is-cancelled':'agenda-row'} key={item.id}>
+        {dayAppointments.map(item=><article className={item.status==='cancelled'?'agenda-row is-cancelled':item.rescheduled?'agenda-row is-rescheduled':'agenda-row'} key={item.id}>
           <button type="button" onClick={()=>setSelectedDemo(item)} aria-label={`Ver agendamento fictício de ${item.customer}`}>
             <time>{item.time}</time>
             <div><strong>{item.customer}</strong><span>{item.service}</span><small><UserRound size={14}/>{item.technician||'Sem responsável'}</small></div>
@@ -156,10 +156,33 @@ export function AgendaPage() {
         <button className="demo-locked-action" type="button" onClick={()=>{setSelectedDemo(null);openUpgrade('Alterar ou reagendar um atendimento')}}>Alterar agendamento</button>
       </div>}
     </BottomSheet>
+
+    <BottomSheet
+      open={!!rescheduleAppointment}
+      title="Reagendar atendimento"
+      description="Você pode informar uma preferência ou deixar dia e horário em branco para o cliente escolher entre as disponibilidades reais."
+      onClose={()=>{setRescheduleAppointment(null);setRescheduleConflict(null);setRescheduleError('')}}
+    >
+      {rescheduleAppointment&&<div className="reschedule-form">
+        <div className="account-note"><strong>Como funciona</strong><span>Ao iniciar, o horário atual é liberado imediatamente e o atendimento vai para Pendências de reagendamento. Sem preferência, o cliente escolhe data e horário. Com preferência, ele recebe a sugestão para confirmar; se recusar, recebe as alternativas disponíveis.</span></div>
+        <div className="form-grid">
+          <label>Dia preferencial <span className="optional-label">opcional</span><input type="date" value={preferredDate} onChange={event=>{setPreferredDate(event.target.value);setRescheduleConflict(null)}}/></label>
+          <label>Horário preferencial <span className="optional-label">opcional</span><input type="time" value={preferredTime} onChange={event=>{setPreferredTime(event.target.value);setRescheduleConflict(null)}}/></label>
+        </div>
+        {rescheduleConflict?.reason==='appointment_conflict'&&<section className="priority-conflict-card" role="alert">
+          <strong>Esse horário conflita com atendimento(s) já confirmado(s).</strong>
+          <span>Ao priorizar este cliente, o ALOVIA libera um técnico movendo o atendimento conflitante para a fila de reagendamento. O outro cliente também será avisado para escolher um novo horário.</span>
+          <ul>{rescheduleConflict.conflicts.map(item=><li key={item.appointment_id}>{item.customer_name} · {item.service_name} · {new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',timeZone:timezone}).format(new Date(item.starts_at))}</li>)}</ul>
+          <button className="danger-button" type="button" disabled={requestReschedule.isPending} onClick={()=>void submitReschedule(true)}>Sim, priorizar e iniciar reagendamento duplo</button>
+        </section>}
+        {rescheduleError&&<p className="form-error" role="alert">{rescheduleError}</p>}
+        <div className="form-actions"><button className="secondary-button" type="button" onClick={()=>setRescheduleAppointment(null)}>Voltar</button><button className="primary-button" type="button" disabled={requestReschedule.isPending||rescheduleConflict?.reason==='appointment_conflict'} onClick={()=>void submitReschedule(false)}>{requestReschedule.isPending?'Iniciando…':'Iniciar reagendamento'}</button></div>
+      </div>}
+    </BottomSheet>
   </div>
 }
 
-type CalendarItem={id:string;time:string;service:string;status:DemoAppointmentStatus}
+type CalendarItem={id:string;time:string;service:string;status:DemoAppointmentStatus;rescheduled?:boolean}
 
 function CalendarToolbar({mode,selectedDate,onMode,onPrevious,onNext,onToday}:{mode:CalendarMode;selectedDate:string;onMode:(mode:CalendarMode)=>void;onPrevious:()=>void;onNext:()=>void;onToday:()=>void}) {
   return <section className="agenda-calendar-toolbar" aria-label="Controles do calendário">
@@ -187,7 +210,7 @@ function AgendaCalendar({days,month,selectedDate,appointmentsFor,onSelect,mode}:
         return <button type="button" className={`agenda-calendar__day ${outside?'is-outside':''} ${date===today?'is-today':''} ${date===selectedDate?'is-selected':''}`} onClick={()=>onSelect(date)} key={date} aria-label={`${readableDate(date)}, ${items.length} atendimento(s)`}>
           <span className="agenda-calendar__date">{Number(date.slice(-2))}</span>
           <div className="agenda-calendar__events">
-            {items.slice(0,mode==='week'?4:3).map(item=><span className="agenda-calendar__event" key={item.id}><time>{item.time}</time><strong>{item.service}</strong></span>)}
+            {items.slice(0,mode==='week'?4:3).map(item=><span className={item.rescheduled?'agenda-calendar__event is-rescheduled':'agenda-calendar__event'} key={item.id}><time>{item.time}</time><strong>{item.service}</strong></span>)}
             {items.length>(mode==='week'?4:3)&&<span className="agenda-calendar__more">+{items.length-(mode==='week'?4:3)} atendimento(s)</span>}
           </div>
         </button>
@@ -251,6 +274,7 @@ function RealAgenda({selectedDate,setSelectedDate,canMutate,initialView,setOuter
   const rangeEnds=business.data?zonedDateTimeToIso(range.end,'00:00',timezone):''
   const calendarAppointments=useAppointmentsRange(rangeStarts,rangeEnds,view!=='day'&&!!business.data)
   const appointments=useAppointments(selectedDate)
+  const pendingReschedules=usePendingReschedules()
   const requestedAppointmentId=searchParams.get('appointment')
   const requestedAppointment=useAppointment(requestedAppointmentId)
   const customers=useCustomers()
@@ -258,8 +282,15 @@ function RealAgenda({selectedDate,setSelectedDate,canMutate,initialView,setOuter
   const employees=useEmployees()
   const save=useSaveAppointment()
   const cancel=useCancelAppointment()
+  const requestReschedule=useRequestAppointmentReschedule()
   const createCustomer=useCreateCustomer()
   const [draft,setDraft]=useState<RealDraft|null>(null)
+  const [activeAppointment,setActiveAppointment]=useState<Appointment|null>(null)
+  const [rescheduleAppointment,setRescheduleAppointment]=useState<Appointment|null>(null)
+  const [preferredDate,setPreferredDate]=useState('')
+  const [preferredTime,setPreferredTime]=useState('')
+  const [rescheduleError,setRescheduleError]=useState('')
+  const [rescheduleConflict,setRescheduleConflict]=useState<AppointmentRescheduleResult|null>(null)
   const [error,setError]=useState('')
 
   useEffect(()=>{
@@ -270,6 +301,7 @@ function RealAgenda({selectedDate,setSelectedDate,canMutate,initialView,setOuter
     setView('day')
     setOuterView('day')
     setDraft(realDraft(date,timezone,appointment))
+    setActiveAppointment(appointment)
     setSearchParams({}, {replace:true})
   },[requestedAppointmentId,requestedAppointment.data,business.data,timezone,setOuterView,setSearchParams,setSelectedDate])
 
@@ -277,7 +309,7 @@ function RealAgenda({selectedDate,setSelectedDate,canMutate,initialView,setOuter
   const requestedNew=canEdit&&searchParams.get('action')==='new'
   const requestedCustomer=searchParams.get('customer')??''
   const visibleDraft=draft??(requestedNew?realDraft(selectedDate,timezone,undefined,requestedCustomer):null)
-  const closeDraft=()=>{setDraft(null);if(requestedNew)setSearchParams({}, {replace:true})}
+  const closeDraft=()=>{setDraft(null);setActiveAppointment(null);if(requestedNew)setSearchParams({}, {replace:true})}
   const update=<K extends keyof RealDraft>(key:K,value:RealDraft[K])=>setDraft(current=>({...((current??visibleDraft) as RealDraft),[key]:value}))
   const submit=async(event:FormEvent)=>{
     event.preventDefault()
@@ -309,14 +341,62 @@ function RealAgenda({selectedDate,setSelectedDate,canMutate,initialView,setOuter
     time:timeValue(item.starts_at,timezone),
     service:item.service_name,
     status:item.status,
+    rescheduled:item.rescheduled,
   }))
 
   const selectDay=(date:string)=>{setSelectedDate(date);setView('day');setOuterView('day')}
   const setCalendar=(mode:CalendarMode)=>{setCalendarMode(mode);setView(mode);setOuterView(mode)}
+  const pendingItems=pendingReschedules.data?.items??[]
+
+  const beginReschedule=(appointment:Appointment)=>{
+    setRescheduleAppointment(appointment)
+    setPreferredDate('')
+    setPreferredTime('')
+    setRescheduleError('')
+    setRescheduleConflict(null)
+    setDraft(null)
+    setActiveAppointment(null)
+  }
+
+  const submitReschedule=async(forceConflicts=false)=>{
+    if(!rescheduleAppointment)return
+    setRescheduleError('')
+    if((preferredDate&&!preferredTime)||(!preferredDate&&preferredTime)){
+      setRescheduleError('Preencha dia e horário juntos ou deixe os dois campos em branco.')
+      return
+    }
+    try{
+      const preferred=preferredDate&&preferredTime
+        ?zonedDateTimeToIso(preferredDate,preferredTime,timezone)
+        :null
+      const result=await requestReschedule.mutateAsync({
+        id:rescheduleAppointment.id,
+        preferred_starts_at:preferred,
+        force_conflicts:forceConflicts,
+      })
+      if(result.status==='conflict'){
+        setRescheduleConflict(result)
+        if(result.reason==='slot_unavailable'){
+          setRescheduleError('Esse horário não pode ser priorizado porque não é um horário operacional disponível. Escolha outro dia/horário ou deixe os campos em branco.')
+        }
+        return
+      }
+      setRescheduleAppointment(null)
+      setRescheduleConflict(null)
+    }catch{
+      setRescheduleError('Não foi possível iniciar o reagendamento. Tente novamente.')
+    }
+  }
 
   return <div className="page-stack operational-page compact-page">
     <section className="operational-heading"><div><span className="eyebrow">Planejamento real</span><h1>Agenda</h1></div>{canEdit&&<button className="compact-button" type="button" onClick={()=>{setView('day');setOuterView('day');setDraft(realDraft(selectedDate,timezone))}}><CalendarPlus2 size={18}/>Novo</button>}</section>
     {!canMutate&&<section className="account-note" role="status"><strong>Agenda preservada</strong><span>Você pode consultar seus atendimentos. Alterações ficam disponíveis com uma assinatura ativa.</span></section>}
+
+    {pendingItems.length>0&&<section className="reschedule-pending-section" aria-labelledby="reschedule-pending-title">
+      <div className="section-title-row"><div><span className="eyebrow">Aguardando cliente</span><h2 id="reschedule-pending-title">Pendências de reagendamento</h2></div><span className="reschedule-pending-count">{pendingItems.length}</span></div>
+      <p>Esses atendimentos estão com o horário anterior liberado e não ocupam capacidade na agenda.</p>
+      <div className="reschedule-pending-list">{pendingItems.map(item=><button type="button" key={item.id} onClick={()=>{setActiveAppointment(item);setDraft(realDraft(dateValue(item.starts_at,timezone),timezone,item))}}><RotateCcw size={17}/><span><strong>{item.customer_name}</strong><small>{item.service_name}{item.reschedule_preferred_starts_at?` · preferência ${new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',timeZone:timezone}).format(new Date(item.reschedule_preferred_starts_at))}`:''}</small></span><StatusBadge tone="warning">Reagendamento</StatusBadge></button>)}</div>
+    </section>}
 
     {view!=='day'?<>
       <CalendarToolbar
@@ -338,7 +418,7 @@ function RealAgenda({selectedDate,setSelectedDate,canMutate,initialView,setOuter
       {(appointments.isPending||business.isPending)&&<LoadingState/>}
       {(appointments.isError||business.isError)&&<ErrorState onRetry={()=>{void appointments.refetch();void business.refetch()}}/>}
       {appointments.data&&business.data&&<><div className="section-title-row"><h2>{items.length} {items.length===1?'atendimento':'atendimentos'}</h2><InfoHelp title="Agenda operacional">Os dados exibidos pertencem à empresa ativa e permanecem preservados mesmo quando o acesso operacional está pausado.</InfoHelp></div>
-        {items.length?<section className="agenda-list">{items.map(item=><article className={item.status==='cancelled'?'agenda-row is-cancelled':'agenda-row'} key={item.id}><button type="button" onClick={()=>setDraft(realDraft(selectedDate,timezone,item))} aria-label={`Abrir agendamento de ${item.customer_name}`}><time>{timeValue(item.starts_at,timezone)}</time><div><strong>{item.customer_name}</strong><span>{item.service_name}</span><small><UserRound size={14}/>{item.employee_name}</small></div><StatusBadge tone={statusTones[item.status]}>{statusLabels[item.status]}</StatusBadge></button></article>)}</section>
+        {items.length?<section className="agenda-list">{items.map(item=><article className={item.status==='cancelled'?'agenda-row is-cancelled':'agenda-row'} key={item.id}><button type="button" onClick={()=>{setActiveAppointment(item);setDraft(realDraft(selectedDate,timezone,item))}} aria-label={`Abrir agendamento de ${item.customer_name}`}><time>{timeValue(item.starts_at,timezone)}</time><div><strong>{item.customer_name}</strong><span>{item.service_name}</span><small><UserRound size={14}/>{item.employee_name}</small></div><span className="agenda-row__status">{item.rescheduled&&<small className="rescheduled-badge">Reagendado</small>}<StatusBadge tone={statusTones[item.status]}>{statusLabels[item.status]}</StatusBadge></span></button></article>)}</section>
         :<EmptyState icon={Clock3} title="Dia livre" description={canEdit?'Crie um agendamento para esta data.':'Nenhum atendimento nesta data.'} action={canEdit?<button className="primary-button" type="button" onClick={()=>setDraft(realDraft(selectedDate,timezone))}>Novo agendamento</button>:undefined}/>}</>}
     </>}
 
@@ -358,7 +438,11 @@ function RealAgenda({selectedDate,setSelectedDate,canMutate,initialView,setOuter
         <label>Status<select value={visibleDraft.status} onChange={event=>update('status',event.target.value as AppointmentStatus)}>{Object.entries(statusLabels).map(([value,label])=><option value={value} key={value}>{label}</option>)}</select></label>
         <label>Observações<textarea rows={3} maxLength={2000} value={visibleDraft.notes} onChange={event=>update('notes',event.target.value)}/></label>
         {error&&<p className="form-error" role="alert">{error}</p>}
-        <div className="form-actions">{visibleDraft.id&&visibleDraft.status!=='cancelled'&&<button className="danger-button" type="button" disabled={cancel.isPending} onClick={()=>cancel.mutate(visibleDraft.id!,{onSuccess:closeDraft,onError:()=>setError('Não foi possível cancelar o agendamento.')})}>Cancelar agendamento</button>}<button className="primary-button" type="submit" disabled={save.isPending||createCustomer.isPending}>Salvar</button></div>
+        <div className="form-actions">
+          {activeAppointment?.status==='confirmed'&&<button className="secondary-button" type="button" onClick={()=>beginReschedule(activeAppointment)}><RotateCcw size={16}/>Reagendar atendimento</button>}
+          {visibleDraft.id&&visibleDraft.status!=='cancelled'&&!activeAppointment?.reschedule_pending&&<button className="danger-button" type="button" disabled={cancel.isPending} onClick={()=>cancel.mutate(visibleDraft.id!,{onSuccess:closeDraft,onError:()=>setError('Não foi possível cancelar o agendamento.')})}>Cancelar agendamento</button>}
+          {!activeAppointment?.reschedule_pending&&<button className="primary-button" type="submit" disabled={save.isPending||createCustomer.isPending}>Salvar</button>}
+        </div>
       </form>}
     </BottomSheet>
   </div>
