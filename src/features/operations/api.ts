@@ -6,6 +6,7 @@ import { entitlementsFor, requirePaidAccess } from '../access/entitlements'
 import type {
   Appointment,
   AppointmentInput,
+  AppointmentRescheduleResult,
   AssistantExclusion,
   AutomationSettings,
   Business,
@@ -101,6 +102,31 @@ export function useAppointment(id:string|null) {
     queryFn:({signal})=>api.request<Appointment>(`/appointments/${id}`,{signal}),
     enabled:context.enabled&&!!id,
     retry:false,
+  })
+}
+export function usePendingReschedules() {
+  const context=usePaidContext()
+  return useQuery({
+    queryKey:[...root(context.businessId),'reschedule-pending'],
+    queryFn:({signal})=>api.request<{items:Appointment[]}>('/appointments/reschedule-pending',{signal}),
+    enabled:context.enabled,
+    retry:false,
+    placeholderData:previous=>previous,
+    refetchInterval:15_000,
+    refetchIntervalInBackground:false,
+  })
+}
+export function useRequestAppointmentReschedule() {
+  const context=usePaidContext()
+  return useMutation({
+    mutationFn:({id,preferred_starts_at,force_conflicts=false}:{id:string;preferred_starts_at:string|null;force_conflicts?:boolean})=>paidMutation(
+      context,
+      ()=>api.request<AppointmentRescheduleResult>(`/appointments/${id}/reschedule-request`,{
+        method:'POST',
+        body:json({preferred_starts_at,force_conflicts}),
+      }),
+    ),
+    onSuccess:()=>invalidate(context.businessId,'appointments','appointments-range','reschedule-pending','dashboard','conversations','notifications'),
   })
 }
 export function useAppointmentsRange(startsAt:string,endsBefore:string,enabled=true) {
