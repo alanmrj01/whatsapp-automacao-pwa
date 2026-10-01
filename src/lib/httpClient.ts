@@ -1,11 +1,14 @@
 export class ApiError extends Error {
   status: number
-  constructor(status: number) {
-    super(status === 401 ? 'Sua sessão expirou. Entre novamente.' :
+  detail?: string
+  constructor(status: number, detail?: string) {
+    const fallback = status === 401 ? 'Sua sessão expirou. Entre novamente.' :
       status === 403 ? 'Você não tem permissão para esta ação.' :
-      'Não foi possível concluir. Verifique sua conexão e tente novamente.')
+      'Não foi possível concluir. Verifique sua conexão e tente novamente.'
+    super(detail?.trim() || fallback)
     this.name = 'ApiError'
     this.status = status
+    this.detail = detail
   }
 }
 
@@ -57,7 +60,16 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
   }
 
   async function body<T>(response: Response): Promise<T> {
-    if (!response.ok) throw new ApiError(response.status)
+    if (!response.ok) {
+      let detail: string | undefined
+      try {
+        const payload = await response.clone().json() as {detail?: unknown}
+        if (typeof payload.detail === 'string') detail = payload.detail
+      } catch {
+        // Preserve the sanitized local fallback when the response is not JSON.
+      }
+      throw new ApiError(response.status, detail)
+    }
     if (response.status === 204) return undefined as T
     try { return await response.json() as T } catch { throw new ApiError(502) }
   }
