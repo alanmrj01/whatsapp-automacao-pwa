@@ -21,6 +21,13 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
   const base = baseUrl.replace(/\/$/, '') + '/api/v1'
 
   function clear() { token = null; blocked = true; generation++ }
+  function resume() {
+    // Used only by the explicit "Reconectar" recovery screen. A transient
+    // background failure must not require closing/reopening the PWA.
+    token = null
+    blocked = false
+    generation++
+  }
   function expire() { clear(); onExpired() }
 
   async function raw(
@@ -145,7 +152,7 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
   }
 
   return {
-    request, requestBlob, refresh, clear,
+    request, requestBlob, refresh, clear, resume,
     onExpired(listener: () => void) { onExpired = listener },
     async login<T = unknown>(email: string, password: string) {
       return startAuthentication<T>('/auth/login', {email,password})
