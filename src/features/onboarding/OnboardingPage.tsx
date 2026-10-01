@@ -27,9 +27,10 @@ import {
   useUpdateBusinessHours,
   useUpdateCatalogItem,
   useUpdateEmployee,
+  useUpdateEmployeeServices,
   useUpdateService,
 } from '../operations/api'
-import type { CatalogItem } from '../operations/types'
+import type { CatalogItem, Employee, OperationalRole, Service } from '../operations/types'
 import { ConnectWhatsAppSheet } from '../whatsapp/ConnectWhatsAppSheet'
 import { ConnectionStatusBadge } from '../whatsapp/ConnectionStatusBadge'
 import { useConnection } from '../whatsapp/useConnection'
@@ -233,49 +234,95 @@ function CompanyStep({onNext}:{onNext:()=>void}){
 }
 
 function TeamStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
-  const employees=useEmployees(),create=useCreateEmployee(),update=useUpdateEmployee(),remove=useDeleteEmployee(),setup=useSetupStatus()
+  const employees=useEmployees(),services=useServices(),create=useCreateEmployee(),update=useUpdateEmployee(),updateServices=useUpdateEmployeeServices(),remove=useDeleteEmployee(),setup=useSetupStatus()
   const [name,setName]=useState('')
-  const [editingId,setEditingId]=useState<string|null>(null)
-  const [editingName,setEditingName]=useState('')
+  const [role,setRole]=useState<'technician'|'assistant'>('technician')
+  const [serviceIds,setServiceIds]=useState<string[]>([])
   const [attempted,setAttempted]=useState(false)
-  const technicians=employees.data?.items.filter(item=>item.active&&item.operational_role==='technician')??[]
-  if(employees.isPending)return <LoadingState/>
-  if(employees.isError||!employees.data)return <ErrorState onRetry={()=>void employees.refetch()}/>
+  const activeServices=services.data?.items.filter(item=>item.active)??[]
+  const professionals=employees.data?.items.filter(item=>item.active&&item.operational_role!=='administrator')??[]
+  const technicians=professionals.filter(item=>item.operational_role==='technician')
+
+  useEffect(()=>{
+    if(role==='assistant'){if(serviceIds.length)setServiceIds([]);return}
+    if(activeServices.length&&!serviceIds.length)setServiceIds(activeServices.map(item=>item.id))
+  },[role,activeServices.length])
+
+  if(employees.isPending||services.isPending)return <LoadingState/>
+  if(employees.isError||services.isError||!employees.data||!services.data)return <ErrorState onRetry={()=>{void employees.refetch();void services.refetch()}}/>
 
   const add=async()=>{
     setAttempted(true)
     if(name.trim().length<2)return
-    await create.mutateAsync({name:name.trim(),operational_role:'technician'})
-    setName('')
-    setAttempted(false)
+    const created=await create.mutateAsync({name:name.trim(),operational_role:role})
+    if(role==='technician'&&activeServices.length&&serviceIds.length!==activeServices.length){
+      await updateServices.mutateAsync({id:created.id,service_ids:serviceIds})
+    }
+    setName('');setRole('technician');setServiceIds(activeServices.map(item=>item.id));setAttempted(false)
     await setup.refetch()
   }
-  const saveEdit=async(id:string)=>{
-    if(editingName.trim().length<2)return
-    await update.mutateAsync({id,values:{name:editingName.trim()}})
-    setEditingId(null);setEditingName('')
-  }
-  const deleteTechnician=async(id:string)=>{
+  const deleteProfessional=async(id:string)=>{
     await remove.mutateAsync(id)
-    if(editingId===id){setEditingId(null);setEditingName('')}
     await setup.refetch()
   }
 
-  return <StepCard number={2} title="Técnico responsável" description="Cadastre pelo menos um técnico. Ele poderá ser alocado a qualquer serviço.">
+  return <StepCard number={2} title="Técnicos" description="Cadastre pelo menos um técnico. Técnicos ocupam capacidade própria na agenda; auxiliares trabalham junto com um técnico e não geram horários extras.">
     <div className="onboarding-form">
-      <label><RequiredLabel>Nome do técnico</RequiredLabel><div className="inline-create"><input className={attempted&&name.trim().length<2?'field-invalid':''} aria-invalid={attempted&&name.trim().length<2} value={name} onChange={event=>setName(event.target.value)} placeholder="Nome do profissional"/><button className="compact-button" type="button" disabled={create.isPending} onClick={()=>void add()}><Plus size={16}/>Adicionar</button></div>{attempted&&name.trim().length<2&&<FieldError>Informe o nome do técnico.</FieldError>}</label>
-      {technicians.length>0&&<div className="technician-list">{technicians.map(item=><div className="technician-row" key={item.id}>
-        {editingId===item.id?<input className={editingName.trim().length<2?'field-invalid':''} value={editingName} onChange={event=>setEditingName(event.target.value)} autoFocus/>:<span><Check size={16}/><strong>{item.name}</strong></span>}
-        <div className="row-icon-actions">
-          {editingId===item.id?<button className="icon-edit-button" type="button" aria-label={`Salvar nome de ${item.name}`} disabled={update.isPending||editingName.trim().length<2} onClick={()=>void saveEdit(item.id)}><Check size={17}/></button>:<button className="icon-edit-button" type="button" aria-label={`Editar ${item.name}`} onClick={()=>{setEditingId(item.id);setEditingName(item.name)}}><Pencil size={17}/></button>}
-          <button className="icon-danger-button" type="button" aria-label={`Excluir ${item.name}`} disabled={remove.isPending} onClick={()=>void deleteTechnician(item.id)}><Trash2 size={17}/></button>
-        </div>
-      </div>)}</div>}
-      {attempted&&!technicians.length&&<p className="form-error" role="alert">Adicione pelo menos um técnico para continuar.</p>}
-      {(create.isError||update.isError||remove.isError)&&<MutationError/>}
-      <StepActions onBack={onBack} onNext={()=>{setAttempted(true);if(technicians.length)onNext()}} nextDisabled={create.isPending||update.isPending||remove.isPending} nextLabel="Próxima etapa"/>
+      <label><RequiredLabel>Nome</RequiredLabel><input className={attempted&&name.trim().length<2?'field-invalid':''} aria-invalid={attempted&&name.trim().length<2} value={name} onChange={event=>setName(event.target.value)} placeholder="Nome do profissional"/>{attempted&&name.trim().length<2&&<FieldError>Informe o nome do profissional.</FieldError>}</label>
+      <label><RequiredLabel>Cargo</RequiredLabel><select value={role} onChange={event=>setRole(event.target.value as 'technician'|'assistant')}><option value="technician">Técnico</option><option value="assistant">Auxiliar</option></select></label>
+      {role==='technician'&&<OnboardingServiceSelector services={activeServices} selected={serviceIds} onChange={setServiceIds}/>}
+      <button className="compact-button" type="button" disabled={create.isPending||updateServices.isPending||!name.trim()} onClick={()=>void add()}><Plus size={16}/>{create.isPending?'Adicionando…':'Adicionar profissional'}</button>
+      {professionals.length>0&&<div className="technician-list">{professionals.map(item=><OnboardingProfessionalEditor key={item.id} employee={item} services={activeServices} update={update} updateServices={updateServices} remove={()=>void deleteProfessional(item.id)}/>)}</div>}
+      {attempted&&!technicians.length&&<p className="form-error" role="alert">Adicione pelo menos um técnico para continuar. Auxiliares não contam como capacidade individual.</p>}
+      {(create.isError||update.isError||updateServices.isError||remove.isError)&&<MutationError/>}
+      <StepActions onBack={onBack} onNext={()=>{setAttempted(true);if(technicians.length)onNext()}} nextDisabled={create.isPending||update.isPending||updateServices.isPending||remove.isPending} nextLabel="Próxima etapa"/>
     </div>
   </StepCard>
+}
+
+function OnboardingProfessionalEditor({
+  employee,services,update,updateServices,remove,
+}:{
+  employee:Employee
+  services:Service[]
+  update:ReturnType<typeof useUpdateEmployee>
+  updateServices:ReturnType<typeof useUpdateEmployeeServices>
+  remove:()=>void
+}){
+  const [editing,setEditing]=useState(false)
+  const [name,setName]=useState(employee.name)
+  const [role,setRole]=useState<'technician'|'assistant'>(employee.operational_role==='assistant'?'assistant':'technician')
+  const [serviceIds,setServiceIds]=useState(employee.service_ids)
+
+  useEffect(()=>{setServiceIds(employee.service_ids)},[employee.service_ids.join('|')])
+
+  const save=async()=>{
+    if(name.trim().length<2)return
+    await update.mutateAsync({id:employee.id,values:{name:name.trim(),operational_role:role as OperationalRole}})
+    if(role==='technician')await updateServices.mutateAsync({id:employee.id,service_ids:serviceIds})
+    setEditing(false)
+  }
+
+  return <div className="technician-row technician-row--stacked">
+    <div className="technician-row__main">
+      <span><Check size={16}/><strong>{employee.name}</strong><small>{employee.operational_role==='assistant'?'Auxiliar':'Técnico'}</small></span>
+      <div className="row-icon-actions">
+        <button className="icon-edit-button" type="button" aria-label={`Editar ${employee.name}`} onClick={()=>setEditing(value=>!value)}><Pencil size={17}/></button>
+        <button className="icon-danger-button" type="button" aria-label={`Excluir ${employee.name}`} onClick={remove}><Trash2 size={17}/></button>
+      </div>
+    </div>
+    {editing&&<div className="onboarding-inline-editor">
+      <label><RequiredLabel>Nome</RequiredLabel><input value={name} onChange={event=>setName(event.target.value)}/></label>
+      <label><RequiredLabel>Cargo</RequiredLabel><select value={role} onChange={event=>{const next=event.target.value as 'technician'|'assistant';setRole(next);if(next==='assistant')setServiceIds([]);else if(!serviceIds.length)setServiceIds(services.map(item=>item.id))}}><option value="technician">Técnico</option><option value="assistant">Auxiliar</option></select></label>
+      {role==='technician'&&<OnboardingServiceSelector services={services} selected={serviceIds} onChange={setServiceIds}/>}
+      <button className="compact-button" type="button" disabled={update.isPending||updateServices.isPending||!name.trim()||role==='technician'&&services.length>0&&!serviceIds.length} onClick={()=>void save()}><Save size={16}/>Salvar</button>
+    </div>}
+  </div>
+}
+
+function OnboardingServiceSelector({services,selected,onChange}:{services:Service[];selected:string[];onChange:(ids:string[])=>void}){
+  const toggle=(id:string)=>onChange(selected.includes(id)?selected.filter(item=>item!==id):[...selected,id])
+  return <fieldset className="onboarding-fieldset"><legend><RequiredLabel>Função operacional</RequiredLabel></legend><small>Todos os serviços ficam selecionados por padrão. Desmarque apenas os que este técnico não realiza.</small><div className="onboarding-service-selector">{services.map(service=><label className="onboarding-choice" key={service.id}><input type="checkbox" checked={selected.includes(service.id)} onChange={()=>toggle(service.id)}/><span><strong>{service.name}</strong></span></label>)}</div>{!services.length&&<small>Os serviços serão vinculados automaticamente quando você cadastrá-los na próxima etapa.</small>}</fieldset>
 }
 
 function HoursStep({onBack,onNext}:{onBack:()=>void;onNext:()=>void}){
