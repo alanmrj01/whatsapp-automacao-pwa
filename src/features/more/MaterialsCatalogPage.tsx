@@ -171,10 +171,7 @@ export function MaterialsCatalogPage(){
     return !!draft&&draftChanged(draft,toDraft(item))
   })??false
 
-  if(items.isPending||business.isPending)return <Shell><LoadingState/></Shell>
-  if(items.isError||business.isError||!items.data||!business.data)return <Shell><ErrorState onRetry={()=>{void items.refetch();void business.refetch()}}/></Shell>
-
-  const optedOut=business.data.materials_catalog_reviewed&&!activeMaterials.length
+  const optedOut=business.data?.materials_catalog_reviewed===true&&!activeMaterials.length
 
   const toggleOptOut=async(checked:boolean)=>{
     if(checked){
@@ -263,7 +260,7 @@ export function MaterialsCatalogPage(){
           },
         })
       }
-      if(!business.data.materials_catalog_reviewed){
+      if(!business.data?.materials_catalog_reviewed){
         await updateBusiness.mutateAsync({materials_catalog_reviewed:true})
       }
       setSaveAttempted(false)
@@ -281,6 +278,9 @@ export function MaterialsCatalogPage(){
   // Autosave is intentionally driven only by editable catalog drafts.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[drafts])
+
+  if(items.isPending||business.isPending)return <Shell><LoadingState/></Shell>
+  if(items.isError||business.isError||!items.data||!business.data)return <Shell><ErrorState onRetry={()=>{void items.refetch();void business.refetch()}}/></Shell>
 
   return <Shell>
     <section className="operational-heading catalog-page-heading">
