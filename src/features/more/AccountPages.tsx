@@ -36,6 +36,11 @@ export function UserSettingsPage() {
       <div className="account-detail"><span className="account-detail__icon"><UserRound size={19}/></span><div><span>Perfil</span><strong>{membership?roleLabels[membership.role]:'—'}</strong></div></div>
       <div className="account-detail"><span className="account-detail__icon"><ShieldCheck size={19}/></span><div><span>Acesso</span><strong>{accessLabel}</strong></div></div>
     </section>
+    <section className="account-action-section">
+      <h2>Sair da conta</h2>
+      <p>Encerra a sessão atual e revoga o acesso deste navegador.</p>
+      <SessionActions />
+    </section>
   </div>
 }
 
@@ -46,11 +51,7 @@ export function SecuritySettingsPage() {
     <section className="account-card">
       <div className="account-detail"><span className="account-detail__icon"><LockKeyhole size={19}/></span><div><span>Sessão</span><strong>{state==='authenticated'?'Ativa e autenticada':'Verificando sessão'}</strong><small>Seu acesso é validado pelo servidor a cada sessão.</small></div></div>
     </section>
-    <section className="account-action-section">
-      <h2>Sair com segurança</h2>
-      <p>Encerra a sessão atual e revoga o acesso deste navegador.</p>
-      <SessionActions />
-    </section>
+
   </div>
 }
 
