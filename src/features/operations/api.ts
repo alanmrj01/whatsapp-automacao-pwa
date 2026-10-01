@@ -68,7 +68,7 @@ export function useNotifications(unreadOnly=true) {
     enabled:context.enabled,
     retry:false,
     refetchInterval:30_000,
-    refetchIntervalInBackground:true,
+    refetchIntervalInBackground:false,
   })
 }
 export function useCustomerOutreach(outreachType:'incomplete_24h'|'cleaning_6m') {
