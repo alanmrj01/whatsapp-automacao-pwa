@@ -249,6 +249,17 @@ test('paid agenda reads the hydrated membership without loading unused product s
   assert.doesNotMatch(agenda,/useProductState/)
 })
 
+test('paid reschedule dialog stays inside the real agenda and submits its mutation', () => {
+  const agenda = read('src/features/appointments/AgendaPage.tsx')
+  const realAgenda = agenda.indexOf('function RealAgenda')
+  const dialog = agenda.indexOf('title="Reagendar atendimento"')
+
+  assert.ok(realAgenda >= 0)
+  assert.ok(dialog > realAgenda)
+  assert.match(agenda,/onClick=\{\(\)=>void submitReschedule\(false\)\}/)
+  assert.match(agenda,/onClick=\{\(\)=>void submitReschedule\(true\)\}/)
+})
+
 test('More prioritizes WhatsApp before the remaining operational setup', () => {
   const more = read('src/features/more/MorePage.tsx')
   assert.ok(more.indexOf('<Section title="WhatsApp">') < more.indexOf('<Section title="Atendimento">'))

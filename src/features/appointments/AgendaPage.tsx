@@ -157,28 +157,6 @@ export function AgendaPage() {
       </div>}
     </BottomSheet>
 
-    <BottomSheet
-      open={!!rescheduleAppointment}
-      title="Reagendar atendimento"
-      description="Você pode informar uma preferência ou deixar dia e horário em branco para o cliente escolher entre as disponibilidades reais."
-      onClose={()=>{setRescheduleAppointment(null);setRescheduleConflict(null);setRescheduleError('')}}
-    >
-      {rescheduleAppointment&&<div className="reschedule-form">
-        <div className="account-note"><strong>Como funciona</strong><span>Ao iniciar, o horário atual é liberado imediatamente e o atendimento vai para Pendências de reagendamento. Sem preferência, o cliente escolhe data e horário. Com preferência, ele recebe a sugestão para confirmar; se recusar, recebe as alternativas disponíveis.</span></div>
-        <div className="form-grid">
-          <label>Dia preferencial <span className="optional-label">opcional</span><input type="date" value={preferredDate} onChange={event=>{setPreferredDate(event.target.value);setRescheduleConflict(null)}}/></label>
-          <label>Horário preferencial <span className="optional-label">opcional</span><input type="time" value={preferredTime} onChange={event=>{setPreferredTime(event.target.value);setRescheduleConflict(null)}}/></label>
-        </div>
-        {rescheduleConflict?.reason==='appointment_conflict'&&<section className="priority-conflict-card" role="alert">
-          <strong>Esse horário conflita com atendimento(s) já confirmado(s).</strong>
-          <span>Ao priorizar este cliente, o ALOVIA libera um técnico movendo o atendimento conflitante para a fila de reagendamento. O outro cliente também será avisado para escolher um novo horário.</span>
-          <ul>{rescheduleConflict.conflicts.map(item=><li key={item.appointment_id}>{item.customer_name} · {item.service_name} · {new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',timeZone:timezone}).format(new Date(item.starts_at))}</li>)}</ul>
-          <button className="danger-button" type="button" disabled={requestReschedule.isPending} onClick={()=>void submitReschedule(true)}>Sim, priorizar e iniciar reagendamento duplo</button>
-        </section>}
-        {rescheduleError&&<p className="form-error" role="alert">{rescheduleError}</p>}
-        <div className="form-actions"><button className="secondary-button" type="button" onClick={()=>setRescheduleAppointment(null)}>Voltar</button><button className="primary-button" type="button" disabled={requestReschedule.isPending||rescheduleConflict?.reason==='appointment_conflict'} onClick={()=>void submitReschedule(false)}>{requestReschedule.isPending?'Iniciando…':'Iniciar reagendamento'}</button></div>
-      </div>}
-    </BottomSheet>
   </div>
 }
 
@@ -444,6 +422,29 @@ function RealAgenda({selectedDate,setSelectedDate,canMutate,initialView,setOuter
           {!activeAppointment?.reschedule_pending&&<button className="primary-button" type="submit" disabled={save.isPending||createCustomer.isPending}>Salvar</button>}
         </div>
       </form>}
+    </BottomSheet>
+
+    <BottomSheet
+      open={!!rescheduleAppointment}
+      title="Reagendar atendimento"
+      description="Você pode informar uma preferência ou deixar dia e horário em branco para o cliente escolher entre as disponibilidades reais."
+      onClose={()=>{setRescheduleAppointment(null);setRescheduleConflict(null);setRescheduleError('')}}
+    >
+      {rescheduleAppointment&&<div className="reschedule-form">
+        <div className="account-note"><strong>Como funciona</strong><span>Ao iniciar, o horário atual é liberado imediatamente e o atendimento vai para Pendências de reagendamento. Sem preferência, o cliente escolhe data e horário. Com preferência, ele recebe a sugestão para confirmar; se recusar, recebe as alternativas disponíveis.</span></div>
+        <div className="form-grid">
+          <label>Dia preferencial <span className="optional-label">opcional</span><input type="date" value={preferredDate} onChange={event=>{setPreferredDate(event.target.value);setRescheduleConflict(null)}}/></label>
+          <label>Horário preferencial <span className="optional-label">opcional</span><input type="time" value={preferredTime} onChange={event=>{setPreferredTime(event.target.value);setRescheduleConflict(null)}}/></label>
+        </div>
+        {rescheduleConflict?.reason==='appointment_conflict'&&<section className="priority-conflict-card" role="alert">
+          <strong>Esse horário conflita com atendimento(s) já confirmado(s).</strong>
+          <span>Ao priorizar este cliente, o ALOVIA libera um técnico movendo o atendimento conflitante para a fila de reagendamento. O outro cliente também será avisado para escolher um novo horário.</span>
+          <ul>{rescheduleConflict.conflicts.map(item=><li key={item.appointment_id}>{item.customer_name} · {item.service_name} · {new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',timeZone:timezone}).format(new Date(item.starts_at))}</li>)}</ul>
+          <button className="danger-button" type="button" disabled={requestReschedule.isPending} onClick={()=>void submitReschedule(true)}>Sim, priorizar e iniciar reagendamento duplo</button>
+        </section>}
+        {rescheduleError&&<p className="form-error" role="alert">{rescheduleError}</p>}
+        <div className="form-actions"><button className="secondary-button" type="button" onClick={()=>setRescheduleAppointment(null)}>Voltar</button><button className="primary-button" type="button" disabled={requestReschedule.isPending||rescheduleConflict?.reason==='appointment_conflict'} onClick={()=>void submitReschedule(false)}>{requestReschedule.isPending?'Iniciando…':'Iniciar reagendamento'}</button></div>
+      </div>}
     </BottomSheet>
   </div>
 }

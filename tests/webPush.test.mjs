@@ -43,7 +43,7 @@ test('closed app receives a safe user-visible notification',async()=>{
 
 test('open app receives one lightweight refresh signal instead of a duplicate notification',async()=>{
   const messages=[]
-  const harness=workerHarness([{postMessage:value=>messages.push(value)}])
+  const harness=workerHarness([{visibilityState:'visible',postMessage:value=>messages.push(value)}])
   await dispatch(harness.listeners.push,{
     data:{json:()=>({title:'Novo agendamento automático',body:'Um novo agendamento foi confirmado.',target_path:'/app/agenda'})},
   })
@@ -51,6 +51,16 @@ test('open app receives one lightweight refresh signal instead of a duplicate no
   assert.equal(messages.length,1)
   assert.equal(messages[0].type,'ALOVIA_WEB_PUSH_EVENT')
   assert.equal(messages[0].target_path,'/app/agenda')
+})
+
+test('background app receives refresh signal and a system notification',async()=>{
+  const messages=[]
+  const harness=workerHarness([{visibilityState:'hidden',postMessage:value=>messages.push(value)}])
+  await dispatch(harness.listeners.push,{
+    data:{json:()=>({title:'Novo agendamento automático',body:'Um novo agendamento foi confirmado.',target_path:'/app/agenda'})},
+  })
+  assert.equal(messages.length,1)
+  assert.equal(harness.notifications.length,1)
 })
 
 test('notification click opens only an allowlisted authenticated route',async()=>{
