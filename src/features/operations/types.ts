@@ -14,6 +14,23 @@ export type Appointment = {
   ends_at:string
   status:AppointmentStatus
   notes:string|null
+  reschedule_pending:boolean
+  rescheduled:boolean
+  reschedule_preferred_starts_at:string|null
+}
+export type AppointmentRescheduleConflict = {
+  appointment_id:string
+  customer_name:string
+  service_name:string
+  starts_at:string
+}
+export type AppointmentRescheduleResult = {
+  status:'pending'|'conflict'
+  appointment_id:string
+  reason:'appointment_conflict'|'slot_unavailable'|null
+  displaced_appointment_ids:string[]
+  conflicts:AppointmentRescheduleConflict[]
+  message_ids:string[]
 }
 export type AppointmentInput = {
   customer_id:string
