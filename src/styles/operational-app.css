@@ -382,9 +382,12 @@
 .conversation-menu {
   position: absolute;
   z-index: 30;
-  top: 36px;
+  top: auto;
   right: 0;
+  bottom: 36px;
   width: min(230px,78vw);
+  max-height: min(260px,60vh);
+  overflow-y: auto;
   padding: 6px;
   display: grid;
   border: 1px solid var(--color-border);
@@ -1325,3 +1328,88 @@
   }
 }
 
+
+
+.conversation-media-state--error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.technician-service-selector,
+.onboarding-fieldset {
+  margin: 0;
+  padding: 12px;
+  display: grid;
+  gap: 9px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface-subtle);
+}
+
+.technician-service-selector > div,
+.onboarding-service-selector {
+  display: grid;
+  gap: 7px;
+}
+
+.technician-service-selector label,
+.onboarding-service-selector label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.technician-service-selector input,
+.onboarding-service-selector input {
+  width: auto;
+  min-height: auto;
+}
+
+.settings-editor__heading {
+  display: grid;
+  grid-template-columns: 28px minmax(0,1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-editor__actions,
+.row-icon-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.onboarding-distance-card,
+.onboarding-inline-editor {
+  padding: 13px;
+  display: grid;
+  gap: 11px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface-subtle);
+}
+
+.technician-row--stacked {
+  display: grid;
+  gap: 10px;
+}
+
+.technician-row__main {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.technician-row__main > span {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
