@@ -264,9 +264,10 @@ test('More prioritizes WhatsApp before the remaining operational setup', () => {
   const more = read('src/features/more/MorePage.tsx')
   assert.ok(more.indexOf('<Section title="WhatsApp">') < more.indexOf('<Section title="Atendimento">'))
   assert.match(more,/title="Assistente Virtual"/)
-  assert.match(more,/title="Técnicos e responsáveis"/)
-  assert.doesNotMatch(more,/Equipe e responsáveis/)
-  assert.ok(more.indexOf('title="Dados da empresa"') < more.indexOf('title="Técnicos e responsáveis"'))
+  assert.match(more,/title="Técnicos"/)
+  assert.match(more,/title="Preventivas"/)
+  assert.doesNotMatch(more,/Técnicos e responsáveis|Limpeza preventiva/)
+  assert.ok(more.indexOf('title="Dados da empresa"') < more.indexOf('title="Técnicos"'))
 })
 
 test('company data, services and materials are separated into simple focused screens', () => {
@@ -490,3 +491,37 @@ test('equipment and materials catalog combines top save icon with debounced auto
   assert.match(catalog,/if\(!hydrated\.current\|\|!canEdit\|\|!hasChanges\|\|catalogInvalid\)return/)
 })
 
+
+
+test('account identity stays in the user section and logout is not duplicated in More', () => {
+  const sidebar = read('src/components/DesktopSidebar.tsx')
+  const more = read('src/features/more/MorePage.tsx')
+  const account = read('src/features/more/AccountPages.tsx')
+  const brand = read('src/components/BrandMark.tsx')
+
+  assert.doesNotMatch(sidebar,/desktop-sidebar__business|Empresa ativa/)
+  assert.doesNotMatch(more,/<SessionActions\/>/)
+  assert.match(account,/title="Usuário"/)
+  assert.match(account,/<SessionActions \/>/)
+  assert.match(brand,/var\(--color-primary-600\)/)
+})
+
+test('reschedule form uses app field styling and explains the Meta 24h boundary', () => {
+  const agenda = read('src/features/appointments/AgendaPage.tsx')
+  const css = read('src/features/appointments/agenda-calendar.css')
+  const client = read('src/lib/httpClient.ts')
+
+  assert.match(agenda,/janela de 24 horas do WhatsApp está encerrada/i)
+  assert.match(agenda,/template Meta aprovado/i)
+  assert.match(css,/\.reschedule-form input\[type="date"\]/)
+  assert.match(css,/border-radius: 12px/)
+  assert.match(client,/detail\?: string/)
+  assert.match(client,/response\.clone\(\)\.json\(\)/)
+})
+
+test('preventive outreach uses the concise Preventivas label', () => {
+  const page = read('src/features/more/CustomerOutreachPage.tsx')
+  const shell = read('src/app/AppShell.tsx')
+  assert.match(page,/<h1>Preventivas<\/h1>/)
+  assert.match(shell,/\/app\/mais\/relacionamento': 'Preventivas'/)
+})
