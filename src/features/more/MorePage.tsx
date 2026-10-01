@@ -2,7 +2,6 @@ import { Bot, Boxes, Building2, CalendarCog, CircleUserRound, Clock3, CreditCard
 import { ListRow } from '../../components/ListRow'
 import { Section } from '../../components/Section'
 import { StatusBadge } from '../../components/StatusBadge'
-import { SessionActions } from '../auth/SessionActions'
 import { useEntitlements } from '../access/useEntitlements'
 import { useUpgradePrompt } from '../access/upgradePromptContext'
 import { useProductState } from '../product/productState'
@@ -32,14 +31,14 @@ export function MorePage(){
     <Section title="Atendimento">
       <div className="list-surface">
         <ListRow icon={Bot} title="Assistente Virtual" subtitle="Mensagens e contatos sem resposta automática" to={paid?'/app/mais/automacao':undefined} onClick={!paid?gated('Configurar o Assistente Virtual'):undefined}/>
-        <ListRow icon={HeartHandshake} title="Limpeza preventiva" subtitle="Próximos contatos automáticos e histórico de resultados" to={paid?'/app/mais/relacionamento':undefined} onClick={!paid?gated('Acompanhar relacionamento com clientes'):undefined}/>
+        <ListRow icon={HeartHandshake} title="Preventivas" subtitle="Próximos contatos automáticos e histórico de resultados" to={paid?'/app/mais/relacionamento':undefined} onClick={!paid?gated('Acompanhar preventivas com clientes'):undefined}/>
       </div>
     </Section>
 
     <Section title="Empresa">
       <div className="list-surface">
         <ListRow icon={Building2} title="Dados da empresa" subtitle="Nome, responsável, endereço e fuso horário" to={paid?'/app/mais/empresa':undefined} onClick={!paid?gated('Configurar os dados da empresa'):undefined}/>
-        <ListRow icon={UsersRound} title="Técnicos e responsáveis" to={paid?'/app/mais/equipe':undefined} onClick={!paid?gated('Gerenciar técnicos e responsáveis'):undefined}/>
+        <ListRow icon={UsersRound} title="Técnicos" to={paid?'/app/mais/equipe':undefined} onClick={!paid?gated('Gerenciar técnicos'):undefined}/>
         <ListRow icon={Clock3} title="Horários de funcionamento" to={paid?'/app/mais/horarios':undefined} onClick={!paid?gated('Configurar horários de funcionamento'):undefined}/>
         <ListRow icon={Boxes} title="Catálogo de serviços" subtitle="Serviços, duração e preço" to={paid?'/app/mais/servicos':undefined} onClick={!paid?gated('Configurar catálogo de serviços'):undefined}/>
         <ListRow icon={PackageOpen} title="Catálogo de equipamentos e materiais" subtitle="Materiais e equipamentos cobrados à parte" to={paid?'/app/mais/catalogo':undefined} onClick={!paid?gated('Configurar catálogo da empresa'):undefined}/>
@@ -58,6 +57,5 @@ export function MorePage(){
         <ListRow icon={ShieldCheck} title="Privacidade" to="/app/mais/privacidade"/>
       </div>
     </Section>
-    <SessionActions/>
   </div>
 }
