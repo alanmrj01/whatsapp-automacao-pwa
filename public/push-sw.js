@@ -18,12 +18,14 @@ self.addEventListener('push', event => {
 
     const targetPath = safeTarget(payload.target_path)
     const openClients = await clients.matchAll({type:'window',includeUncontrolled:true})
-    if (openClients.length > 0) {
-      for (const client of openClients) {
-        client.postMessage({type:'ALOVIA_WEB_PUSH_EVENT',target_path:targetPath})
-      }
-      return
+    for (const client of openClients) {
+      client.postMessage({type:'ALOVIA_WEB_PUSH_EVENT',target_path:targetPath})
     }
+
+    // A minimized/background PWA is still returned by matchAll(). Only suppress
+    // the system notification when Alovia is actually visible in the foreground.
+    const hasVisibleClient = openClients.some(client => client.visibilityState === 'visible')
+    if (hasVisibleClient) return
 
     await self.registration.showNotification(payload.title, {
       body: payload.body,
