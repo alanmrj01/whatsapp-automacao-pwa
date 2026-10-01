@@ -130,6 +130,18 @@ export function ConversationDetailPage() {
         <ArrowLeft size={22}/>
       </Link>
 
+      <button
+        type="button"
+        className={`conversation-assistant-toggle ${conversation.assistant_enabled?'is-active':'is-paused'}`}
+        aria-label={conversation.assistant_enabled?'Desativar respostas automáticas':'Reativar respostas automáticas'}
+        title={conversation.assistant_enabled?'Assistente ativo — tocar para pausar':'Assistente pausado — tocar para reativar'}
+        disabled={!canMutate||assistant.isPending}
+        onClick={()=>assistant.mutate({id:conversation.id,enabled:!conversation.assistant_enabled})}
+      >
+        <Bot size={18}/>
+        <span>{conversation.assistant_enabled?'Auto':'Pausado'}</span>
+      </button>
+
       <button className="conversation-contact-avatar-button" type="button" onClick={openContact} aria-label="Abrir dados do contato">
         <span className="conversation-avatar conversation-detail-avatar" aria-hidden="true">
           {initials(conversation.customer_name)}
@@ -143,17 +155,6 @@ export function ConversationDetailPage() {
       </button>
 
       <div className="conversation-detail-header__actions" aria-label="Ações da conversa">
-        <button
-          type="button"
-          className={`conversation-assistant-toggle ${conversation.assistant_enabled?'is-active':'is-paused'}`}
-          aria-label={conversation.assistant_enabled?'Desativar respostas automáticas':'Reativar respostas automáticas'}
-          title={conversation.assistant_enabled?'Assistente ativo — tocar para pausar':'Assistente pausado — tocar para reativar'}
-          disabled={!canMutate||assistant.isPending}
-          onClick={()=>assistant.mutate({id:conversation.id,enabled:!conversation.assistant_enabled})}
-        >
-          <Bot size={18}/>
-          <span>{conversation.assistant_enabled?'Auto':'Pausado'}</span>
-        </button>
         <button
           type="button"
           className="conversation-header-action"

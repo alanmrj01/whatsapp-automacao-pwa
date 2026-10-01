@@ -121,3 +121,16 @@ test('assistant exclusions accept existing customers or a normalized manual numb
   assert.match(settings,/Este número já está na lista/)
   assert.match(api,/\/automation\/exclusions/)
 })
+
+test('assistant toggle stays immediately visible at the top-left of an opened conversation', () => {
+  const detail = read('src/features/conversations/ConversationDetailPage.tsx')
+  const css = read('src/features/conversations/conversation-detail.css')
+
+  const back = detail.indexOf('aria-label="Voltar para conversas"')
+  const assistant = detail.indexOf('conversation-assistant-toggle')
+  const avatar = detail.indexOf('conversation-contact-avatar-button')
+  assert.ok(back >= 0 && assistant > back && avatar > assistant)
+  assert.match(css,/grid-template-columns: 44px auto 40px minmax\(0, 1fr\) auto/)
+  assert.match(css,/@media \(max-width: 430px\)[\s\S]*grid-template-columns: 40px 38px 36px minmax\(0, 1fr\) 40px/)
+})
+

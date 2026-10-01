@@ -465,3 +465,17 @@ test('equipment status badge stays intact on narrow mobile cards', () => {
   assert.match(css,/\.equipment-status\{[^}]*overflow-wrap:normal/)
   assert.match(css,/\.equipment-status\{[^}]*flex:0 0 auto/)
 })
+
+test('equipment and materials catalog combines top save icon with debounced autosave', () => {
+  const catalog = read('src/features/more/MaterialsCatalogPage.tsx')
+
+  assert.match(catalog,/className="catalog-save-button"/)
+  assert.match(catalog,/aria-label="Salvar catálogo"/)
+  assert.match(catalog,/<Save size=\{21\}\/>/)
+  assert.match(catalog,/Salvamento automático…/)
+  assert.match(catalog,/setTimeout\(\(\)=>\{void save\(\)\},1200\)/)
+  assert.match(catalog,/hasChanges/)
+  assert.match(catalog,/draftChanged/)
+  assert.match(catalog,/if\(!hydrated\.current\|\|!canEdit\|\|!hasChanges\|\|catalogInvalid\)return/)
+})
+

@@ -34,7 +34,7 @@
   margin: 0;
   padding: 10px max(10px, env(safe-area-inset-right)) 10px max(10px, env(safe-area-inset-left));
   display: grid;
-  grid-template-columns: 44px 40px minmax(0, 1fr) auto;
+  grid-template-columns: 44px auto 40px minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   border-bottom: 1px solid var(--color-border);
@@ -588,6 +588,18 @@
 }
 
 @media (max-width: 430px) {
+  .conversation-route-shell .conversation-detail-header {
+    grid-template-columns: 40px 38px 36px minmax(0, 1fr) 40px;
+    gap: 5px;
+    padding-left: max(6px, env(safe-area-inset-left));
+    padding-right: max(6px, env(safe-area-inset-right));
+  }
+
+  .conversation-route-shell .conversation-detail-avatar {
+    width: 36px;
+    height: 36px;
+  }
+
   .conversation-media-wrap {
     min-width: min(250px, 72vw);
   }

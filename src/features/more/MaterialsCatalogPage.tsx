@@ -1,5 +1,5 @@
 import { ExternalLink, Plus, RotateCcw, Save, Search, Trash2 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ErrorState } from '../../components/ErrorState'
 import { InfoHelp } from '../../components/InfoHelp'
 import { LoadingState } from '../../components/LoadingState'
@@ -67,6 +67,8 @@ export function MaterialsCatalogPage(){
   const [wifiFilter,setWifiFilter]=useState<'all'|'wifi'|'no_wifi'>('all')
   const [segmentFilter,setSegmentFilter]=useState<'all'|EquipmentSegment>('all')
   const [statusFilter,setStatusFilter]=useState<'all'|'active'|'inactive'>('all')
+  const [saveState,setSaveState]=useState<'idle'|'saving'|'saved'|'error'>('idle')
+  const hydrated=useRef(false)
 
   const activeMaterials=useMemo(
     ()=>items.data?.items.filter(item=>(item.kind==='material'||item.preset_key==='condenser-bracket')&&item.active)??[],
@@ -133,6 +135,7 @@ export function MaterialsCatalogPage(){
   useEffect(()=>{
     if(!items.data)return
     setDrafts(Object.fromEntries(items.data.items.map(item=>[item.id,toDraft(item)])))
+    hydrated.current=true
   },[items.data])
 
   const selectNewEquipmentPhoto=(file:File|null)=>{
@@ -158,15 +161,17 @@ export function MaterialsCatalogPage(){
     }
   }
 
-  if(items.isPending||business.isPending)return <Shell><LoadingState/></Shell>
-  if(items.isError||business.isError||!items.data||!business.data)return <Shell><ErrorState onRetry={()=>{void items.refetch();void business.refetch()}}/></Shell>
-
-  const optedOut=business.data.materials_catalog_reviewed&&!activeMaterials.length
   const materialDraftInvalid=(id:string)=>materialInvalid(drafts[id])
   const equipmentDraftInvalid=(id:string)=>equipmentInvalid(drafts[id])
   const catalogInvalid=
     activeMaterials.some(item=>materialDraftInvalid(item.id))||
     equipmentReferences.some(item=>equipmentDraftInvalid(item.id))
+  const hasChanges=items.data?.items.some(item=>{
+    const draft=drafts[item.id]
+    return !!draft&&draftChanged(draft,toDraft(item))
+  })??false
+
+  const optedOut=business.data?.materials_catalog_reviewed===true&&!activeMaterials.length
 
   const toggleOptOut=async(checked:boolean)=>{
     if(checked){
@@ -220,51 +225,73 @@ export function MaterialsCatalogPage(){
   const save=async()=>{
     setSaveAttempted(true)
     if(catalogInvalid)return
-    for(const item of activeMaterials){
-      const draft=drafts[item.id]
-      await update.mutateAsync({
-        id:item.id,
-        values:{
-          kind:'material',
-          name:draft.name.trim(),
-          description:draft.description.trim()||null,
-          price:parseMoney(draft.price)!,
-          unit_label:draft.unit,
-          active:true,
-        },
-      })
+    setSaveState('saving')
+    try{
+      for(const item of activeMaterials){
+        const draft=drafts[item.id]
+        if(!draftChanged(draft,toDraft(item)))continue
+        await update.mutateAsync({
+          id:item.id,
+          values:{
+            kind:'material',
+            name:draft.name.trim(),
+            description:draft.description.trim()||null,
+            price:parseMoney(draft.price)!,
+            unit_label:draft.unit,
+            active:true,
+          },
+        })
+      }
+      for(const item of equipmentReferences){
+        const draft=drafts[item.id]
+        if(!draftChanged(draft,toDraft(item)))continue
+        await update.mutateAsync({
+          id:item.id,
+          values:{
+            kind:'equipment',
+            name:draft.name.trim(),
+            description:draft.description.trim()||null,
+            price:parseOptionalMoney(draft.price),
+            unit_label:null,
+            image_url:draft.imageUrl.trim()||null,
+            source_url:draft.sourceUrl.trim()||null,
+            specifications:{...item.specifications,...equipmentSpecifications(draft)},
+            active:draft.active,
+          },
+        })
+      }
+      if(!business.data?.materials_catalog_reviewed){
+        await updateBusiness.mutateAsync({materials_catalog_reviewed:true})
+      }
+      setSaveAttempted(false)
+      setSaveState('saved')
+    }catch{
+      setSaveState('error')
     }
-    for(const item of equipmentReferences){
-      const draft=drafts[item.id]
-      await update.mutateAsync({
-        id:item.id,
-        values:{
-          kind:'equipment',
-          name:draft.name.trim(),
-          description:draft.description.trim()||null,
-          price:parseOptionalMoney(draft.price),
-          unit_label:null,
-          image_url:draft.imageUrl.trim()||null,
-          source_url:draft.sourceUrl.trim()||null,
-          specifications:{...item.specifications,...equipmentSpecifications(draft)},
-          active:draft.active,
-        },
-      })
-    }
-    await updateBusiness.mutateAsync({materials_catalog_reviewed:true})
-    setSaveAttempted(false)
   }
+
+  useEffect(()=>{
+    if(!hydrated.current||!canEdit||!hasChanges||catalogInvalid)return
+    setSaveState('saving')
+    const timer=window.setTimeout(()=>{void save()},1200)
+    return ()=>window.clearTimeout(timer)
+  // Autosave is intentionally driven only by editable catalog drafts.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[drafts])
+
+  if(items.isPending||business.isPending)return <Shell><LoadingState/></Shell>
+  if(items.isError||business.isError||!items.data||!business.data)return <Shell><ErrorState onRetry={()=>{void items.refetch();void business.refetch()}}/></Shell>
 
   return <Shell>
     <section className="operational-heading catalog-page-heading">
-      <div><span className="eyebrow">Empresa</span><h1>Catálogo de equipamentos e materiais</h1></div>
+      <div><span className="eyebrow">Empresa</span><h1>Catálogo de equipamentos e materiais</h1><p>{saveState==='saving'?'Salvamento automático…':saveState==='saved'?'Alterações salvas automaticamente.':saveState==='error'?'Falha no salvamento automático.':'Alterações válidas são salvas automaticamente.'}</p></div>
       <div className="catalog-page-actions">
         {canEdit&&!!(activeMaterials.length||equipmentReferences.length)&&<button
           className="catalog-save-button"
           type="button"
           aria-label="Salvar catálogo"
           title="Salvar catálogo"
-          disabled={update.isPending||updateBusiness.isPending}
+          disabled={update.isPending||updateBusiness.isPending||catalogInvalid}
           onClick={()=>void save()}
         ><Save size={21}/></button>}
         <InfoHelp title="Catálogo da empresa">Materiais cobrados e equipamentos de referência têm regras separadas. A recomendação usa somente equipamentos técnicos ativos da sua empresa.</InfoHelp>
@@ -500,6 +527,11 @@ function equipmentSpecifications(draft:Draft):EquipmentCatalogSpecifications{
     outdoor_dimensions_cm:dimensionValue(draft.outdoorWidth,draft.outdoorHeight,draft.outdoorDepth),
     condenser_form:draft.condenserForm||'unknown',
   }
+}
+
+function draftChanged(current:Draft|undefined,baseline:Draft){
+  if(!current)return false
+  return JSON.stringify(current)!==JSON.stringify(baseline)
 }
 
 function materialInvalid(draft:Draft|undefined){
