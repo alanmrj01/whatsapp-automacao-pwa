@@ -19,7 +19,7 @@ const titles: Record<string, string> = {
   '/app/mais/catalogo': 'Catálogo da empresa',
   '/app/mais/horarios': 'Horários',
   '/app/mais/automacao': 'Automação',
-  '/app/mais/relacionamento': 'Limpeza preventiva',
+  '/app/mais/relacionamento': 'Preventivas',
   '/app/mais/equipe': 'Equipe',
   '/app/mais/agenda': 'Configurar agenda',
 }
