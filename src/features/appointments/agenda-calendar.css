@@ -349,3 +349,29 @@
   display: grid;
   gap: 4px;
 }
+
+
+/* Keep reschedule controls visually consistent with the rest of Alovia forms. */
+.reschedule-form label {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  color: var(--color-text);
+  font-size: .76rem;
+  font-weight: 700;
+}
+
+.reschedule-form input[type="date"],
+.reschedule-form input[type="time"] {
+  width: 100%;
+  min-height: 48px;
+  padding: 11px 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 12px;
+  color: var(--color-text);
+  background: #fff;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 16px;
+  color-scheme: light;
+}
