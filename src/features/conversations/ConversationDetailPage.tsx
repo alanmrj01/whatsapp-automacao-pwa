@@ -298,6 +298,7 @@ function MessageBubble({message,timezone,copied,onCopy}:{message:ConversationMes
 function MediaAttachment({message}:{message:ConversationMessage}) {
   const [objectUrl,setObjectUrl]=useState<string|null>(null)
   const [failed,setFailed]=useState(false)
+  const [retryNonce,setRetryNonce]=useState(0)
   const mediaUrl=message.media_url
 
   useEffect(()=>{
@@ -326,10 +327,11 @@ function MediaAttachment({message}:{message:ConversationMessage}) {
       controller.abort()
       if(localUrl)URL.revokeObjectURL(localUrl)
     }
-  },[mediaUrl])
+  },[mediaUrl,retryNonce])
 
-  if(failed)return <div className="conversation-media-state" role="status">
-    Não foi possível carregar esta mídia. Tente novamente ao reabrir a conversa.
+  if(failed)return <div className="conversation-media-state conversation-media-state--error" role="status">
+    <span>Não foi possível carregar esta mídia.</span>
+    <button type="button" className="compact-button" onClick={()=>{setFailed(false);setRetryNonce(value=>value+1)}}>Tentar novamente</button>
   </div>
   if(!objectUrl)return <div className="conversation-media-state" role="status">Carregando mídia…</div>
 
@@ -344,16 +346,17 @@ function MediaAttachment({message}:{message:ConversationMessage}) {
     src={objectUrl}
     alt={label}
     loading="lazy"
+    onError={()=>setFailed(true)}
   />
   if(message.message_type==='audio')return <div className="conversation-media-wrap">
     <span className="conversation-media-label">{label}</span>
-    <audio className="conversation-media conversation-media--audio" controls preload="metadata" src={objectUrl}>
+    <audio className="conversation-media conversation-media--audio" controls preload="metadata" src={objectUrl} onError={()=>setFailed(true)}>
       Seu navegador não consegue reproduzir este áudio.
     </audio>
   </div>
   return <div className="conversation-media-wrap">
     <span className="conversation-media-label">{label}</span>
-    <video className="conversation-media conversation-media--video" controls playsInline preload="metadata" src={objectUrl}>
+    <video className="conversation-media conversation-media--video" controls playsInline preload="metadata" src={objectUrl} onError={()=>setFailed(true)}>
       Seu navegador não consegue reproduzir este vídeo.
     </video>
   </div>
