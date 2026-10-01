@@ -94,6 +94,15 @@ export function useAppointments(date:string) {
   const context=usePaidContext()
   return useQuery({queryKey:[...root(context.businessId),'appointments',date],queryFn:({signal})=>api.request<{items:Appointment[]}>(`/appointments?date=${encodeURIComponent(date)}`,{signal}),enabled:context.enabled,retry:false})
 }
+export function useAppointment(id:string|null) {
+  const context=usePaidContext()
+  return useQuery({
+    queryKey:[...root(context.businessId),'appointment',id],
+    queryFn:({signal})=>api.request<Appointment>(`/appointments/${id}`,{signal}),
+    enabled:context.enabled&&!!id,
+    retry:false,
+  })
+}
 export function useAppointmentsRange(startsAt:string,endsBefore:string,enabled=true) {
   const context=usePaidContext()
   const params=new URLSearchParams({starts_at:startsAt,ends_before:endsBefore})
