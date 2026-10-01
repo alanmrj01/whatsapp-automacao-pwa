@@ -149,6 +149,9 @@ export type Business = {
   finishing_minutes:number|null
   minimum_booking_notice_minutes:number|null
   equipment_delivery_fee_per_km:number|string
+  service_radius_km:number|string|null
+  service_distance_included_km:number|string
+  service_distance_fee_per_km:number|string
   materials_catalog_reviewed:boolean
   agenda_preferences_reviewed:boolean
   onboarding_completed_at:string|null
