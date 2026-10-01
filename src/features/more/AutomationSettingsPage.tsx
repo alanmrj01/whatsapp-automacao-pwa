@@ -61,8 +61,9 @@ type ContactNavigator = Navigator & {
 
 function Exclusions({customers,exclusions,canEdit}:{customers:Customer[];exclusions:AssistantExclusion[];canEdit:boolean}){
   const add=useAddAssistantExclusion(),remove=useRemoveAssistantExclusion()
-  const [source,setSource]=useState<'device'|'customer'|'manual'>('device')
+  const [source,setSource]=useState<'device'|'customer'|'manual'>('customer')
   const [customerId,setCustomerId]=useState('')
+  const [customerSearch,setCustomerSearch]=useState('')
   const [manualPhone,setManualPhone]=useState('')
   const [manualLabel,setManualLabel]=useState('')
   const [reason,setReason]=useState('')
@@ -70,6 +71,12 @@ function Exclusions({customers,exclusions,canEdit}:{customers:Customer[];exclusi
   const selected=customers.find(item=>item.id===customerId)
   const excluded=new Set(exclusions.map(item=>item.whatsapp_id))
   const available=customers.filter(item=>item.phone&&!excluded.has(item.phone.replace(/\D/g,'')))
+  const normalizedCustomerSearch=customerSearch.trim().toLocaleLowerCase('pt-BR')
+  const visibleCustomers=available.filter(item=>{
+    if(!normalizedCustomerSearch)return true
+    return item.name.toLocaleLowerCase('pt-BR').includes(normalizedCustomerSearch)
+      || (item.phone??'').replace(/\D/g,'').includes(normalizedCustomerSearch.replace(/\D/g,''))
+  })
   const normalizedManualPhone=manualPhone.replace(/\D/g,'')
   const manualValid=/^[1-9]\d{6,14}$/.test(normalizedManualPhone)&&!excluded.has(normalizedManualPhone)
   const contactNavigator=navigator as ContactNavigator
@@ -95,18 +102,21 @@ function Exclusions({customers,exclusions,canEdit}:{customers:Customer[];exclusi
     const whatsappId=source==='customer'?selected?.phone?.replace(/\D/g,''):normalizedManualPhone
     if(!whatsappId)return
     const label=source==='customer'?selected?.name:manualLabel.trim()||null
-    add.mutate({whatsapp_id:whatsappId,label,reason:reason.trim()||null,mode:'human_only'},{onSuccess:()=>{setCustomerId('');setManualPhone('');setManualLabel('');setReason('')}})
+    add.mutate({whatsapp_id:whatsappId,label,reason:reason.trim()||null,mode:'human_only'},{onSuccess:()=>{setCustomerId('');setCustomerSearch('');setManualPhone('');setManualLabel('');setReason('')}})
   }
   return <section aria-labelledby="exclusions-title">
     <div className="section-title-row"><div><span className="eyebrow">Exceções permanentes</span><h2 id="exclusions-title">Contatos sem resposta automática</h2></div><InfoHelp title="Contatos sem resposta automática">As mensagens continuam aparecendo normalmente, mas o Assistente Virtual não responde sozinho.</InfoHelp></div>
     {canEdit&&<form className="settings-form settings-form--inline" onSubmit={event=>{event.preventDefault();submit()}}>
-      <label>Como adicionar<select value={source} onChange={event=>setSource(event.target.value as 'device'|'customer'|'manual')}><option value="device">Contato do celular</option><option value="customer">Contato já cadastrado no ALOVIA</option><option value="manual">Adicionar por número</option></select></label>
+      <label>Como adicionar<select value={source} onChange={event=>setSource(event.target.value as 'device'|'customer'|'manual')}><option value="customer">Buscar nos contatos do ALOVIA</option><option value="manual">Adicionar por número</option><option value="device">Selecionar da agenda do celular</option></select></label>
       {source==='device'&&<>
-        {canPickDeviceContact?<button className="secondary-button contact-picker-button" type="button" onClick={()=>void pickDeviceContact()}><Smartphone size={18}/>Procurar na lista de contatos</button>:<p className="settings-note">Este navegador não permite abrir a agenda do aparelho. Use “Contato já cadastrado” ou “Adicionar por número”.</p>}
+        {canPickDeviceContact?<><button className="secondary-button contact-picker-button" type="button" onClick={()=>void pickDeviceContact()}><Smartphone size={18}/>Abrir agenda do celular</button><p className="settings-note">A busca dentro dessa janela é controlada pelo Android/navegador. Se ela não responder, use a busca do ALOVIA acima ou adicione pelo número.</p></>:<p className="settings-note">Este navegador não permite abrir a agenda do aparelho. Use a busca do ALOVIA ou “Adicionar por número”.</p>}
         {!!manualPhone&&<div className="settings-contact-preview"><ContactRound size={18}/><div><strong>{manualLabel||'Contato selecionado'}</strong><span>{manualPhone}</span></div></div>}
         {contactError&&<p className="form-error" role="alert">Não foi possível abrir ou ler o contato selecionado.</p>}
       </>}
-      {source==='customer'&&<label>Contato<select required value={customerId} onChange={event=>setCustomerId(event.target.value)}><option value="">Selecione</option>{available.map(item=><option value={item.id} key={item.id}>{item.name}{item.phone?' · '+item.phone:''}</option>)}</select></label>}
+      {source==='customer'&&<>
+        <label>Buscar contato<input type="search" value={customerSearch} onChange={event=>setCustomerSearch(event.target.value)} placeholder="Nome ou telefone"/></label>
+        <label>Contato<select required value={customerId} onChange={event=>setCustomerId(event.target.value)}><option value="">Selecione</option>{visibleCustomers.map(item=><option value={item.id} key={item.id}>{item.name}{item.phone?' · '+item.phone:''}</option>)}</select>{normalizedCustomerSearch&&!visibleCustomers.length&&<small>Nenhum contato encontrado no ALOVIA. Você pode adicionar pelo número.</small>}</label>
+      </>}
       {source==='manual'&&<>
         <label>Telefone<input required inputMode="tel" autoComplete="tel" value={manualPhone} onChange={event=>setManualPhone(event.target.value)} placeholder="Ex.: 5511999999999"/><small>Informe país e DDD. O número é normalizado antes de salvar.</small></label>
         <label>Nome ou rótulo <span className="optional-label">opcional</span><input maxLength={255} value={manualLabel} onChange={event=>setManualLabel(event.target.value)} placeholder="Ex.: Fornecedor"/></label>
