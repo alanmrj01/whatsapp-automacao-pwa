@@ -1,6 +1,6 @@
 export function BrandMark({ inverse = false }: { inverse?: boolean }) {
   return (
-    <span className={`brand-mark${inverse ? ' brand-mark--inverse' : ''}`} aria-hidden="true">
+    <span className={`brand-mark${inverse ? ' brand-mark--inverse' : ''}`} style={{color: inverse ? '#fff' : 'var(--color-primary-600)'}} aria-hidden="true">
       <svg className="brand-mark__bubble" viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" focusable="false">
         <path d="M32 7a24 24 0 1 1-12.7 44.4L7 55l3.6-12.4A24 24 0 0 1 32 7Z" strokeWidth="6" strokeLinejoin="miter" />
         <g className="brand-mark__snow" transform="translate(32 31)" strokeWidth="2.4">

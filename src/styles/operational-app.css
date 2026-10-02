@@ -1413,3 +1413,31 @@
   gap: 7px;
   flex-wrap: wrap;
 }
+
+
+/* Service catalog rows keep labels and controls aligned across desktop and mobile. */
+.catalog-table-row--service {
+  grid-template-columns: minmax(220px,1.35fr) minmax(150px,.75fr) minmax(130px,.65fr) 44px;
+  align-items: start;
+}
+
+.catalog-table-row--service .catalog-icon-danger {
+  align-self: start;
+  margin-top: 21px;
+}
+
+@media (max-width: 760px) {
+  .catalog-table-row--service {
+    grid-template-columns: minmax(0,1fr) minmax(120px,.7fr) 44px;
+  }
+}
+
+@media (max-width: 560px) {
+  .catalog-table-row--service {
+    grid-template-columns: minmax(0,1fr) 44px;
+  }
+
+  .catalog-table-row--service .catalog-icon-danger {
+    margin-top: 21px;
+  }
+}

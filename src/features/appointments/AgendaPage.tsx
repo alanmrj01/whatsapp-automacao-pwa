@@ -16,6 +16,7 @@ import { useAuth } from '../auth/useAuth'
 import { useAppointment, useAppointments, useAppointmentsRange, useBusiness, useCancelAppointment, useCreateCustomer, useCustomers, useEmployees, usePendingReschedules, useRequestAppointmentReschedule, useSaveAppointment, useServices } from '../operations/api'
 import type { Appointment, AppointmentRescheduleResult, AppointmentStatus } from '../operations/types'
 import { zonedDateTimeToIso } from '../operations/timezone'
+import { ApiError } from '../../lib/httpClient'
 import './agenda-calendar.css'
 
 const statusLabels:Record<DemoAppointmentStatus,string> = {pending:'Pendente',confirmed:'Confirmado',completed:'Concluído',cancelled:'Cancelado'}
@@ -361,8 +362,12 @@ function RealAgenda({selectedDate,setSelectedDate,canMutate,initialView,setOuter
       }
       setRescheduleAppointment(null)
       setRescheduleConflict(null)
-    }catch{
-      setRescheduleError('Não foi possível iniciar o reagendamento. Tente novamente.')
+    }catch(error){
+      if(error instanceof ApiError && error.status===409 && /window is closed|approved template/i.test(error.detail??error.message)){
+        setRescheduleError('A janela de 24 horas do WhatsApp está encerrada para este cliente. Para iniciar o reagendamento agora, é necessário um template Meta aprovado. O agendamento atual foi mantido sem alterações.')
+      }else{
+        setRescheduleError('Não foi possível iniciar o reagendamento. Tente novamente.')
+      }
     }
   }
 
@@ -433,8 +438,8 @@ function RealAgenda({selectedDate,setSelectedDate,canMutate,initialView,setOuter
       {rescheduleAppointment&&<div className="reschedule-form">
         <div className="account-note"><strong>Como funciona</strong><span>Ao iniciar, o horário atual é liberado imediatamente e o atendimento vai para Pendências de reagendamento. Sem preferência, o cliente escolhe data e horário. Com preferência, ele recebe a sugestão para confirmar; se recusar, recebe as alternativas disponíveis.</span></div>
         <div className="form-grid">
-          <label>Dia preferencial <span className="optional-label">opcional</span><input type="date" value={preferredDate} onChange={event=>{setPreferredDate(event.target.value);setRescheduleConflict(null)}}/></label>
-          <label>Horário preferencial <span className="optional-label">opcional</span><input type="time" value={preferredTime} onChange={event=>{setPreferredTime(event.target.value);setRescheduleConflict(null)}}/></label>
+          <label><span className="field-label-row"><span>Dia preferencial</span><span className="optional-label">opcional</span></span><input type="date" value={preferredDate} onChange={event=>{setPreferredDate(event.target.value);setRescheduleConflict(null)}}/></label>
+          <label><span className="field-label-row"><span>Horário preferencial</span><span className="optional-label">opcional</span></span><input type="time" value={preferredTime} onChange={event=>{setPreferredTime(event.target.value);setRescheduleConflict(null)}}/></label>
         </div>
         {rescheduleConflict?.reason==='appointment_conflict'&&<section className="priority-conflict-card" role="alert">
           <strong>Esse horário conflita com atendimento(s) já confirmado(s).</strong>

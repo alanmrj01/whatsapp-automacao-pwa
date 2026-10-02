@@ -1,11 +1,8 @@
 import { NavLink } from 'react-router-dom'
-import { useAuth } from '../features/auth/useAuth'
 import { BrandMark } from './BrandMark'
 import { navigationItems } from './navigation'
 
 export function DesktopSidebar() {
-  const {membership} = useAuth()
-  const name = membership?.business_name ?? 'Sua empresa'
   return (
     <aside className="desktop-sidebar">
       <div className="desktop-sidebar__brand">
@@ -30,13 +27,6 @@ export function DesktopSidebar() {
           </NavLink>
         ))}
       </nav>
-      <div className="desktop-sidebar__business">
-        <div className="business-avatar" aria-hidden="true">{name.slice(0,2).toUpperCase()}</div>
-        <div>
-          <strong>{name}</strong>
-          <span>Empresa ativa</span>
-        </div>
-      </div>
     </aside>
   )
 }
