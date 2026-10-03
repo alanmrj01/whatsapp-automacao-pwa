@@ -443,6 +443,42 @@
   overflow-wrap: normal;
 }
 
+
+.checkout-admin-access-notice {
+  margin-top: 16px;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 9px 10px;
+  border: 1px solid #cfe8dc;
+  border-radius: 15px;
+  color: #17734a;
+  background: #f4fbf7;
+}
+
+.checkout-admin-access-notice > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.checkout-admin-access-notice strong {
+  color: var(--color-text);
+  font-size: .8rem;
+  line-height: 1.35;
+}
+
+.checkout-admin-access-notice span {
+  color: var(--color-text-soft);
+  font-size: .73rem;
+  line-height: 1.45;
+}
+
+.checkout-admin-access-notice .secondary-button {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
 .checkout-loading-card,
 .checkout-expired-card {
   display: grid;
