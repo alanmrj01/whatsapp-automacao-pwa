@@ -100,27 +100,21 @@ function formatPhone(value:string) {
     .replace(/(\d{5})(\d)/,'$1-$2')
 }
 
-function cardNumberLimit(value:string) {
-  const number=digits(value,19)
-  if(/^3[47]/.test(number))return 15
-  if(/^4/.test(number))return 16
-  if(/^(5[1-5]|2(?:2[2-9]|[3-6]\d|7[01]|720))/.test(number))return 16
-  return 19
-}
-
 function formatCardNumber(value:string) {
-  const limit=cardNumberLimit(value)
-  return digits(value,limit).replace(/(\d{4})(?=\d)/g,'$1 ').trim()
+  return digits(value,19).replace(/(\d{4})(?=\d)/g,'$1 ').trim()
 }
 
 function isValidCardNumber(value:string) {
   const number=digits(value,19)
-  return number.length>=13&&number.length<=cardNumberLimit(number)
+  return number.length>=13&&number.length<=19
 }
 
 function isCardNumberComplete(value:string) {
   const number=digits(value,19)
-  return number.length===cardNumberLimit(number)
+  if(/^3[47]/.test(number))return number.length===15
+  if(/^4/.test(number))return number.length===16
+  if(/^(5[1-5]|2(?:2[2-9]|[3-6]\d|7[01]|720))/.test(number))return number.length===16
+  return number.length===19
 }
 
 function cardSecurityCodeLimit(cardNumber:string) {
