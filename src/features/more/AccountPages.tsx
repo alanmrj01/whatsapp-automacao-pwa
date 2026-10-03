@@ -15,7 +15,7 @@ const roleLabels: Record<MembershipRole,string> = {
 function AccountHeader({eyebrow,title,description}:{eyebrow:string;title:string;description:string}) {
   return <section className="operational-heading account-heading">
     <div>
-      <Link className="account-back" to="/app/mais"><ChevronLeft size={18}/>Mais</Link>
+      <Link className="account-back" to="/app/mais"><ChevronLeft size={18}/>Configurações</Link>
       <span className="eyebrow">{eyebrow}</span>
       <h1>{title}</h1>
       <p>{description}</p>
