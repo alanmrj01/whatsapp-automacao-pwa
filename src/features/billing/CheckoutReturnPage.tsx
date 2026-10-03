@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock3, LoaderCircle, RotateCcw, XCircle } from 'lucide-react'
+import { Clock3, LoaderCircle, RotateCcw, XCircle } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../../lib/api'
