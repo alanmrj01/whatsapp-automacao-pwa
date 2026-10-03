@@ -333,11 +333,11 @@ export function CheckoutPage() {
               </label>
               <label className="checkout-field">
                 <span>CPF ou CNPJ</span>
-                <input inputMode="numeric" autoComplete="off" value={payerDocument} onChange={event=>setPayerDocument(formatDocument(event.target.value))} placeholder="000.000.000-00" required/>
+                <input inputMode="numeric" autoComplete="off" value={payerDocument} onChange={event=>setPayerDocument(formatDocument(event.target.value))} placeholder="CPF ou CNPJ" required/>
               </label>
               <label className="checkout-field">
                 <span>Celular</span>
-                <input inputMode="tel" autoComplete="tel" value={payerPhone} onChange={event=>setPayerPhone(formatPhone(event.target.value))} placeholder="(00) 00000-0000" required/>
+                <input inputMode="tel" autoComplete="tel" value={payerPhone} onChange={event=>setPayerPhone(formatPhone(event.target.value))} placeholder="Celular com DDD" required/>
               </label>
               <label className="checkout-field checkout-field--wide">
                 <span>E-mail da conta</span>
@@ -345,7 +345,7 @@ export function CheckoutPage() {
               </label>
               <label className="checkout-field">
                 <span>CEP</span>
-                <input inputMode="numeric" autoComplete="postal-code" value={postalCode} onChange={event=>setPostalCode(formatPostalCode(event.target.value))} placeholder="00000-000" required/>
+                <input inputMode="numeric" autoComplete="postal-code" value={postalCode} onChange={event=>setPostalCode(formatPostalCode(event.target.value))} placeholder="CEP" required/>
               </label>
               <label className="checkout-field">
                 <span>Número</span>
@@ -372,7 +372,7 @@ export function CheckoutPage() {
               </label>
               <label className="checkout-field checkout-field--wide">
                 <span>Número do cartão</span>
-                <div className="checkout-input-with-icon"><CreditCard size={18}/><input inputMode="numeric" autoComplete="cc-number" value={cardNumber} onChange={event=>setCardNumber(formatCardNumber(event.target.value))} placeholder="0000 0000 0000 0000" required/></div>
+                <div className="checkout-input-with-icon"><CreditCard size={18}/><input inputMode="numeric" autoComplete="cc-number" value={cardNumber} onChange={event=>setCardNumber(formatCardNumber(event.target.value))} placeholder="Número do cartão" required/></div>
               </label>
               <label className="checkout-field">
                 <span>Validade</span>
@@ -425,3 +425,4 @@ export function CheckoutPage() {
       </aside>
     </div>
   </main>
+}
