@@ -36,7 +36,7 @@ export const plans: Plan[] = [
     id:'plus',
     name:'Plus',
     positioning:'Para empresas que já trabalham em equipe.',
-    monthlyPrice:297,
+    monthlyPrice:397,
     users:5,
     automaticAttendances:1500,
     features:['1 WhatsApp','Assistente virtual completo','Conversas e agenda reais','Gestão de equipe'],
