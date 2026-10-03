@@ -165,8 +165,14 @@ export function CheckoutPage() {
       setCardHolderName(current=>current||nextProfile.payer_name||'')
       setPostalCode(current=>current||formatPostalCode(nextProfile.postal_code??''))
       setAddressNumber(current=>current||nextProfile.address_number||'')
-    } catch {
-      setError('Não foi possível preparar seu checkout agora. Tente novamente.')
+    } catch (caught) {
+      if(caught instanceof ApiError&&caught.status===401) {
+        setError('Sua sessão expirou. Entre novamente para continuar.')
+      } else if(caught instanceof ApiError&&caught.status===409) {
+        setError(caught.detail||'Não foi possível preparar este checkout agora.')
+      } else {
+        setError('Não foi possível preparar seu checkout agora. Tente novamente.')
+      }
     } finally {
       setLoading(false)
     }
@@ -485,29 +491,28 @@ export function CheckoutPage() {
 
         <section className="checkout-security-card">
           <ShieldCheck size={24} aria-hidden="true"/>
-          <div>
+          <div className="checkout-security-content">
             <div className="checkout-security-title">
               <strong>Pagamento protegido</strong>
               <span className="asaas-wordmark" aria-label="Asaas">Asaas</span>
             </div>
             <p>Processamento financeiro realizado com segurança por Asaas.</p>
+
+            <a
+              className="checkout-asaas-about"
+              href="https://www.asaas.com/sobre-nos"
+              target="_blank"
+              rel="noopener noreferrer"
+              referrerPolicy="no-referrer"
+            >
+              <span className="checkout-asaas-about-copy">
+                <small>Conheça a empresa</small>
+                <strong>Asaas</strong>
+              </span>
+              <ExternalLink size={17} aria-hidden="true"/>
+            </a>
           </div>
         </section>
-
-        <a
-          className="checkout-asaas-about"
-          href="https://www.asaas.com/sobre-nos"
-          target="_blank"
-          rel="noopener noreferrer"
-          referrerPolicy="no-referrer"
-        >
-          <span className="checkout-asaas-about-copy">
-            <small>Conheça a empresa</small>
-            <strong>Asaas</strong>
-          </span>
-          <span className="asaas-wordmark asaas-wordmark--small" aria-hidden="true">Asaas</span>
-          <ExternalLink size={17} aria-hidden="true"/>
-        </a>
       </aside>
     </div>
   </main>
