@@ -147,6 +147,7 @@ export function CheckoutPage() {
   const [remaining,setRemaining]=useState(600)
   const [error,setError]=useState<string|null>(null)
   const [submitting,setSubmitting]=useState(false)
+  const [adminAccessNotice,setAdminAccessNotice]=useState(false)
   const [openStep,setOpenStep]=useState<1|2>(1)
   const payerDocumentRef=useRef<HTMLInputElement|null>(null)
   const payerPhoneRef=useRef<HTMLInputElement|null>(null)
@@ -260,6 +261,7 @@ export function CheckoutPage() {
     setRemaining(600)
     setError(null)
     setSubmitting(false)
+    setAdminAccessNotice(false)
     setOpenStep(1)
     setCardNumber('')
     setExpiryMonth('')
@@ -271,6 +273,16 @@ export function CheckoutPage() {
   const submit=async(event:FormEvent)=>{
     event.preventDefault()
     if(!checkout||submitting||expired)return
+
+    if(membership?.admin_full_access) {
+      setError(null)
+      setAdminAccessNotice(true)
+      setCardNumber('')
+      setExpiryMonth('')
+      setExpiryYear('')
+      setCcv('')
+      return
+    }
 
     const checkoutMode=checkout.checkout_mode??(checkout.checkout_url?'hosted':null)
 
@@ -314,6 +326,7 @@ export function CheckoutPage() {
 
     setSubmitting(true)
     setError(null)
+    setAdminAccessNotice(false)
     try {
       await api.request(`/billing/checkouts/${checkout.checkout_id}/credit-card`,{
         method:'POST',
