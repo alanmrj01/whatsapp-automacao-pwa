@@ -53,9 +53,11 @@ function AutomationForm({settings,canEdit}:{settings:AutomationSettings;canEdit:
 }
 
 type DeviceContact = {name?:string[];tel?:string[]}
+type ContactProperty = 'name'|'tel'
 type ContactNavigator = Navigator & {
   contacts?: {
-    select:(properties:Array<'name'|'tel'>,options:{multiple:boolean})=>Promise<DeviceContact[]>
+    getProperties?:()=>Promise<string[]>
+    select:(properties:ContactProperty[],options:{multiple:boolean})=>Promise<DeviceContact[]>
   }
 }
 
@@ -66,6 +68,7 @@ function Exclusions({customers,exclusions,canEdit}:{customers:Customer[];exclusi
   const [customerSearch,setCustomerSearch]=useState('')
   const [manualPhone,setManualPhone]=useState('')
   const [manualLabel,setManualLabel]=useState('')
+  const [devicePhones,setDevicePhones]=useState<string[]>([])
   const [reason,setReason]=useState('')
   const [contactError,setContactError]=useState(false)
   const selected=customers.find(item=>item.id===customerId)
@@ -86,11 +89,20 @@ function Exclusions({customers,exclusions,canEdit}:{customers:Customer[];exclusi
     if(!canPickDeviceContact)return
     setContactError(false)
     try{
-      const [contact]=await contactNavigator.contacts!.select(['name','tel'],{multiple:false})
-      const phone=contact?.tel?.[0]??''
+      const supported=await contactNavigator.contacts!.getProperties?.()
+      const properties:ContactProperty[]=['name','tel'].filter(
+        property=>!supported||supported.includes(property),
+      ) as ContactProperty[]
+      if(!properties.includes('tel')){
+        setContactError(true)
+        return
+      }
+      const [contact]=await contactNavigator.contacts!.select(properties,{multiple:false})
+      const phones=(contact?.tel??[]).filter(Boolean)
       const label=contact?.name?.[0]??''
-      if(!phone)return
-      setManualPhone(phone)
+      if(!phones.length)return
+      setDevicePhones(phones)
+      setManualPhone(phones[0])
       setManualLabel(label)
       setSource('device')
     }catch{
@@ -102,16 +114,21 @@ function Exclusions({customers,exclusions,canEdit}:{customers:Customer[];exclusi
     const whatsappId=source==='customer'?selected?.phone?.replace(/\D/g,''):normalizedManualPhone
     if(!whatsappId)return
     const label=source==='customer'?selected?.name:manualLabel.trim()||null
-    add.mutate({whatsapp_id:whatsappId,label,reason:reason.trim()||null,mode:'human_only'},{onSuccess:()=>{setCustomerId('');setCustomerSearch('');setManualPhone('');setManualLabel('');setReason('')}})
+    add.mutate({whatsapp_id:whatsappId,label,reason:reason.trim()||null,mode:'human_only'},{onSuccess:()=>{setCustomerId('');setCustomerSearch('');setManualPhone('');setManualLabel('');setDevicePhones([]);setReason('')}})
   }
   return <section aria-labelledby="exclusions-title">
     <div className="section-title-row"><div><span className="eyebrow">Exceções permanentes</span><h2 id="exclusions-title">Contatos sem resposta automática</h2></div><InfoHelp title="Contatos sem resposta automática">As mensagens continuam aparecendo normalmente, mas o Assistente Virtual não responde sozinho.</InfoHelp></div>
     {canEdit&&<form className="settings-form settings-form--inline" onSubmit={event=>{event.preventDefault();submit()}}>
       <label>Como adicionar<select value={source} onChange={event=>setSource(event.target.value as 'device'|'customer'|'manual')}><option value="customer">Buscar nos contatos do ALOVIA</option><option value="manual">Adicionar por número</option><option value="device">Selecionar da agenda do celular</option></select></label>
       {source==='device'&&<>
-        {canPickDeviceContact?<><button className="secondary-button contact-picker-button" type="button" onClick={()=>void pickDeviceContact()}><Smartphone size={18}/>Abrir agenda do celular</button><p className="settings-note">A busca dentro dessa janela é controlada pelo Android/navegador. Se ela não responder, use a busca do ALOVIA acima ou adicione pelo número.</p></>:<p className="settings-note">Este navegador não permite abrir a agenda do aparelho. Use a busca do ALOVIA ou “Adicionar por número”.</p>}
+        {canPickDeviceContact?<><button className="secondary-button contact-picker-button" type="button" onClick={()=>void pickDeviceContact()}><Smartphone size={18}/>Abrir contatos do aparelho</button><p className="settings-note">O ALOVIA usa o seletor nativo do Android. Ele pode mostrar contatos da conta Google, memória do aparelho ou chip quando essas fontes são expostas pelo sistema. Contatos salvos somente dentro do WhatsApp não são liberados diretamente para um PWA.</p></>:<p className="settings-note">Este navegador não permite abrir os contatos do aparelho. Use “Buscar nos contatos do ALOVIA” ou “Adicionar por número”.</p>}
         {!!manualPhone&&<div className="settings-contact-preview"><ContactRound size={18}/><div><strong>{manualLabel||'Contato selecionado'}</strong><span>{manualPhone}</span></div></div>}
-        {contactError&&<p className="form-error" role="alert">Não foi possível abrir ou ler o contato selecionado.</p>}
+        {devicePhones.length>1&&<label>Número do contato<select value={manualPhone} onChange={event=>setManualPhone(event.target.value)}>{devicePhones.map(phone=><option value={phone} key={phone}>{phone}</option>)}</select><small>Este contato possui mais de um número. Escolha qual deve ficar sem resposta automática.</small></label>}
+        <div className="contact-picker-fallbacks">
+          <button type="button" className="secondary-button" onClick={()=>setSource('customer')}>Buscar no ALOVIA</button>
+          <button type="button" className="secondary-button" onClick={()=>setSource('manual')}>Adicionar pelo número</button>
+        </div>
+        {contactError&&<p className="form-error" role="alert">Não foi possível abrir ou ler o contato selecionado. Tente a busca do ALOVIA ou adicione o número manualmente.</p>}
       </>}
       {source==='customer'&&<>
         <label>Buscar contato<input type="search" value={customerSearch} onChange={event=>setCustomerSearch(event.target.value)} placeholder="Nome ou telefone"/></label>
