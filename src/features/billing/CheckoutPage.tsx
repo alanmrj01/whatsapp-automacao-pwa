@@ -16,6 +16,7 @@ import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { BrandMark } from '../../components/BrandMark'
 import { api } from '../../lib/api'
 import { ApiError } from '../../lib/httpClient'
+import { useAuth } from '../auth/useAuth'
 import {
   billingCycles,
   cyclePrice,
