@@ -67,6 +67,16 @@
   status = 200
 
 [[headers]]
+  for = "/app/checkout*"
+  [headers.values]
+    Cache-Control = "no-store"
+    Pragma = "no-cache"
+    Referrer-Policy = "no-referrer"
+    Content-Security-Policy = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: https:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; script-src-elem 'self'; script-src-attr 'none'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests"
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+
+[[headers]]
   for = "/api/*"
   [headers.values]
     Cache-Control = "no-store"
