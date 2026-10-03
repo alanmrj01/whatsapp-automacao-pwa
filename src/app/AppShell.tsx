@@ -13,7 +13,7 @@ const titles: Record<string, string> = {
   '/app/agenda': 'Agenda',
   '/app/conversas': 'Conversas',
   '/app/whatsapp': 'WhatsApp',
-  '/app/mais': 'Mais',
+  '/app/mais': 'Configurações',
   '/app/mais/empresa': 'Dados da empresa',
   '/app/mais/servicos': 'Catálogo de serviços',
   '/app/mais/catalogo': 'Catálogo da empresa',
