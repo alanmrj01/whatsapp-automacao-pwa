@@ -1,5 +1,5 @@
-import { CheckCircle2, Clock3, RotateCcw, XCircle } from 'lucide-react'
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { CheckCircle2, Clock3, LoaderCircle, RotateCcw, XCircle } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../../lib/api'
 import { useAuth } from '../auth/useAuth'
@@ -21,6 +21,7 @@ export function CheckoutReturnPage() {
   const browserState = params.get('state')
   const [status,setStatus] = useState<CheckoutStatus['status'] | 'checking'>('checking')
   const [retry,setRetry] = useState(0)
+  const finalizing = useRef(false)
   const validCheckout = useMemo(()=>!!checkoutId&&UUID_PATTERN.test(checkoutId),[checkoutId])
 
   useEffect(()=>{
@@ -34,12 +35,20 @@ export function CheckoutReturnPage() {
       try {
         const current = await api.request<CheckoutStatus>(`/billing/checkouts/${checkoutId}`)
         if (cancelled) return
-        setStatus(current.status)
         if (current.status === 'paid') {
-          await syncSession()
-          if (!cancelled) navigate('/app',{replace:true})
+          if (finalizing.current) return
+          finalizing.current = true
+          setStatus('checking')
+          try {
+            await syncSession()
+            if (!cancelled) navigate('/app',{replace:true})
+          } catch {
+            finalizing.current = false
+            if (!cancelled) timer = window.setTimeout(check,1200)
+          }
           return
         }
+        setStatus(current.status)
         if (['canceled','expired','failed'].includes(current.status)) return
       } catch {
         if (cancelled) return
@@ -75,7 +84,7 @@ export function CheckoutReturnPage() {
     </CheckoutMessage>
   }
 
-  return <CheckoutMessage icon={status==='paid'?<CheckCircle2/>:<Clock3/>} title="Confirmando pagamento" text="Estamos confirmando o pagamento com o Asaas. Isso costuma levar apenas alguns instantes.">
+  return <CheckoutMessage icon={<LoaderCircle className="checkout-confirmation-spinner"/>} title="Confirmando pagamento" text="Estamos confirmando o pagamento com o Asaas. Isso costuma levar apenas alguns instantes.">
     <button className="secondary-button" type="button" onClick={()=>setRetry(value=>value+1)}><RotateCcw size={16}/>Verificar novamente</button>
   </CheckoutMessage>
 }
