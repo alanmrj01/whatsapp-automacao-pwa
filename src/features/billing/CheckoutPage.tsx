@@ -258,6 +258,11 @@ export function CheckoutPage() {
   const price=cyclePrice(plan,cycleParam)
   const cycle=billingCycles.find(item=>item.id===cycleParam)
   const expired=remaining<=0
+  const hostedCheckout=checkout?.checkout_mode==='hosted'||(!checkout?.checkout_mode&&!!checkout?.checkout_url)
+  const hostedCheckoutUrl=
+    hostedCheckout&&checkout?.checkout_url&&isAsaasCheckoutUrl(checkout.checkout_url)
+      ?checkout.checkout_url
+      :null
 
   const restart=()=>{
     requestKey.current=crypto.randomUUID()
@@ -416,7 +421,18 @@ export function CheckoutPage() {
           <button className="primary-button" type="button" onClick={restart}><RefreshCcw size={17}/>Gerar nova sessão</button>
         </section>}
 
-        {!loading&&!expired&&checkout&&<form className="native-checkout-form" onSubmit={submit} noValidate>
+        {!loading&&!expired&&hostedCheckout&&hostedCheckoutUrl&&<section className="native-checkout-card checkout-expired-card">
+          <ShieldCheck size={24} aria-hidden="true"/>
+          <div><strong>Pagamento seguro pelo Asaas</strong><span>Você será redirecionado para concluir o pagamento com cartão no ambiente seguro do Asaas.</span></div>
+          <button className="primary-button" type="button" onClick={()=>window.location.assign(hostedCheckoutUrl)}>Continuar para pagamento</button>
+        </section>}
+
+        {!loading&&!expired&&hostedCheckout&&!hostedCheckoutUrl&&<section className="native-checkout-card checkout-expired-card">
+          <div><strong>O checkout seguro não está disponível agora.</strong><span>Tente gerar uma nova sessão em alguns instantes.</span></div>
+          <button className="secondary-button" type="button" onClick={restart}><RefreshCcw size={17}/>Tentar novamente</button>
+        </section>}
+
+        {!loading&&!expired&&checkout&&!hostedCheckout&&<form className="native-checkout-form" onSubmit={submit} noValidate>
           <section className={`native-checkout-card checkout-accordion-card${openStep===1?' is-open':''}`}>
             <button
               className="checkout-section-toggle"
