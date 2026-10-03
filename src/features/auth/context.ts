@@ -12,6 +12,7 @@ type AuthContextValue = {
   selectBusiness: (id: string) => Promise<void>
   bootstrap: () => Promise<void>
   reconnect: () => Promise<void>
+  syncSession: () => Promise<void>
   retryPendingLogout: () => Promise<void>
   continueToLogin: () => void
 }

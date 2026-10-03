@@ -2,12 +2,16 @@
   command = "npm run build"
   publish = "dist"
 
+# TEMPORARY PR PREVIEW ROUTING:
+# This branch proxies /api to the isolated Sandbox candidate below so auth stays
+# same-origin in the browser. Revert these proxy targets before merging the PR.
+
 # Keep auth/session same-origin from the browser's perspective. The PWA calls
 # /api/* on its own origin and Netlify proxies to Cloud Run server-side.
 # Login gets a stricter per-IP edge limit before the generic auth/API proxies.
 [[redirects]]
   from = "/api/v1/auth/login"
-  to = "https://whatsapp-backend-186627697999.southamerica-east1.run.app/api/v1/auth/login"
+  to = "https://native-checkout-sbx---whatsapp-backend-76kppogwfq-rj.a.run.app/api/v1/auth/login"
   status = 200
   force = true
   [redirects.rate_limit]
@@ -19,7 +23,7 @@
 # with normal multi-tab session restoration.
 [[redirects]]
   from = "/api/v1/auth/*"
-  to = "https://whatsapp-backend-186627697999.southamerica-east1.run.app/api/v1/auth/:splat"
+  to = "https://native-checkout-sbx---whatsapp-backend-76kppogwfq-rj.a.run.app/api/v1/auth/:splat"
   status = 200
   force = true
   [redirects.rate_limit]
@@ -27,9 +31,32 @@
     window_size = 60
     aggregate_by = ["ip", "domain"]
 
+# Keep the exact checkout-creation route before the wildcard. Netlify uses
+# first-match routing; placing the wildcard first rewrites the empty splat as a
+# trailing slash and makes FastAPI answer 307 before the POST reaches the route.
+[[redirects]]
+  from = "/api/v1/billing/checkouts"
+  to = "https://native-checkout-sbx---whatsapp-backend-76kppogwfq-rj.a.run.app/api/v1/billing/checkouts"
+  status = 200
+  force = true
+  [redirects.rate_limit]
+    window_limit = 30
+    window_size = 60
+    aggregate_by = ["ip", "domain"]
+
+[[redirects]]
+  from = "/api/v1/billing/checkouts/*"
+  to = "https://native-checkout-sbx---whatsapp-backend-76kppogwfq-rj.a.run.app/api/v1/billing/checkouts/:splat"
+  status = 200
+  force = true
+  [redirects.rate_limit]
+    window_limit = 30
+    window_size = 60
+    aggregate_by = ["ip", "domain"]
+
 [[redirects]]
   from = "/api/*"
-  to = "https://whatsapp-backend-186627697999.southamerica-east1.run.app/api/:splat"
+  to = "https://native-checkout-sbx---whatsapp-backend-76kppogwfq-rj.a.run.app/api/:splat"
   status = 200
   force = true
 
@@ -39,6 +66,16 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+[[headers]]
+  for = "/app/checkout*"
+  [headers.values]
+    Cache-Control = "no-store"
+    Pragma = "no-cache"
+    Referrer-Policy = "no-referrer"
+    Content-Security-Policy = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: https:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; script-src-elem 'self'; script-src-attr 'none'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests"
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
 
 [[headers]]
   for = "/api/*"
