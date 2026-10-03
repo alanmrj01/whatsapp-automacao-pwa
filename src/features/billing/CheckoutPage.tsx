@@ -350,6 +350,15 @@ export function CheckoutPage() {
       setCcv('')
       if(caught instanceof ApiError&&caught.status===422) {
         setError('Não foi possível autorizar o cartão. Confira os dados ou tente outro cartão.')
+      } else if(
+        caught instanceof ApiError&&
+        caught.status===409&&
+        caught.detail==='Admin full access is active; a paid plan is not required'
+      ) {
+        setAdminAccessNotice(true)
+        setCardNumber('')
+        setExpiryMonth('')
+        setExpiryYear('')
       } else if(caught instanceof ApiError&&caught.status===409) {
         setError(caught.detail==='Checkout expired'
           ?'Esta sessão expirou. Gere uma nova sessão para continuar.'
