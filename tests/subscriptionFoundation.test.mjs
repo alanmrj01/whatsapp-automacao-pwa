@@ -26,7 +26,7 @@ test('free demo and former operational account are different states', () => {
 
 test('commercial catalog uses Basic and Plus with quarterly as default', () => {
   assert.equal(defaultBillingCycle,'quarterly')
-  assert.deepEqual(plans.map(plan=>[plan.id,plan.monthlyPrice]),[['basic',197],['plus',297]])
+  assert.deepEqual(plans.map(plan=>[plan.id,plan.monthlyPrice]),[['basic',197],['plus',397]])
   assert.equal(billingCycles.find(item=>item.id==='quarterly')?.discount,0.10)
   assert.equal(billingCycles.find(item=>item.id==='quarterly')?.badge,'Mais popular')
   assert.equal(billingCycles.find(item=>item.id==='annual')?.discount,0.15)
@@ -36,8 +36,8 @@ test('commercial catalog uses Basic and Plus with quarterly as default', () => {
   const plus = plans.find(plan=>plan.id==='plus')
   assert.equal(cyclePrice(basic,'quarterly').total,531.9)
   assert.equal(cyclePrice(basic,'annual').total,2009.4)
-  assert.equal(cyclePrice(plus,'quarterly').total,801.9)
-  assert.equal(cyclePrice(plus,'annual').total,3029.4)
+  assert.equal(cyclePrice(plus,'quarterly').total,1071.9)
+  assert.equal(cyclePrice(plus,'annual').total,4049.4)
   assert.equal(isPurchasablePlan('basic'),true)
   assert.equal(isPurchasablePlan('plus'),false)
 })
@@ -61,17 +61,23 @@ test('Basic goes to checkout while Plus only reveals the coming-soon notice', ()
   assert.doesNotMatch(plan,/Sua escolha/)
 
   assert.match(checkout,/Finalize sua assinatura/)
-  assert.match(checkout,/Pagamento seguro/)
+  assert.match(checkout,/Pagamento protegido/)
   assert.match(checkout,/cyclePrice\(plan,cycleParam\)/)
   assert.match(checkout,/Cartão de crédito/)
-  assert.match(checkout,/Pix Automático/)
-  assert.match(checkout,/payment_method:paymentMethod/)
-  assert.match(checkout,/payer_cpf_cnpj:payerDocument/)
-  assert.match(checkout,/Copiar código Pix/)
-  assert.match(checkout,/if \(!isPurchasablePlan\(planId\)\)/)
+  assert.match(checkout,/checkout_mode/)
+  assert.match(checkout,/payer_cpf_cnpj:documentDigits/)
+  assert.match(checkout,/Processamento financeiro realizado com segurança por Asaas/)
+  assert.match(checkout,/Garantia de 7 dias/)
+  assert.match(checkout,/Atendimento e agendamento automático integrados/)
+  assert.match(checkout,/Até 2 técnicos/)
+  assert.match(checkout,/Conheça a empresa/)
+  assert.match(checkout,/identificationComplete/)
+  assert.match(checkout,/setRemaining\(600\)/)
+  assert.match(checkout,/if\(!isPurchasablePlan\(planId\)\)/)
   assert.match(checkout,/unavailable=\$\{planId\}/)
   assert.doesNotMatch(checkout,/Boleto/)
-  assert.match(router,/path="checkout" element=\{<CheckoutPage \/>\}/)
+  assert.doesNotMatch(checkout,/Pix Automático/)
+  assert.match(router,/path="\/app\/checkout" element=\{<CheckoutPage \/>\}/)
 })
 
 test('compact upgrade prompt and account routes remain explicit', () => {
@@ -88,4 +94,41 @@ test('compact upgrade prompt and account routes remain explicit', () => {
   assert.match(router,/mais\/privacidade/)
   assert.match(dashboard,/<h1>Dashboard<\/h1>/)
   assert.match(dashboard,/dashboard-business-name/)
+})
+
+test('checkout confirmation does not auto-reload or bounce through auth loading', () => {
+  const checkoutReturn = read('src/features/billing/CheckoutReturnPage.tsx')
+  const authProvider = read('src/features/auth/AuthProvider.tsx')
+  const vite = read('vite.config.ts')
+  const main = read('src/main.tsx')
+
+  assert.match(checkoutReturn,/syncSession/)
+  assert.doesNotMatch(checkoutReturn,/await reconnect\(\)/)
+  assert.match(authProvider,/const syncSession = useCallback/)
+  assert.match(authProvider,/api\.request<SessionUser>\('\/me'\)/)
+  const syncBlock = authProvider.match(/const syncSession = useCallback\([\s\S]*?\n  \}, \[\]\)/)?.[0] ?? ''
+  assert.ok(syncBlock)
+  assert.doesNotMatch(syncBlock,/setState\('loading'\)/)
+  assert.match(vite,/registerType: 'prompt'/)
+  assert.doesNotMatch(vite,/registerType: 'autoUpdate'/)
+  assert.match(main,/onNeedRefresh: \(\) => undefined/)
+})
+
+
+test('admin-granted accounts never enter the paid checkout confirmation flow', () => {
+  const checkout = read('src/features/billing/CheckoutPage.tsx')
+  const authTypes = read('src/features/auth/types.ts')
+
+  assert.match(authTypes,/admin_full_access\?: boolean/)
+  assert.match(checkout,/membership\?\.admin_full_access/)
+  assert.match(checkout,/Esta conta já está liberada pelo administrador do ALOVIA/)
+  assert.match(checkout,/Não é necessário adquirir um plano pago enquanto essa liberação estiver ativa/)
+  assert.match(checkout,/Admin full access is active; a paid plan is not required/)
+})
+
+test('service-distance inputs use the current rounded onboarding field system', () => {
+  const css = read('src/features/onboarding/onboarding.css')
+  assert.match(css,/\.onboarding-distance-card input:not\(\[type="checkbox"\]\)/)
+  assert.match(css,/\.onboarding-distance-card input:not\(\[type="checkbox"\]\):focus/)
+  assert.match(css,/\.onboarding-distance-card \.field-invalid/)
 })

@@ -62,6 +62,7 @@ export type Conversation = {
   customer_id:string
   customer_name:string
   customer_phone:string|null
+  customer_whatsapp_id?:string|null
   last_content:string|null
   last_message_at:string|null
   status:ConversationStatus

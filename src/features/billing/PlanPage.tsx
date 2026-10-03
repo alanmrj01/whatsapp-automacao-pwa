@@ -48,7 +48,7 @@ export function PlanPage() {
   return <div className="page-stack operational-page compact-page plan-page">
     <section className="operational-heading account-heading plan-heading">
       <div>
-        <Link className="account-back" to="/app/mais"><ChevronLeft size={18}/>Mais</Link>
+        <Link className="account-back" to="/app/mais"><ChevronLeft size={18}/>Configurações</Link>
         <span className="eyebrow">Assinatura</span>
         <h1>Escolha seu plano</h1>
         <p>Comece com o Basic ou escolha o Plus para uma operação com mais equipe e volume.</p>

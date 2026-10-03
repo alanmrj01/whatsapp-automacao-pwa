@@ -204,6 +204,19 @@
 .catalog-row-actions{display:flex!important;grid-auto-flow:column;gap:5px!important;align-items:center}
 .optional-label{font-weight:500;color:var(--color-text-muted);font-size:.75rem}
 
+.onboarding-distance-card label{
+  min-width:0;
+  display:grid;
+  gap:7px;
+  font-weight:700;
+}
+.onboarding-distance-card small{
+  color:var(--color-text-muted);
+  font-size:.72rem;
+  font-weight:500;
+  line-height:1.4;
+}
+
 @media(max-width:700px){
   .onboarding-shell{padding:12px 10px 22px}
   .onboarding-card,.onboarding-welcome{padding:20px 16px;border-radius:18px}
@@ -226,6 +239,7 @@
 }
 .onboarding-form input:not([type="checkbox"]),
 .onboarding-form select,
+.onboarding-distance-card input:not([type="checkbox"]),
 .onboarding-item-row input:not([type="checkbox"]),
 .onboarding-item-row select,
 .catalog-add-card input,
@@ -245,6 +259,7 @@
 }
 .onboarding-form input:not([type="checkbox"]):focus,
 .onboarding-form select:focus,
+.onboarding-distance-card input:not([type="checkbox"]):focus,
 .onboarding-item-row input:not([type="checkbox"]):focus,
 .onboarding-item-row select:focus,
 .catalog-add-card input:focus,
@@ -442,6 +457,7 @@
   line-height:1.35;
 }
 .onboarding-form .field-invalid,
+.onboarding-distance-card .field-invalid,
 .onboarding-item-row .field-invalid,
 .catalog-add-card .field-invalid{
   border-color:#e08b8b!important;
@@ -581,6 +597,7 @@
 }
 .onboarding-form input:not([type="checkbox"]),
 .onboarding-form select,
+.onboarding-distance-card input:not([type="checkbox"]),
 .onboarding-item-row input:not([type="checkbox"]),
 .onboarding-item-row select,
 .catalog-add-card input,

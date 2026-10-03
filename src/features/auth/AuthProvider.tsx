@@ -151,6 +151,15 @@ export function AuthProvider({children}: {children:ReactNode}) {
     await bootstrap()
   }, [bootstrap])
 
+  const syncSession = useCallback(async () => {
+    if (logoutBlocked.current) return
+    const expected = operation.current
+    const me = await api.request<SessionUser>('/me')
+    if (operation.current !== expected) return
+    setUser(me)
+    setState('authenticated')
+  }, [])
+
   async function selectBusiness(id:string) {
     if (!user?.memberships.some(m => m.business_id === id)) throw new ApiError(403)
     const expected = ++operation.current
@@ -176,6 +185,6 @@ export function AuthProvider({children}: {children:ReactNode}) {
 
   return <AuthContext.Provider value={{state,user,
     membership:user?.memberships.find(m=>m.business_id===user.active_business_id),
-    login,signup,logout,selectBusiness,bootstrap,reconnect,
+    login,signup,logout,selectBusiness,bootstrap,reconnect,syncSession,
     retryPendingLogout,continueToLogin}}>{children}</AuthContext.Provider>
 }

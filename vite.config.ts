@@ -18,7 +18,8 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // Checkout contains long forms: never reload an active client automatically.
+      registerType: 'prompt',
       includeAssets: [
         'app-icon.svg',
         'app-icon-maskable.svg',
