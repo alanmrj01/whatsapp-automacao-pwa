@@ -7,6 +7,7 @@ import {
   Clock3,
   CreditCard,
   ExternalLink,
+  LockKeyhole,
   RefreshCcw,
   ShieldCheck,
 } from 'lucide-react'
@@ -318,7 +319,7 @@ export function CheckoutPage() {
       </Link>
       <div className="native-checkout-brand">
         <BrandMark/>
-        <div><strong>ALOVIA</strong><span>Assinatura segura</span></div>
+        <div><strong>ALOVIA</strong></div>
       </div>
       <div className={`checkout-timer${expired?' is-expired':''}`} aria-live="polite">
         <Clock3 size={17}/>
