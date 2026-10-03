@@ -15,7 +15,12 @@ import './styles/operational-app.css'
 import './styles/account-billing.css'
 import './styles/billing-payment.css'
 
-registerSW({ immediate: true })
+registerSW({
+  immediate: true,
+  // A new build must never discard a form in progress. The waiting service
+  // worker is picked up after the user explicitly reloads/reopens the app.
+  onNeedRefresh: () => undefined,
+})
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
