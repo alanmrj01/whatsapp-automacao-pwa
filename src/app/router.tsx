@@ -69,6 +69,8 @@ export function AppRouter() {
         </Route>
         <Route element={<ProtectedRoute />}>
           <Route path="/app/onboarding" element={<PaidOperationalGuard><OnboardingPage /></PaidOperationalGuard>} />
+          <Route path="/app/checkout" element={<CheckoutPage />} />
+          <Route path="/app/checkout/retorno" element={<CheckoutReturnPage />} />
           <Route path="/app" element={<OnboardingGuard><AppShell /></OnboardingGuard>}>
             <Route index element={<DashboardPage />} />
             <Route path="agenda" element={<AgendaPage />} />
@@ -79,8 +81,6 @@ export function AppRouter() {
             <Route path="whatsapp/exclusivo" element={<RoleGuard><ApiOnlyInfoPage /></RoleGuard>} />
             <Route path="mais" element={<MorePage />} />
             <Route path="mais/plano" element={<PlanPage />} />
-            <Route path="checkout" element={<CheckoutPage />} />
-            <Route path="checkout/retorno" element={<CheckoutReturnPage />} />
             <Route path="mais/usuario" element={<UserSettingsPage />} />
             <Route path="mais/seguranca" element={<SecuritySettingsPage />} />
             <Route path="mais/privacidade" element={<PrivacySettingsPage />} />
