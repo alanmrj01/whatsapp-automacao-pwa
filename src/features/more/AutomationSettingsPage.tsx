@@ -9,26 +9,26 @@ import {
   useAddAssistantExclusion,
   useAssistantExclusions,
   useAutomationSettings,
-  useCustomers,
+  useConversationContacts,
   useRemoveAssistantExclusion,
   useUpdateAutomation,
 } from '../operations/api'
-import type { AssistantExclusion, AutomationSettings, Customer } from '../operations/types'
+import type { AssistantExclusion, AutomationSettings, Conversation } from '../operations/types'
 
 const windowOptions=[5,10,20,30,60,120,240,360,720,1440,2160]
 
 export function AutomationSettingsPage(){
-  const settings=useAutomationSettings(),customers=useCustomers(),exclusions=useAssistantExclusions()
+  const settings=useAutomationSettings(),conversationContacts=useConversationContacts(),exclusions=useAssistantExclusions()
   const canEdit=canConfigureWhatsApp(useAuth().membership?.role)
-  const pending=settings.isPending||customers.isPending||exclusions.isPending
-  const error=settings.isError||customers.isError||exclusions.isError
+  const pending=settings.isPending||conversationContacts.isPending||exclusions.isPending
+  const error=settings.isError||conversationContacts.isError||exclusions.isError
   return <Shell>
     <section className="operational-heading"><div><span className="eyebrow">Atendimento</span><h1>Assistente Virtual</h1></div><InfoHelp title="Assistente Virtual">Ajuste apenas o comportamento visível do Assistente e os contatos que não devem receber respostas automáticas. O reconhecimento técnico dos serviços é gerenciado automaticamente pelo ALOVIA.</InfoHelp></section>
     {pending&&<LoadingState/>}
-    {error&&<ErrorState onRetry={()=>{void settings.refetch();void customers.refetch();void exclusions.refetch()}}/>}
-    {settings.data&&customers.data&&exclusions.data&&<>
+    {error&&<ErrorState onRetry={()=>{void settings.refetch();void conversationContacts.refetch();void exclusions.refetch()}}/>}
+    {settings.data&&conversationContacts.data&&exclusions.data&&<>
       <AutomationForm settings={settings.data} canEdit={canEdit}/>
-      <Exclusions customers={customers.data.items} exclusions={exclusions.data.items} canEdit={canEdit}/>
+      <Exclusions conversations={conversationContacts.data.items} exclusions={exclusions.data.items} canEdit={canEdit}/>
     </>}
   </Shell>
 }
@@ -61,25 +61,26 @@ type ContactNavigator = Navigator & {
   }
 }
 
-function Exclusions({customers,exclusions,canEdit}:{customers:Customer[];exclusions:AssistantExclusion[];canEdit:boolean}){
+function Exclusions({conversations,exclusions,canEdit}:{conversations:Conversation[];exclusions:AssistantExclusion[];canEdit:boolean}){
   const add=useAddAssistantExclusion(),remove=useRemoveAssistantExclusion()
-  const [source,setSource]=useState<'device'|'customer'|'manual'>('customer')
+  const [source,setSource]=useState<'device'|'customer'|'manual'>('device')
   const [customerId,setCustomerId]=useState('')
-  const [customerSearch,setCustomerSearch]=useState('')
   const [manualPhone,setManualPhone]=useState('')
   const [manualLabel,setManualLabel]=useState('')
   const [devicePhones,setDevicePhones]=useState<string[]>([])
   const [reason,setReason]=useState('')
   const [contactError,setContactError]=useState(false)
-  const selected=customers.find(item=>item.id===customerId)
   const excluded=new Set(exclusions.map(item=>item.whatsapp_id))
-  const available=customers.filter(item=>item.phone&&!excluded.has(item.phone.replace(/\D/g,'')))
-  const normalizedCustomerSearch=customerSearch.trim().toLocaleLowerCase('pt-BR')
-  const visibleCustomers=available.filter(item=>{
-    if(!normalizedCustomerSearch)return true
-    return item.name.toLocaleLowerCase('pt-BR').includes(normalizedCustomerSearch)
-      || (item.phone??'').replace(/\D/g,'').includes(normalizedCustomerSearch.replace(/\D/g,''))
-  })
+  const conversationContacts=[...new Map(
+    conversations
+      .filter(item=>item.customer_phone)
+      .map(item=>{
+        const phone=(item.customer_phone??'').replace(/\D/g,'')
+        return [phone,{id:item.customer_id,name:item.customer_name,phone}] as const
+      })
+      .filter(([phone])=>phone&&!excluded.has(phone)),
+  ).values()].sort((left,right)=>left.name.localeCompare(right.name,'pt-BR'))
+  const selected=conversationContacts.find(item=>item.id===customerId)
   const normalizedManualPhone=manualPhone.replace(/\D/g,'')
   const manualValid=/^[1-9]\d{6,14}$/.test(normalizedManualPhone)&&!excluded.has(normalizedManualPhone)
   const contactNavigator=navigator as ContactNavigator
@@ -111,10 +112,10 @@ function Exclusions({customers,exclusions,canEdit}:{customers:Customer[];exclusi
   }
 
   const submit=()=>{
-    const whatsappId=source==='customer'?selected?.phone?.replace(/\D/g,''):normalizedManualPhone
+    const whatsappId=source==='customer'?selected?.phone:normalizedManualPhone
     if(!whatsappId)return
     const label=source==='customer'?selected?.name:manualLabel.trim()||null
-    add.mutate({whatsapp_id:whatsappId,label,reason:reason.trim()||null,mode:'human_only'},{onSuccess:()=>{setCustomerId('');setCustomerSearch('');setManualPhone('');setManualLabel('');setDevicePhones([]);setReason('')}})
+    add.mutate({whatsapp_id:whatsappId,label,reason:reason.trim()||null,mode:'human_only'},{onSuccess:()=>{setCustomerId('');setManualPhone('');setManualLabel('');setDevicePhones([]);setReason('')}})
   }
   return <section aria-labelledby="exclusions-title">
     <div className="section-title-row"><div><span className="eyebrow">Exceções permanentes</span><h2 id="exclusions-title">Contatos sem resposta automática</h2></div><InfoHelp title="Contatos sem resposta automática">As mensagens continuam aparecendo normalmente, mas o Assistente Virtual não responde sozinho.</InfoHelp></div>
@@ -131,8 +132,8 @@ function Exclusions({customers,exclusions,canEdit}:{customers:Customer[];exclusi
         {contactError&&<p className="form-error" role="alert">Não foi possível abrir ou ler o contato selecionado. Tente a busca do ALOVIA ou adicione o número manualmente.</p>}
       </>}
       {source==='customer'&&<>
-        <label>Buscar contato<input type="search" value={customerSearch} onChange={event=>setCustomerSearch(event.target.value)} placeholder="Nome ou telefone"/></label>
-        <label>Contato<select required value={customerId} onChange={event=>setCustomerId(event.target.value)}><option value="">Selecione</option>{visibleCustomers.map(item=><option value={item.id} key={item.id}>{item.name}{item.phone?' · '+item.phone:''}</option>)}</select>{normalizedCustomerSearch&&!visibleCustomers.length&&<small>Nenhum contato encontrado no ALOVIA. Você pode adicionar pelo número.</small>}</label>
+        <label>Contato do ALOVIA<select required value={customerId} onChange={event=>setCustomerId(event.target.value)}><option value="">Selecione um contato</option>{conversationContacts.map(item=><option value={item.id} key={item.phone}>{item.name}{item.phone?' · +'+item.phone:''}</option>)}</select><small>Esta lista mostra os contatos das conversas existentes no ALOVIA.</small></label>
+        {!conversationContacts.length&&<p className="settings-note">Nenhum contato de conversa disponível. Você pode selecionar da agenda do aparelho ou adicionar pelo número.</p>}
       </>}
       {source==='manual'&&<>
         <label>Telefone<input required inputMode="tel" autoComplete="tel" value={manualPhone} onChange={event=>setManualPhone(event.target.value)} placeholder="Ex.: 5511999999999"/><small>Informe país e DDD. O número é normalizado antes de salvar.</small></label>
