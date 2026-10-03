@@ -774,3 +774,7 @@
     padding: 2px 15px 15px;
   }
 }
+
+.checkout-confirmation-spinner {
+  animation: spin .9s linear infinite;
+}
