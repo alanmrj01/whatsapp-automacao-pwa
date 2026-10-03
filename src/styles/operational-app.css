@@ -1441,3 +1441,36 @@
     margin-top: 21px;
   }
 }
+
+.settings-logout-section {
+  padding-top: 2px;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom));
+}
+
+.settings-logout-section > div,
+.settings-logout-section .logout-button {
+  width: 100%;
+}
+
+.settings-logout-section .logout-button {
+  justify-content: center;
+  min-height: 50px;
+}
+
+.contact-picker-fallbacks {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 8px;
+}
+
+.contact-picker-fallbacks .secondary-button {
+  width: 100%;
+  min-width: 0;
+  justify-content: center;
+}
+
+@media (max-width: 420px) {
+  .contact-picker-fallbacks {
+    grid-template-columns: 1fr;
+  }
+}
