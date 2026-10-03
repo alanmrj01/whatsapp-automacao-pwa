@@ -80,7 +80,7 @@ function Exclusions({conversations,exclusions,canEdit}:{conversations:Conversati
       })
       .filter(([phone])=>phone&&!excluded.has(phone)),
   ).values()].sort((left,right)=>left.name.localeCompare(right.name,'pt-BR'))
-  const selected=conversationContacts.find(item=>item.id===customerId)
+  const selected=conversationContacts.find(item=>item.phone===customerId)
   const normalizedManualPhone=manualPhone.replace(/\D/g,'')
   const manualValid=/^[1-9]\d{6,14}$/.test(normalizedManualPhone)&&!excluded.has(normalizedManualPhone)
   const contactNavigator=navigator as ContactNavigator
@@ -132,7 +132,7 @@ function Exclusions({conversations,exclusions,canEdit}:{conversations:Conversati
         {contactError&&<p className="form-error" role="alert">Não foi possível abrir ou ler o contato selecionado. Tente a busca do ALOVIA ou adicione o número manualmente.</p>}
       </>}
       {source==='customer'&&<>
-        <label>Contato do ALOVIA<select required value={customerId} onChange={event=>setCustomerId(event.target.value)}><option value="">Selecione um contato</option>{conversationContacts.map(item=><option value={item.id} key={item.phone}>{item.name}{item.phone?' · +'+item.phone:''}</option>)}</select><small>Esta lista mostra os contatos das conversas existentes no ALOVIA.</small></label>
+        <label>Contato do ALOVIA<select required value={customerId} onChange={event=>setCustomerId(event.target.value)}><option value="">Selecione um contato</option>{conversationContacts.map(item=><option value={item.phone} key={item.phone}>{item.name}{item.phone?' · +'+item.phone:''}</option>)}</select><small>Esta lista mostra os contatos das conversas existentes no ALOVIA.</small></label>
         {!conversationContacts.length&&<p className="settings-note">Nenhum contato de conversa disponível. Você pode selecionar da agenda do aparelho ou adicionar pelo número.</p>}
       </>}
       {source==='manual'&&<>
