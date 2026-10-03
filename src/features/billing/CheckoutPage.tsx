@@ -1,9 +1,12 @@
 import {
   ArrowLeft,
+  BadgeCheck,
   Check,
+  ChevronDown,
+  ChevronUp,
   Clock3,
   CreditCard,
-  LockKeyhole,
+  ExternalLink,
   RefreshCcw,
   ShieldCheck,
 } from 'lucide-react'
@@ -120,6 +123,8 @@ export function CheckoutPage() {
   const [remaining,setRemaining]=useState(600)
   const [error,setError]=useState<string|null>(null)
   const [submitting,setSubmitting]=useState(false)
+  const [openStep,setOpenStep]=useState<1|2>(1)
+  const previousIdentificationComplete=useRef(false)
 
   const [payerName,setPayerName]=useState('')
   const [payerDocument,setPayerDocument]=useState('')
@@ -180,6 +185,23 @@ export function CheckoutPage() {
     return()=>window.clearInterval(timer)
   },[checkout?.expires_at])
 
+
+  const identificationComplete=
+    payerName.trim().length>=2&&
+    [11,14].includes(digits(payerDocument,14).length)&&
+    [10,11].includes(digits(payerPhone,11).length)&&
+    !!profile?.email&&
+    digits(postalCode,8).length===8&&
+    !!addressNumber.trim()
+
+  useEffect(()=>{
+    const wasComplete=previousIdentificationComplete.current
+    previousIdentificationComplete.current=identificationComplete
+    if(identificationComplete&&!wasComplete&&openStep===1) {
+      setOpenStep(2)
+    }
+  },[identificationComplete,openStep])
+
   if(!isPlanId(planId)||!isBillingCycle(cycleParam)) {
     return <Navigate to="/app/mais/plano" replace/>
   }
@@ -200,6 +222,8 @@ export function CheckoutPage() {
     setRemaining(600)
     setError(null)
     setSubmitting(false)
+    setOpenStep(1)
+    previousIdentificationComplete.current=false
     setCardNumber('')
     setExpiryMonth('')
     setExpiryYear('')
@@ -270,8 +294,10 @@ export function CheckoutPage() {
           card_ccv:ccvDigits,
         }),
       })
+      setCcv('')
       navigate(`/app/checkout/retorno?state=success&checkout=${checkout.checkout_id}`,{replace:true})
     } catch (caught) {
+      setCcv('')
       if(caught instanceof ApiError&&caught.status===422) {
         setError('Não foi possível autorizar o cartão. Confira os dados ou tente outro cartão.')
       } else if(caught instanceof ApiError&&caught.status===409) {
@@ -305,8 +331,16 @@ export function CheckoutPage() {
         <div className="native-checkout-intro">
           <span className="eyebrow">Finalize sua assinatura</span>
           <h1>Seu atendimento automático começa aqui.</h1>
-          <p>Revise seus dados e conclua o pagamento. A renovação do plano é automática e você continua no ambiente da ALOVIA durante todo o processo.</p>
+          <p>Revise seus dados e conclua o pagamento. A renovação do plano é automática.</p>
         </div>
+
+        <section className="checkout-guarantee-card" aria-label="Garantia de 7 dias">
+          <BadgeCheck size={22} aria-hidden="true"/>
+          <div>
+            <strong>Garantia de 7 dias</strong>
+            <span>Se o ALOVIA não ajudar no seu processo, devolvemos seu dinheiro.</span>
+          </div>
+        </section>
 
         {loading&&<section className="native-checkout-card checkout-loading-card">
           <div className="checkout-loading-spinner"/>
@@ -320,13 +354,28 @@ export function CheckoutPage() {
         </section>}
 
         {!loading&&!expired&&checkout&&<form className="native-checkout-form" onSubmit={submit} noValidate>
-          <section className="native-checkout-card">
-            <div className="checkout-section-heading">
-              <span>1</span>
-              <div><h2>Identificação</h2><p>Preenchemos automaticamente o que já conhecemos sobre sua conta.</p></div>
-            </div>
+          <section className={`native-checkout-card checkout-accordion-card${openStep===1?' is-open':''}`}>
+            <button
+              className="checkout-section-toggle"
+              type="button"
+              aria-expanded={openStep===1}
+              aria-controls="checkout-identification-fields"
+              onClick={()=>setOpenStep(1)}
+            >
+              <span className="checkout-step-number">{identificationComplete?<Check size={16}/>:1}</span>
+              <span className="checkout-step-copy">
+                <strong>Identificação</strong>
+                <small>{identificationComplete?'Dados preenchidos':'Preencha seus dados para continuar'}</small>
+              </span>
+              {openStep===1?<ChevronUp size={20}/>:<ChevronDown size={20}/>}
+            </button>
 
-            <div className="checkout-field-grid">
+            <div
+              id="checkout-identification-fields"
+              className="checkout-accordion-content"
+              hidden={openStep!==1}
+            >
+              <div className="checkout-field-grid">
               <label className="checkout-field checkout-field--wide">
                 <span>Nome completo do titular</span>
                 <input autoComplete="name" value={payerName} onChange={event=>{setPayerName(event.target.value);if(!cardHolderName)setCardHolderName(event.target.value)}} placeholder="Nome completo" required/>
@@ -355,17 +404,33 @@ export function CheckoutPage() {
                 <span>Complemento <small>opcional</small></span>
                 <input autoComplete="address-line2" value={addressComplement} onChange={event=>setAddressComplement(event.target.value)} placeholder="Sala, bloco, apartamento…"/>
               </label>
+              </div>
             </div>
           </section>
 
-          <section className="native-checkout-card">
-            <div className="checkout-section-heading">
-              <span>2</span>
-              <div><h2>Cartão de crédito</h2><p>Cobrança recorrente processada pelo Asaas.</p></div>
-              <CreditCard size={22} aria-hidden="true"/>
-            </div>
+          <section className={`native-checkout-card checkout-accordion-card${openStep===2?' is-open':''}`}>
+            <button
+              className="checkout-section-toggle"
+              type="button"
+              aria-expanded={openStep===2}
+              aria-controls="checkout-card-fields"
+              disabled={!identificationComplete}
+              onClick={()=>identificationComplete&&setOpenStep(2)}
+            >
+              <span className="checkout-step-number">2</span>
+              <span className="checkout-step-copy">
+                <strong>Cartão de crédito</strong>
+                <small>{identificationComplete?'Cobrança recorrente processada pelo Asaas.':'Conclua a identificação primeiro'}</small>
+              </span>
+              {openStep===2?<ChevronUp size={20}/>:<ChevronDown size={20}/>}
+            </button>
 
-            <div className="checkout-field-grid">
+            <div
+              id="checkout-card-fields"
+              className="checkout-accordion-content"
+              hidden={openStep!==2}
+            >
+              <div className="checkout-field-grid">
               <label className="checkout-field checkout-field--wide">
                 <span>Nome impresso no cartão</span>
                 <input autoComplete="cc-name" value={cardHolderName} onChange={event=>setCardHolderName(event.target.value)} placeholder="Como aparece no cartão" required/>
@@ -386,14 +451,15 @@ export function CheckoutPage() {
                 <span>Código de segurança</span>
                 <div className="checkout-input-with-icon"><LockKeyhole size={17}/><input type="password" inputMode="numeric" autoComplete="cc-csc" maxLength={4} value={ccv} onChange={event=>setCcv(digits(event.target.value,4))} placeholder="CVV" required/></div>
               </label>
-            </div>
+              </div>
 
-            {error&&<p className="form-error checkout-native-error" role="alert">{error}</p>}
+              {error&&<p className="form-error checkout-native-error" role="alert">{error}</p>}
 
             <button className="primary-button checkout-native-submit" type="submit" disabled={submitting||expired}>
               {submitting?'Processando com segurança…':`Assinar ${plan.name} por ${formatBRL(price.total)}${cycleParam==='monthly'?'/mês':''}`}
             </button>
-            <p className="checkout-submit-note">Ao confirmar, você autoriza a cobrança recorrente do plano {cycle?.label.toLowerCase()}.</p>
+              <p className="checkout-submit-note">Ao confirmar, você autoriza a cobrança recorrente do plano {cycle?.label.toLowerCase()}.</p>
+            </div>
           </section>
         </form>}
 
@@ -409,19 +475,38 @@ export function CheckoutPage() {
           <div className="checkout-order-title"><div><strong>ALOVIA {plan.name}</strong><span>{plan.positioning}</span></div><span>{cycle?.label}</span></div>
           <div className="checkout-order-price"><strong>{formatBRL(price.total)}</strong><span>{cycleParam==='monthly'?'por mês':cycleParam==='quarterly'?'a cada 3 meses':'por ano'}</span></div>
           <ul>
-            <li><Check size={16}/>{plan.users===1?'1 usuário':`Até ${plan.users} usuários`}</li>
-            <li><Check size={16}/>Assistente virtual e agenda integrados</li>
+            <li><Check size={16}/>Atendimento e agendamento automático integrados</li>
+            <li><Check size={16}/>Até 2 técnicos</li>
             <li><Check size={16}/>Renovação automática</li>
           </ul>
           {profile?.business_name&&<p className="checkout-order-business">Assinatura para <strong>{profile.business_name}</strong></p>}
         </section>
 
         <section className="checkout-security-card">
-          <ShieldCheck size={25}/>
-          <div><strong>Pagamento protegido</strong><p>Processamento financeiro realizado com segurança pelo Asaas em conexão HTTPS.</p></div>
-          <div className="checkout-security-divider"/>
-          <div className="checkout-security-line"><LockKeyhole size={16}/><span>A ALOVIA não armazena o número completo do cartão nem o código de segurança.</span></div>
+          <ShieldCheck size={24} aria-hidden="true"/>
+          <div>
+            <div className="checkout-security-title">
+              <strong>Pagamento protegido</strong>
+              <span className="asaas-wordmark" aria-label="Asaas">Asaas</span>
+            </div>
+            <p>Processamento financeiro realizado com segurança por Asaas.</p>
+          </div>
         </section>
+
+        <a
+          className="checkout-asaas-about"
+          href="https://www.asaas.com/sobre-nos"
+          target="_blank"
+          rel="noopener noreferrer"
+          referrerPolicy="no-referrer"
+        >
+          <span className="checkout-asaas-about-copy">
+            <small>Conheça a empresa</small>
+            <strong>Asaas</strong>
+          </span>
+          <span className="asaas-wordmark asaas-wordmark--small" aria-hidden="true">Asaas</span>
+          <ExternalLink size={17} aria-hidden="true"/>
+        </a>
       </aside>
     </div>
   </main>
