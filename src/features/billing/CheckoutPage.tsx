@@ -136,7 +136,7 @@ function formatRemaining(seconds:number) {
 export function CheckoutPage() {
   const [params]=useSearchParams()
   const navigate=useNavigate()
-  const {membership}=useAuth()
+  const {membership,syncSession}=useAuth()
   const planId=params.get('plan')
   const cycleParam=params.get('cycle')
   const requestKey=useRef(crypto.randomUUID())
@@ -174,6 +174,10 @@ export function CheckoutPage() {
   const [ccv,setCcv]=useState('')
 
   const validSelection=isPlanId(planId)&&isBillingCycle(cycleParam)&&isPurchasablePlan(planId)
+
+  useEffect(()=>{
+    void syncSession().catch(()=>undefined)
+  },[syncSession])
 
   const prepareCheckout=useCallback(async(key:string)=>{
     if(!isPlanId(planId)||!isBillingCycle(cycleParam)||!isPurchasablePlan(planId))return
