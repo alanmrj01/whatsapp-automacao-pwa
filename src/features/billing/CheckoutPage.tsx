@@ -27,7 +27,7 @@ type CheckoutMode = 'hosted' | 'native' | 'pix'
 type CheckoutResponse = {
   checkout_id:string
   payment_method:'credit_card'|'pix_automatic'
-  checkout_mode:CheckoutMode
+  checkout_mode?:CheckoutMode
   checkout_url?:string|null
   expires_at?:string|null
   plan:PlanId
@@ -211,7 +211,9 @@ export function CheckoutPage() {
     event.preventDefault()
     if(!checkout||submitting||expired)return
 
-    if(checkout.checkout_mode==='hosted') {
+    const checkoutMode=checkout.checkout_mode??(checkout.checkout_url?'hosted':null)
+
+    if(checkoutMode==='hosted') {
       if(!checkout.checkout_url||!isAsaasCheckoutUrl(checkout.checkout_url)) {
         setError('O checkout seguro não está disponível agora.')
         return
@@ -220,7 +222,7 @@ export function CheckoutPage() {
       return
     }
 
-    if(checkout.checkout_mode!=='native') {
+    if(checkoutMode!=='native') {
       setError('Esta forma de pagamento ainda não está disponível.')
       return
     }
