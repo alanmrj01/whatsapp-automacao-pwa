@@ -346,6 +346,17 @@
   font-weight: 500;
 }
 
+.checkout-field-hint {
+  margin-top: -2px;
+  color: var(--color-text-muted);
+  font-size: .68rem;
+  line-height: 1.35;
+}
+
+.checkout-field-hint--error {
+  color: var(--color-danger);
+}
+
 .checkout-field input {
   width: 100%;
   min-width: 0;
