@@ -137,7 +137,7 @@ test('mutations invalidate only tenant operational resources that changed', () =
 test('main navigation stays focused and WhatsApp setup remains available from More', () => {
   const navigation = read('src/components/navigation.ts')
   const more = read('src/features/more/MorePage.tsx')
-  assert.deepEqual([...navigation.matchAll(/label: '([^']+)'/g)].map(match=>match[1]),['Início','Conversas','Agenda','Mais'])
+  assert.deepEqual([...navigation.matchAll(/label: '([^']+)'/g)].map(match=>match[1]),['Início','Conversas','Agenda','Configurações'])
   assert.match(more, /to="\/app\/whatsapp"/)
   assert.match(more, /Configuração inicial concluída/)
 })
@@ -493,14 +493,15 @@ test('equipment and materials catalog combines top save icon with debounced auto
 
 
 
-test('account identity stays in the user section and logout is not duplicated in More', () => {
+test('account identity stays in the user section and logout is also available at the end of Configurações', () => {
   const sidebar = read('src/components/DesktopSidebar.tsx')
   const more = read('src/features/more/MorePage.tsx')
   const account = read('src/features/more/AccountPages.tsx')
   const brand = read('src/components/BrandMark.tsx')
 
   assert.doesNotMatch(sidebar,/desktop-sidebar__business|Empresa ativa/)
-  assert.doesNotMatch(more,/<SessionActions\/>/)
+  assert.match(more,/<SessionActions\/>/)
+  assert.match(more,/settings-logout-section/)
   assert.match(account,/title="Usuário"/)
   assert.match(account,/<SessionActions \/>/)
   assert.match(brand,/var\(--color-primary-600\)/)
