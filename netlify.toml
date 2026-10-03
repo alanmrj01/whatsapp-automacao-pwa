@@ -31,6 +31,28 @@
     window_size = 60
     aggregate_by = ["ip", "domain"]
 
+# Payment endpoints get a conservative edge limit to reduce brute-force card
+# attempts without interfering with normal checkout retries or reconciliation.
+[[redirects]]
+  from = "/api/v1/billing/checkouts/*"
+  to = "https://native-checkout-sbx---whatsapp-backend-76kppogwfq-rj.a.run.app/api/v1/billing/checkouts/:splat"
+  status = 200
+  force = true
+  [redirects.rate_limit]
+    window_limit = 30
+    window_size = 60
+    aggregate_by = ["ip", "domain"]
+
+[[redirects]]
+  from = "/api/v1/billing/checkouts"
+  to = "https://native-checkout-sbx---whatsapp-backend-76kppogwfq-rj.a.run.app/api/v1/billing/checkouts"
+  status = 200
+  force = true
+  [redirects.rate_limit]
+    window_limit = 30
+    window_size = 60
+    aggregate_by = ["ip", "domain"]
+
 [[redirects]]
   from = "/api/*"
   to = "https://native-checkout-sbx---whatsapp-backend-76kppogwfq-rj.a.run.app/api/:splat"
