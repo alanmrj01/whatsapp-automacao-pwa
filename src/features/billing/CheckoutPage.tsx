@@ -1,8 +1,17 @@
-import { Check, CheckCircle2, ChevronLeft, Copy, CreditCard, LockKeyhole, QrCode } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import {
+  ArrowLeft,
+  Check,
+  Clock3,
+  CreditCard,
+  LockKeyhole,
+  RefreshCcw,
+  ShieldCheck,
+} from 'lucide-react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { BrandMark } from '../../components/BrandMark'
 import { api } from '../../lib/api'
-import { useAuth } from '../auth/useAuth'
+import { ApiError } from '../../lib/httpClient'
 import {
   billingCycles,
   cyclePrice,
@@ -13,40 +22,33 @@ import {
   type PlanId,
 } from './planCatalog'
 
-type PaymentMethod = 'credit_card' | 'pix_automatic'
+type CheckoutMode = 'hosted' | 'native' | 'pix'
 
 type CheckoutResponse = {
   checkout_id:string
-  payment_method:PaymentMethod
-  checkout_url?:string | null
-  pix_authorization_id?:string | null
-  pix_payload?:string | null
-  pix_expires_at?:string | null
+  payment_method:'credit_card'|'pix_automatic'
+  checkout_mode:CheckoutMode
+  checkout_url?:string|null
+  expires_at?:string|null
   plan:PlanId
   cycle:BillingCycle
   amount_cents:number
 }
 
-type CheckoutStatus = {
-  checkout_id:string
-  status:'creating'|'active'|'paid'|'canceled'|'expired'|'failed'
-  payment_method:PaymentMethod
-  plan:PlanId
-  cycle:BillingCycle
+type CheckoutProfile = {
+  email:string
+  business_name:string
+  payer_name:string|null
+  postal_code:string|null
+  address_number:string|null
 }
 
-function isBillingCycle(value: string | null): value is BillingCycle {
+function isBillingCycle(value:string|null):value is BillingCycle {
   return value === 'monthly' || value === 'quarterly' || value === 'annual'
 }
 
-function isPlanId(value: string | null): value is PlanId {
+function isPlanId(value:string|null):value is PlanId {
   return value === 'basic' || value === 'plus'
-}
-
-function chargeLabel(cycle: BillingCycle, total: number) {
-  if (cycle === 'monthly') return `${formatBRL(total)} por mês`
-  if (cycle === 'quarterly') return `${formatBRL(total)} a cada 3 meses`
-  return `${formatBRL(total)} por ano`
 }
 
 function isAsaasCheckoutUrl(value:string) {
@@ -58,190 +60,366 @@ function isAsaasCheckoutUrl(value:string) {
   }
 }
 
+function digits(value:string,max:number) {
+  return value.replace(/\D/g,'').slice(0,max)
+}
+
+function formatDocument(value:string) {
+  const valueDigits=digits(value,14)
+  if(valueDigits.length<=11) {
+    return valueDigits
+      .replace(/^(\d{3})(\d)/,'$1.$2')
+      .replace(/^(\d{3})\.(\d{3})(\d)/,'$1.$2.$3')
+      .replace(/\.(\d{3})(\d)/,'.$1-$2')
+  }
+  return valueDigits
+    .replace(/^(\d{2})(\d)/,'$1.$2')
+    .replace(/^(\d{2})\.(\d{3})(\d)/,'$1.$2.$3')
+    .replace(/\.(\d{3})(\d)/,'.$1/$2')
+    .replace(/(\d{4})(\d)/,'$1-$2')
+}
+
+function formatPostalCode(value:string) {
+  const valueDigits=digits(value,8)
+  return valueDigits.length>5?valueDigits.replace(/^(\d{5})(\d)/,'$1-$2'):valueDigits
+}
+
+function formatPhone(value:string) {
+  const valueDigits=digits(value,11)
+  if(valueDigits.length<=10) {
+    return valueDigits
+      .replace(/^(\d{2})(\d)/,'($1) $2')
+      .replace(/(\d{4})(\d)/,'$1-$2')
+  }
+  return valueDigits
+    .replace(/^(\d{2})(\d)/,'($1) $2')
+    .replace(/(\d{5})(\d)/,'$1-$2')
+}
+
+function formatCardNumber(value:string) {
+  return digits(value,19).replace(/(\d{4})(?=\d)/g,'$1 ').trim()
+}
+
+function formatRemaining(seconds:number) {
+  const safe=Math.max(0,seconds)
+  const minutes=Math.floor(safe/60)
+  const rest=safe%60
+  return `${String(minutes).padStart(2,'0')}:${String(rest).padStart(2,'0')}`
+}
+
 export function CheckoutPage() {
-  const [params] = useSearchParams()
-  const navigate = useNavigate()
-  const {user,reconnect} = useAuth()
-  const planId = params.get('plan')
-  const cycleParam = params.get('cycle')
-  const membership = user?.memberships.find(item=>item.business_id===user.active_business_id)
-  const requestKey = useRef<string>(crypto.randomUUID())
-  const [paymentMethod,setPaymentMethod] = useState<PaymentMethod>('credit_card')
-  const [payerName,setPayerName] = useState(membership?.business_name??'')
-  const [payerDocument,setPayerDocument] = useState('')
-  const [sending,setSending] = useState(false)
-  const [error,setError] = useState<string | null>(null)
-  const [pixCheckout,setPixCheckout] = useState<CheckoutResponse | null>(null)
-  const [pixStatus,setPixStatus] = useState<CheckoutStatus['status'] | null>(null)
-  const [copied,setCopied] = useState(false)
+  const [params]=useSearchParams()
+  const navigate=useNavigate()
+  const planId=params.get('plan')
+  const cycleParam=params.get('cycle')
+  const requestKey=useRef(crypto.randomUUID())
 
-  useEffect(()=>{
-    if (!payerName && membership?.business_name) setPayerName(membership.business_name)
-  },[membership?.business_name,payerName])
+  const [profile,setProfile]=useState<CheckoutProfile|null>(null)
+  const [checkout,setCheckout]=useState<CheckoutResponse|null>(null)
+  const [loading,setLoading]=useState(true)
+  const [remaining,setRemaining]=useState(600)
+  const [error,setError]=useState<string|null>(null)
+  const [submitting,setSubmitting]=useState(false)
 
-  useEffect(()=>{
-    if (!pixCheckout || !['active','creating'].includes(pixStatus??'active')) return
-    let cancelled = false
-    const checkStatus = async () => {
-      try {
-        const status = await api.request<CheckoutStatus>(`/billing/checkouts/${pixCheckout.checkout_id}`)
-        if (cancelled) return
-        setPixStatus(status.status)
-        if (status.status === 'paid') {
-          await reconnect()
-          if (!cancelled) navigate('/app',{replace:true})
-        } else if (['canceled','expired','failed'].includes(status.status)) {
-          setError('A autorização não foi concluída. Você pode tentar novamente.')
-        }
-      } catch {
-        // A autorização continua válida no Asaas mesmo se uma consulta pontual falhar.
-      }
-    }
-    void checkStatus()
-    const timer = window.setInterval(()=>void checkStatus(),4000)
-    return ()=>{
-      cancelled = true
-      window.clearInterval(timer)
-    }
-  },[navigate,pixCheckout,pixStatus,reconnect])
+  const [payerName,setPayerName]=useState('')
+  const [payerDocument,setPayerDocument]=useState('')
+  const [payerPhone,setPayerPhone]=useState('')
+  const [postalCode,setPostalCode]=useState('')
+  const [addressNumber,setAddressNumber]=useState('')
+  const [addressComplement,setAddressComplement]=useState('')
+  const [cardHolderName,setCardHolderName]=useState('')
+  const [cardNumber,setCardNumber]=useState('')
+  const [expiryMonth,setExpiryMonth]=useState('')
+  const [expiryYear,setExpiryYear]=useState('')
+  const [ccv,setCcv]=useState('')
 
-  if (!isPlanId(planId) || !isBillingCycle(cycleParam)) {
-    return <Navigate to="/app/mais/plano" replace />
-  }
+  const validSelection=isPlanId(planId)&&isBillingCycle(cycleParam)&&isPurchasablePlan(planId)
 
-  if (!isPurchasablePlan(planId)) {
-    return <Navigate to={`/app/mais/plano?cycle=${cycleParam}&unavailable=${planId}`} replace />
-  }
-
-  const plan = plans.find(item=>item.id===planId)
-  if (!plan) return <Navigate to="/app/mais/plano" replace />
-
-  const price = cyclePrice(plan,cycleParam)
-  const cycle = billingCycles.find(item=>item.id===cycleParam)
-
-  function choosePayment(method:PaymentMethod) {
-    if (sending || method===paymentMethod) return
-    requestKey.current = crypto.randomUUID()
-    setPaymentMethod(method)
-    setError(null)
-    setPixCheckout(null)
-    setPixStatus(null)
-    setCopied(false)
-  }
-
-  async function continueToPayment() {
-    if (sending) return
-    if (paymentMethod==='pix_automatic' && (!payerName.trim() || !payerDocument.trim())) {
-      setError('Informe nome e CPF ou CNPJ para autorizar o Pix Automático.')
-      return
-    }
-    setSending(true)
+  const prepareCheckout=useCallback(async(key:string)=>{
+    if(!isPlanId(planId)||!isBillingCycle(cycleParam)||!isPurchasablePlan(planId))return
+    setLoading(true)
     setError(null)
     try {
-      const checkout = await api.request<CheckoutResponse>('/billing/checkouts',{
-        method:'POST',
-        headers:{'Idempotency-Key':requestKey.current},
-        body:JSON.stringify({
-          plan:planId,
-          cycle:cycleParam,
-          payment_method:paymentMethod,
-          return_origin:window.location.origin,
-          ...(paymentMethod==='pix_automatic'?{
-            payer_name:payerName.trim(),
-            payer_cpf_cnpj:payerDocument.trim(),
-          }:{}),
+      const [nextProfile,nextCheckout]=await Promise.all([
+        api.request<CheckoutProfile>('/billing/checkout-profile'),
+        api.request<CheckoutResponse>('/billing/checkouts',{
+          method:'POST',
+          headers:{'Idempotency-Key':key},
+          body:JSON.stringify({
+            plan:planId,
+            cycle:cycleParam,
+            payment_method:'credit_card',
+            return_origin:window.location.origin,
+          }),
         }),
-      })
-      if (checkout.payment_method==='credit_card') {
-        if (!checkout.checkout_url || !isAsaasCheckoutUrl(checkout.checkout_url)) throw new Error('invalid checkout host')
-        window.location.assign(checkout.checkout_url)
+      ])
+      setProfile(nextProfile)
+      setCheckout(nextCheckout)
+      setPayerName(current=>current||nextProfile.payer_name||'')
+      setCardHolderName(current=>current||nextProfile.payer_name||'')
+      setPostalCode(current=>current||formatPostalCode(nextProfile.postal_code??''))
+      setAddressNumber(current=>current||nextProfile.address_number||'')
+    } catch {
+      setError('Não foi possível preparar seu checkout agora. Tente novamente.')
+    } finally {
+      setLoading(false)
+    }
+  },[cycleParam,planId])
+
+  useEffect(()=>{
+    if(!validSelection)return
+    void prepareCheckout(requestKey.current)
+  },[prepareCheckout,validSelection])
+
+  useEffect(()=>{
+    if(!checkout?.expires_at)return
+    const expiresAt=new Date(checkout.expires_at).getTime()
+    const tick=()=>setRemaining(Math.max(0,Math.ceil((expiresAt-Date.now())/1000)))
+    tick()
+    const timer=window.setInterval(tick,1000)
+    return()=>window.clearInterval(timer)
+  },[checkout?.expires_at])
+
+  if(!isPlanId(planId)||!isBillingCycle(cycleParam)) {
+    return <Navigate to="/app/mais/plano" replace/>
+  }
+  if(!isPurchasablePlan(planId)) {
+    return <Navigate to={`/app/mais/plano?cycle=${cycleParam}&unavailable=${planId}`} replace/>
+  }
+
+  const plan=plans.find(item=>item.id===planId)
+  if(!plan)return <Navigate to="/app/mais/plano" replace/>
+
+  const price=cyclePrice(plan,cycleParam)
+  const cycle=billingCycles.find(item=>item.id===cycleParam)
+  const expired=remaining<=0
+
+  const restart=()=>{
+    requestKey.current=crypto.randomUUID()
+    setCheckout(null)
+    setRemaining(600)
+    setError(null)
+    setSubmitting(false)
+    setCardNumber('')
+    setExpiryMonth('')
+    setExpiryYear('')
+    setCcv('')
+    void prepareCheckout(requestKey.current)
+  }
+
+  const submit=async(event:FormEvent)=>{
+    event.preventDefault()
+    if(!checkout||submitting||expired)return
+
+    if(checkout.checkout_mode==='hosted') {
+      if(!checkout.checkout_url||!isAsaasCheckoutUrl(checkout.checkout_url)) {
+        setError('O checkout seguro não está disponível agora.')
         return
       }
-      if (!checkout.pix_payload || !checkout.pix_authorization_id) throw new Error('invalid pix response')
-      setPixCheckout(checkout)
-      setPixStatus('active')
-      setSending(false)
-    } catch {
-      setError('Não foi possível iniciar o pagamento agora. Tente novamente.')
-      setSending(false)
+      window.location.assign(checkout.checkout_url)
+      return
     }
-  }
 
-  async function copyPix() {
-    if (!pixCheckout?.pix_payload) return
+    if(checkout.checkout_mode!=='native') {
+      setError('Esta forma de pagamento ainda não está disponível.')
+      return
+    }
+
+    const documentDigits=digits(payerDocument,14)
+    const phoneDigits=digits(payerPhone,11)
+    const postalDigits=digits(postalCode,8)
+    const cardDigits=digits(cardNumber,19)
+    const monthDigits=digits(expiryMonth,2)
+    const yearDigits=digits(expiryYear,4)
+    const ccvDigits=digits(ccv,4)
+
+    if(
+      payerName.trim().length<2||
+      ![11,14].includes(documentDigits.length)||
+      ![10,11].includes(phoneDigits.length)||
+      postalDigits.length!==8||
+      !addressNumber.trim()||
+      cardHolderName.trim().length<2||
+      cardDigits.length<13||
+      !monthDigits||
+      !yearDigits||
+      ccvDigits.length<3
+    ) {
+      setError('Confira os campos obrigatórios antes de continuar.')
+      return
+    }
+
+    setSubmitting(true)
+    setError(null)
     try {
-      await navigator.clipboard.writeText(pixCheckout.pix_payload)
-      setCopied(true)
-    } catch {
-      setError('Não foi possível copiar automaticamente. Selecione o código abaixo e copie.')
+      await api.request(`/billing/checkouts/${checkout.checkout_id}/credit-card`,{
+        method:'POST',
+        body:JSON.stringify({
+          payer_name:payerName.trim(),
+          payer_cpf_cnpj:documentDigits,
+          payer_postal_code:postalDigits,
+          payer_address_number:addressNumber.trim(),
+          payer_address_complement:addressComplement.trim()||null,
+          payer_phone:phoneDigits,
+          card_holder_name:cardHolderName.trim(),
+          card_number:cardDigits,
+          card_expiry_month:monthDigits,
+          card_expiry_year:yearDigits,
+          card_ccv:ccvDigits,
+        }),
+      })
+      navigate(`/app/checkout/retorno?state=success&checkout=${checkout.checkout_id}`,{replace:true})
+    } catch (caught) {
+      if(caught instanceof ApiError&&caught.status===422) {
+        setError('Não foi possível autorizar o cartão. Confira os dados ou tente outro cartão.')
+      } else if(caught instanceof ApiError&&caught.status===409) {
+        setError(caught.detail==='Checkout expired'
+          ?'Esta sessão expirou. Gere uma nova sessão para continuar.'
+          :'A confirmação anterior ainda está sendo conciliada. Aguarde alguns instantes antes de tentar novamente.')
+      } else {
+        setError('Não foi possível concluir agora. Seus dados do cartão não foram salvos. Tente novamente em alguns instantes.')
+      }
+      setSubmitting(false)
     }
   }
 
-  return <div className="page-stack operational-page compact-page checkout-page">
-    <section className="operational-heading account-heading checkout-heading">
-      <div>
-        <Link className="account-back" to={`/app/mais/plano?cycle=${cycleParam}`}><ChevronLeft size={18}/>Planos</Link>
-        <span className="eyebrow">Checkout</span>
-        <h1>Finalize sua assinatura</h1>
-        <p>Escolha como prefere pagar. A renovação fica automática nos dois meios.</p>
+  return <main className="native-checkout-shell">
+    <header className="native-checkout-header">
+      <Link className="native-checkout-back" to={`/app/mais/plano?cycle=${cycleParam}`} aria-label="Voltar aos planos">
+        <ArrowLeft size={20}/>
+      </Link>
+      <div className="native-checkout-brand">
+        <BrandMark/>
+        <div><strong>ALOVIA</strong><span>Assinatura segura</span></div>
       </div>
-    </section>
+      <div className={`checkout-timer${expired?' is-expired':''}`} aria-live="polite">
+        <Clock3 size={17}/>
+        <span>{expired?'Expirado':formatRemaining(remaining)}</span>
+      </div>
+    </header>
 
-    <section className="checkout-summary" aria-labelledby="checkout-summary-title">
-      <div className="checkout-summary__top">
-        <div>
-          <span className="eyebrow">ALOVIA</span>
-          <h2 id="checkout-summary-title">{plan.name}</h2>
-          <p>{plan.positioning}</p>
+    <div className="native-checkout-layout">
+      <section className="native-checkout-main">
+        <div className="native-checkout-intro">
+          <span className="eyebrow">Finalize sua assinatura</span>
+          <h1>Seu atendimento automático começa aqui.</h1>
+          <p>Revise seus dados e conclua o pagamento. A renovação do plano é automática e você continua no ambiente da ALOVIA durante todo o processo.</p>
         </div>
-        <strong className="checkout-cycle">{cycle?.label}</strong>
-      </div>
 
-      <div className="checkout-price">
-        <div><strong>{formatBRL(price.monthlyEquivalent)}</strong><span>/mês</span></div>
-        <small>{chargeLabel(cycleParam,price.total)}</small>
-      </div>
+        {loading&&<section className="native-checkout-card checkout-loading-card">
+          <div className="checkout-loading-spinner"/>
+          <div><strong>Preparando seu checkout seguro…</strong><span>Isso leva só alguns segundos.</span></div>
+        </section>}
 
-      <div className="checkout-includes">
-        <span><Check size={16}/>{plan.users===1?'1 usuário':`Até ${plan.users} usuários`}</span>
-        <span><Check size={16}/>Até {plan.automaticAttendances.toLocaleString('pt-BR')} atendimentos automáticos/mês</span>
-      </div>
-    </section>
+        {!loading&&expired&&<section className="native-checkout-card checkout-expired-card">
+          <Clock3 size={24}/>
+          <div><strong>Sua sessão de 10 minutos expirou.</strong><span>Gere uma nova sessão para manter o pagamento protegido e atualizado.</span></div>
+          <button className="primary-button" type="button" onClick={restart}><RefreshCcw size={17}/>Gerar nova sessão</button>
+        </section>}
 
-    <section className="checkout-payment-card" aria-labelledby="checkout-payment-title">
-      <div className="checkout-payment-card__icon" aria-hidden="true"><LockKeyhole size={19}/></div>
-      <div>
-        <h2 id="checkout-payment-title">Forma de pagamento</h2>
-        <p>Pagamento seguro processado pelo Asaas.</p>
-      </div>
+        {!loading&&!expired&&checkout&&<form className="native-checkout-form" onSubmit={submit} noValidate>
+          <section className="native-checkout-card">
+            <div className="checkout-section-heading">
+              <span>1</span>
+              <div><h2>Identificação</h2><p>Preenchemos automaticamente o que já conhecemos sobre sua conta.</p></div>
+            </div>
 
-      <div className="payment-method-grid" role="radiogroup" aria-label="Forma de pagamento">
-        <button className={`payment-method${paymentMethod==='credit_card'?' is-selected':''}`} type="button" role="radio" aria-checked={paymentMethod==='credit_card'} onClick={()=>choosePayment('credit_card')}>
-          <CreditCard size={20}/><span><strong>Cartão de crédito</strong><small>Cobrança recorrente no cartão</small></span>
-        </button>
-        <button className={`payment-method${paymentMethod==='pix_automatic'?' is-selected':''}`} type="button" role="radio" aria-checked={paymentMethod==='pix_automatic'} onClick={()=>choosePayment('pix_automatic')}>
-          <QrCode size={20}/><span><strong>Pix Automático</strong><small>Autorize uma vez e renove automaticamente</small></span>
-        </button>
-      </div>
+            <div className="checkout-field-grid">
+              <label className="checkout-field checkout-field--wide">
+                <span>Nome completo do titular</span>
+                <input autoComplete="name" value={payerName} onChange={event=>{setPayerName(event.target.value);if(!cardHolderName)setCardHolderName(event.target.value)}} placeholder="Nome completo" required/>
+              </label>
+              <label className="checkout-field">
+                <span>CPF ou CNPJ</span>
+                <input inputMode="numeric" autoComplete="off" value={payerDocument} onChange={event=>setPayerDocument(formatDocument(event.target.value))} placeholder="000.000.000-00" required/>
+              </label>
+              <label className="checkout-field">
+                <span>Celular</span>
+                <input inputMode="tel" autoComplete="tel" value={payerPhone} onChange={event=>setPayerPhone(formatPhone(event.target.value))} placeholder="(00) 00000-0000" required/>
+              </label>
+              <label className="checkout-field checkout-field--wide">
+                <span>E-mail da conta</span>
+                <input value={profile?.email??''} readOnly aria-readonly="true"/>
+              </label>
+              <label className="checkout-field">
+                <span>CEP</span>
+                <input inputMode="numeric" autoComplete="postal-code" value={postalCode} onChange={event=>setPostalCode(formatPostalCode(event.target.value))} placeholder="00000-000" required/>
+              </label>
+              <label className="checkout-field">
+                <span>Número</span>
+                <input autoComplete="address-line2" value={addressNumber} onChange={event=>setAddressNumber(event.target.value)} placeholder="Número" required/>
+              </label>
+              <label className="checkout-field checkout-field--wide">
+                <span>Complemento <small>opcional</small></span>
+                <input autoComplete="address-line2" value={addressComplement} onChange={event=>setAddressComplement(event.target.value)} placeholder="Sala, bloco, apartamento…"/>
+              </label>
+            </div>
+          </section>
 
-      {paymentMethod==='pix_automatic'&&!pixCheckout&&<div className="pix-payer-fields">
-        <label><span>Nome ou razão social</span><input autoComplete="name" value={payerName} onChange={event=>setPayerName(event.target.value)} placeholder="Nome do pagador"/></label>
-        <label><span>CPF ou CNPJ</span><input inputMode="numeric" autoComplete="off" value={payerDocument} onChange={event=>setPayerDocument(event.target.value)} placeholder="CPF ou CNPJ do pagador"/></label>
-        <small>Esses dados são enviados ao Asaas para criar a autorização. O ALOVIA não armazena seu CPF ou CNPJ neste checkout.</small>
-      </div>}
+          <section className="native-checkout-card">
+            <div className="checkout-section-heading">
+              <span>2</span>
+              <div><h2>Cartão de crédito</h2><p>Cobrança recorrente processada pelo Asaas.</p></div>
+              <CreditCard size={22} aria-hidden="true"/>
+            </div>
 
-      {pixCheckout?<div className="pix-authorization">
-        <div className="pix-authorization__heading"><QrCode size={21}/><div><strong>Autorize no seu banco</strong><span>Copie o código Pix abaixo, pague o primeiro ciclo e aprove a autorização automática.</span></div></div>
-        <textarea readOnly aria-label="Código Pix Copia e Cola" value={pixCheckout.pix_payload??''}/>
-        <button className="secondary-button pix-copy-button" type="button" onClick={copyPix}>{copied?<><CheckCircle2 size={17}/>Copiado</>:<><Copy size={17}/>Copiar código Pix</>}</button>
-        <p className="pix-waiting"><span className="status-dot"/>Aguardando confirmação do Pix Automático…</p>
-      </div>:<>
-        {error&&<p className="form-error checkout-payment-error" role="alert">{error}</p>}
-        <button className="primary-button checkout-payment-button" type="button" onClick={continueToPayment} disabled={sending}>
-          {sending?'Preparando pagamento…':paymentMethod==='pix_automatic'?'Gerar Pix Automático':'Continuar com cartão'}
-        </button>
-      </>}
-      {pixCheckout&&error&&<p className="form-error checkout-payment-error" role="alert">{error}</p>}
-    </section>
-  </div>
-}
+            <div className="checkout-field-grid">
+              <label className="checkout-field checkout-field--wide">
+                <span>Nome impresso no cartão</span>
+                <input autoComplete="cc-name" value={cardHolderName} onChange={event=>setCardHolderName(event.target.value)} placeholder="Como aparece no cartão" required/>
+              </label>
+              <label className="checkout-field checkout-field--wide">
+                <span>Número do cartão</span>
+                <div className="checkout-input-with-icon"><CreditCard size={18}/><input inputMode="numeric" autoComplete="cc-number" value={cardNumber} onChange={event=>setCardNumber(formatCardNumber(event.target.value))} placeholder="0000 0000 0000 0000" required/></div>
+              </label>
+              <label className="checkout-field">
+                <span>Validade</span>
+                <div className="checkout-expiry-fields">
+                  <input inputMode="numeric" autoComplete="cc-exp-month" maxLength={2} value={expiryMonth} onChange={event=>setExpiryMonth(digits(event.target.value,2))} placeholder="MM" aria-label="Mês de validade" required/>
+                  <span>/</span>
+                  <input inputMode="numeric" autoComplete="cc-exp-year" maxLength={4} value={expiryYear} onChange={event=>setExpiryYear(digits(event.target.value,4))} placeholder="AAAA" aria-label="Ano de validade" required/>
+                </div>
+              </label>
+              <label className="checkout-field">
+                <span>Código de segurança</span>
+                <div className="checkout-input-with-icon"><LockKeyhole size={17}/><input type="password" inputMode="numeric" autoComplete="cc-csc" maxLength={4} value={ccv} onChange={event=>setCcv(digits(event.target.value,4))} placeholder="CVV" required/></div>
+              </label>
+            </div>
+
+            {error&&<p className="form-error checkout-native-error" role="alert">{error}</p>}
+
+            <button className="primary-button checkout-native-submit" type="submit" disabled={submitting||expired}>
+              {submitting?'Processando com segurança…':`Assinar ${plan.name} por ${formatBRL(price.total)}${cycleParam==='monthly'?'/mês':''}`}
+            </button>
+            <p className="checkout-submit-note">Ao confirmar, você autoriza a cobrança recorrente do plano {cycle?.label.toLowerCase()}.</p>
+          </section>
+        </form>}
+
+        {!loading&&!checkout&&!expired&&<section className="native-checkout-card checkout-expired-card">
+          <div><strong>Não conseguimos abrir o checkout.</strong><span>{error??'Tente novamente em alguns instantes.'}</span></div>
+          <button className="secondary-button" type="button" onClick={restart}><RefreshCcw size={17}/>Tentar novamente</button>
+        </section>}
+      </section>
+
+      <aside className="native-checkout-summary" aria-label="Resumo do pedido">
+        <section className="native-checkout-card checkout-order-card">
+          <span className="eyebrow">Resumo do pedido</span>
+          <div className="checkout-order-title"><div><strong>ALOVIA {plan.name}</strong><span>{plan.positioning}</span></div><span>{cycle?.label}</span></div>
+          <div className="checkout-order-price"><strong>{formatBRL(price.total)}</strong><span>{cycleParam==='monthly'?'por mês':cycleParam==='quarterly'?'a cada 3 meses':'por ano'}</span></div>
+          <ul>
+            <li><Check size={16}/>{plan.users===1?'1 usuário':`Até ${plan.users} usuários`}</li>
+            <li><Check size={16}/>Assistente virtual e agenda integrados</li>
+            <li><Check size={16}/>Renovação automática</li>
+          </ul>
+          {profile?.business_name&&<p className="checkout-order-business">Assinatura para <strong>{profile.business_name}</strong></p>}
+        </section>
+
+        <section className="checkout-security-card">
+          <ShieldCheck size={25}/>
+          <div><strong>Pagamento protegido</strong><p>Processamento financeiro realizado com segurança pelo Asaas em conexão HTTPS.</p></div>
+          <div className="checkout-security-divider"/>
+          <div className="checkout-security-line"><LockKeyhole size={16}/><span>A ALOVIA não armazena o número completo do cartão nem o código de segurança.</span></div>
+        </section>
+      </aside>
+    </div>
+  </main>
