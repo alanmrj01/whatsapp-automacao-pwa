@@ -694,3 +694,4 @@ export function CheckoutPage() {
       </aside>
     </div>
   </main>
+}
