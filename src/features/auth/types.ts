@@ -6,6 +6,8 @@ export type Membership = {
   role: MembershipRole
   access_mode: AccessMode
   has_had_operational_access?: boolean
+  admin_full_access?: boolean
+  account_state?: 'demo' | 'active' | 'payment_blocked'
 }
 export type SessionUser = {
   id: string
