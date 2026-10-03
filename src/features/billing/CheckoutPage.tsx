@@ -115,7 +115,11 @@ function formatCardNumber(value:string) {
 
 function isValidCardNumber(value:string) {
   const number=digits(value,19)
-  if(!number)return false
+  return number.length>=13&&number.length<=cardNumberLimit(number)
+}
+
+function isCardNumberComplete(value:string) {
+  const number=digits(value,19)
   return number.length===cardNumberLimit(number)
 }
 
@@ -578,7 +582,7 @@ export function CheckoutPage() {
                   onChange={event=>{
                     const formatted=formatCardNumber(event.target.value)
                     setCardNumber(formatted)
-                    if(isValidCardNumber(formatted))focusNext(expiryMonthRef)
+                    if(isCardNumberComplete(formatted))focusNext(expiryMonthRef)
                   }}
                   placeholder="Número do cartão"
                   aria-invalid={cardNumber.length>0&&!isValidCardNumber(cardNumber)}
