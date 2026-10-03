@@ -595,7 +595,8 @@
   background: var(--color-surface-blue);
 }
 
-.checkout-security-card > div {
+.checkout-security-card > div,
+.checkout-security-content {
   min-width: 0;
 }
 
@@ -645,17 +646,15 @@
 
 .checkout-asaas-about {
   min-width: 0;
-  padding: 13px 15px;
+  margin-top: 12px;
+  padding: 12px 0 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto 18px;
+  grid-template-columns: minmax(0, 1fr) 18px;
   align-items: center;
   gap: 10px;
-  border: 1px solid var(--color-border);
-  border-radius: 16px;
+  border-top: 1px solid #d9e6fa;
   color: var(--color-text);
-  background: var(--color-surface);
   text-decoration: none;
-  box-shadow: var(--shadow-sm);
 }
 
 .checkout-asaas-about:focus-visible {
@@ -681,6 +680,7 @@
 
 .checkout-asaas-about > svg {
   color: var(--color-text-muted);
+  justify-self: end;
 }
 
 @media (min-width: 540px) {
