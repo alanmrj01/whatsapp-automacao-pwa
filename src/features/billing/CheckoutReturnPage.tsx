@@ -16,7 +16,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 export function CheckoutReturnPage() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
-  const {reconnect} = useAuth()
+  const {syncSession} = useAuth()
   const checkoutId = params.get('checkout')
   const browserState = params.get('state')
   const [status,setStatus] = useState<CheckoutStatus['status'] | 'checking'>('checking')
@@ -36,7 +36,7 @@ export function CheckoutReturnPage() {
         if (cancelled) return
         setStatus(current.status)
         if (current.status === 'paid') {
-          await reconnect()
+          await syncSession()
           if (!cancelled) navigate('/app',{replace:true})
           return
         }
@@ -53,7 +53,7 @@ export function CheckoutReturnPage() {
       cancelled = true
       if (timer) window.clearTimeout(timer)
     }
-  },[browserState,checkoutId,navigate,reconnect,retry,validCheckout])
+  },[browserState,checkoutId,navigate,retry,syncSession,validCheckout])
 
   if (!validCheckout) return <Navigate to="/app/mais/plano" replace />
 
