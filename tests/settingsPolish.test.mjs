@@ -39,7 +39,7 @@ test('device contact picker is the default and preserves safe fallbacks',()=>{
   assert.match(automation,/devicePhones\.length>1/)
   assert.match(automation,/Buscar no ALOVIA/)
   assert.match(automation,/Adicionar pelo número/)
-  assert.match(automation,/Contatos salvos somente dentro do WhatsApp não são liberados diretamente para um PWA/)
+  assert.match(automation,/Escolha um contato disponível na agenda do aparelho\./)
 })
 
 test('ALOVIA contact source lists every current conversation contact in a collapsible select',()=>{
@@ -51,6 +51,8 @@ test('ALOVIA contact source lists every current conversation contact in a collap
   assert.match(api,/while\(items\.length<total\)/)
   assert.match(automation,/useConversationContacts\(\)/)
   assert.match(automation,/Contato do ALOVIA<select/)
+  assert.match(automation,/customer_whatsapp_id\?\?item\.customer_phone/)
   assert.match(automation,/conversationContacts\.map\(item=><option/)
+  assert.match(automation,/value=\{item\.whatsappId\}/)
   assert.match(automation,/Esta lista mostra os contatos das conversas existentes no ALOVIA\./)
 })
