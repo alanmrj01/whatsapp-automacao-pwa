@@ -144,7 +144,6 @@ export function CheckoutPage() {
   const [error,setError]=useState<string|null>(null)
   const [submitting,setSubmitting]=useState(false)
   const [openStep,setOpenStep]=useState<1|2>(1)
-  const previousIdentificationComplete=useRef(false)
   const payerDocumentRef=useRef<HTMLInputElement|null>(null)
   const payerPhoneRef=useRef<HTMLInputElement|null>(null)
   const postalCodeRef=useRef<HTMLInputElement|null>(null)
@@ -232,11 +231,9 @@ export function CheckoutPage() {
     !!addressNumber.trim()
 
   useEffect(()=>{
-    const wasComplete=previousIdentificationComplete.current
-    previousIdentificationComplete.current=identificationComplete
-    if(identificationComplete&&!wasComplete&&openStep===1) {
-      setOpenStep(2)
-    }
+    if(!identificationComplete||openStep!==1)return
+    const timer=window.setTimeout(()=>setOpenStep(2),700)
+    return()=>window.clearTimeout(timer)
   },[identificationComplete,openStep])
 
   if(!isPlanId(planId)||!isBillingCycle(cycleParam)) {
@@ -260,7 +257,6 @@ export function CheckoutPage() {
     setError(null)
     setSubmitting(false)
     setOpenStep(1)
-    previousIdentificationComplete.current=false
     setCardNumber('')
     setExpiryMonth('')
     setExpiryYear('')
@@ -698,4 +694,3 @@ export function CheckoutPage() {
       </aside>
     </div>
   </main>
-}
