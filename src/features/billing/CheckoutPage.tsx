@@ -667,10 +667,21 @@ export function CheckoutPage() {
 
               {error&&<p className="form-error checkout-native-error" role="alert">{error}</p>}
 
-            <button ref={submitRef} className="primary-button checkout-native-submit" type="submit" disabled={submitting||expired}>
-              {submitting?'Processando com segurança…':`Assinar ${plan.name} por ${formatBRL(price.total)}${cycleParam==='monthly'?'/mês':''}`}
-            </button>
-              <p className="checkout-submit-note">Ao confirmar, você autoriza a cobrança recorrente do plano {cycle?.label.toLowerCase()}.</p>
+              {adminAccessNotice
+                ? <div className="checkout-admin-access-notice" role="status">
+                    <Check size={20} aria-hidden="true"/>
+                    <div>
+                      <strong>Esta conta já está liberada pelo administrador do ALOVIA.</strong>
+                      <span>Não é necessário adquirir um plano pago enquanto essa liberação estiver ativa.</span>
+                    </div>
+                    <button className="secondary-button" type="button" onClick={()=>navigate('/app',{replace:true})}>Voltar ao ALOVIA</button>
+                  </div>
+                : <>
+                    <button ref={submitRef} className="primary-button checkout-native-submit" type="submit" disabled={submitting||expired}>
+                      {submitting?'Processando com segurança…':`Assinar ${plan.name} por ${formatBRL(price.total)}${cycleParam==='monthly'?'/mês':''}`}
+                    </button>
+                    <p className="checkout-submit-note">Ao confirmar, você autoriza a cobrança recorrente do plano {cycle?.label.toLowerCase()}.</p>
+                  </>}
             </div>
           </section>
         </form>}
