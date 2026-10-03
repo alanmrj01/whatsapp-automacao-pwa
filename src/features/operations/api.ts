@@ -12,6 +12,7 @@ import type {
   Business,
   BusinessHours,
   CatalogItem,
+  Conversation,
   ConversationBulkAction,
   ConversationDetail,
   ConversationList,
@@ -158,6 +159,29 @@ export function useConversations(search:string,status:string) {
     refetchIntervalInBackground:false,
   })
 }
+export function useConversationContacts() {
+  const context=usePaidContext()
+  return useQuery({
+    queryKey:[...root(context.businessId),'conversation-contacts'],
+    queryFn:async({signal})=>{
+      const pageSize=50
+      let page=1
+      let total=0
+      const items:Conversation[]=[]
+      do {
+        const result=await api.request<ConversationList>(`/conversations?page=${page}&page_size=${pageSize}`,{signal})
+        items.push(...result.items)
+        total=result.total
+        page+=1
+      } while(items.length<total)
+      return {items,total}
+    },
+    enabled:context.enabled,
+    retry:false,
+    staleTime:30_000,
+  })
+}
+
 export function useConversation(id:string|null) {
   const context=usePaidContext()
   return useQuery({
