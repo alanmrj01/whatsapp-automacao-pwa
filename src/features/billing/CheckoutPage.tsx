@@ -104,6 +104,23 @@ function formatCardNumber(value:string) {
   return digits(value,19).replace(/(\d{4})(?=\d)/g,'$1 ').trim()
 }
 
+function isValidCardNumber(value:string) {
+  const number=digits(value,19)
+  if(number.length<13||number.length>19)return false
+  let sum=0
+  let doubleDigit=false
+  for(let index=number.length-1;index>=0;index--) {
+    let digit=Number(number[index])
+    if(doubleDigit) {
+      digit*=2
+      if(digit>9)digit-=9
+    }
+    sum+=digit
+    doubleDigit=!doubleDigit
+  }
+  return sum%10===0
+}
+
 function formatRemaining(seconds:number) {
   const safe=Math.max(0,seconds)
   const minutes=Math.floor(safe/60)
@@ -273,7 +290,7 @@ export function CheckoutPage() {
       postalDigits.length!==8||
       !addressNumber.trim()||
       cardHolderName.trim().length<2||
-      cardDigits.length<13||
+      !isValidCardNumber(cardDigits)||
       !monthDigits||
       !yearDigits||
       ccvDigits.length<3
@@ -444,7 +461,8 @@ export function CheckoutPage() {
               </label>
               <label className="checkout-field checkout-field--wide">
                 <span>Número do cartão</span>
-                <div className="checkout-input-with-icon"><CreditCard size={18}/><input inputMode="numeric" autoComplete="cc-number" value={cardNumber} onChange={event=>setCardNumber(formatCardNumber(event.target.value))} placeholder="Número do cartão" required/></div>
+                <div className="checkout-input-with-icon"><CreditCard size={18}/><input inputMode="numeric" autoComplete="cc-number" value={cardNumber} onChange={event=>setCardNumber(formatCardNumber(event.target.value))} placeholder="Número do cartão" aria-invalid={cardNumber.length>0&&!isValidCardNumber(cardNumber)} required/></div>
+                {cardNumber.length>0&&!isValidCardNumber(cardNumber)&&<small className="checkout-field-hint checkout-field-hint--error">Confira o número do cartão.</small>}
               </label>
               <label className="checkout-field">
                 <span>Validade</span>
