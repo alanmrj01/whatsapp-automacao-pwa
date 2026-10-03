@@ -113,3 +113,22 @@ test('checkout confirmation does not auto-reload or bounce through auth loading'
   assert.doesNotMatch(vite,/registerType: 'autoUpdate'/)
   assert.match(main,/onNeedRefresh: \(\) => undefined/)
 })
+
+
+test('admin-granted accounts never enter the paid checkout confirmation flow', () => {
+  const checkout = read('src/features/billing/CheckoutPage.tsx')
+  const authTypes = read('src/features/auth/types.ts')
+
+  assert.match(authTypes,/admin_full_access\?: boolean/)
+  assert.match(checkout,/membership\?\.admin_full_access/)
+  assert.match(checkout,/Esta conta já está liberada pelo administrador do ALOVIA/)
+  assert.match(checkout,/Não é necessário adquirir um plano pago enquanto essa liberação estiver ativa/)
+  assert.match(checkout,/Admin full access is active; a paid plan is not required/)
+})
+
+test('service-distance inputs use the current rounded onboarding field system', () => {
+  const css = read('src/features/onboarding/onboarding.css')
+  assert.match(css,/\.onboarding-distance-card input:not\(\[type="checkbox"\]\)/)
+  assert.match(css,/\.onboarding-distance-card input:not\(\[type="checkbox"\]\):focus/)
+  assert.match(css,/\.onboarding-distance-card \.field-invalid/)
+})
