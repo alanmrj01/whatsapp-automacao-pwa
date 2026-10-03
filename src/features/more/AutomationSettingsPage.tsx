@@ -73,14 +73,14 @@ function Exclusions({conversations,exclusions,canEdit}:{conversations:Conversati
   const excluded=new Set(exclusions.map(item=>item.whatsapp_id))
   const conversationContacts=[...new Map(
     conversations
-      .filter(item=>item.customer_phone)
       .map(item=>{
-        const phone=(item.customer_phone??'').replace(/\D/g,'')
-        return [phone,{id:item.customer_id,name:item.customer_name,phone}] as const
+        const whatsappId=(item.customer_whatsapp_id??item.customer_phone??'').replace(/\D/g,'')
+        const displayPhone=(item.customer_phone??item.customer_whatsapp_id??'').replace(/\D/g,'')
+        return [whatsappId,{id:item.customer_id,name:item.customer_name,whatsappId,displayPhone}] as const
       })
-      .filter(([phone])=>phone&&!excluded.has(phone)),
+      .filter(([whatsappId])=>whatsappId&&!excluded.has(whatsappId)),
   ).values()].sort((left,right)=>left.name.localeCompare(right.name,'pt-BR'))
-  const selected=conversationContacts.find(item=>item.phone===customerId)
+  const selected=conversationContacts.find(item=>item.whatsappId===customerId)
   const normalizedManualPhone=manualPhone.replace(/\D/g,'')
   const manualValid=/^[1-9]\d{6,14}$/.test(normalizedManualPhone)&&!excluded.has(normalizedManualPhone)
   const contactNavigator=navigator as ContactNavigator
@@ -112,7 +112,7 @@ function Exclusions({conversations,exclusions,canEdit}:{conversations:Conversati
   }
 
   const submit=()=>{
-    const whatsappId=source==='customer'?selected?.phone:normalizedManualPhone
+    const whatsappId=source==='customer'?selected?.whatsappId:normalizedManualPhone
     if(!whatsappId)return
     const label=source==='customer'?selected?.name:manualLabel.trim()||null
     add.mutate({whatsapp_id:whatsappId,label,reason:reason.trim()||null,mode:'human_only'},{onSuccess:()=>{setCustomerId('');setManualPhone('');setManualLabel('');setDevicePhones([]);setReason('')}})
@@ -122,7 +122,7 @@ function Exclusions({conversations,exclusions,canEdit}:{conversations:Conversati
     {canEdit&&<form className="settings-form settings-form--inline" onSubmit={event=>{event.preventDefault();submit()}}>
       <label>Como adicionar<select value={source} onChange={event=>setSource(event.target.value as 'device'|'customer'|'manual')}><option value="customer">Buscar nos contatos do ALOVIA</option><option value="manual">Adicionar por número</option><option value="device">Selecionar da agenda do celular</option></select></label>
       {source==='device'&&<>
-        {canPickDeviceContact?<><button className="secondary-button contact-picker-button" type="button" onClick={()=>void pickDeviceContact()}><Smartphone size={18}/>Abrir contatos do aparelho</button><p className="settings-note">O ALOVIA usa o seletor nativo do Android. Ele pode mostrar contatos da conta Google, memória do aparelho ou chip quando essas fontes são expostas pelo sistema. Contatos salvos somente dentro do WhatsApp não são liberados diretamente para um PWA.</p></>:<p className="settings-note">Este navegador não permite abrir os contatos do aparelho. Use “Buscar nos contatos do ALOVIA” ou “Adicionar por número”.</p>}
+        {canPickDeviceContact?<><button className="secondary-button contact-picker-button" type="button" onClick={()=>void pickDeviceContact()}><Smartphone size={18}/>Abrir contatos do aparelho</button><p className="settings-note">Escolha um contato disponível na agenda do aparelho.</p></>:<p className="settings-note">Este navegador não permite abrir os contatos do aparelho. Use “Buscar nos contatos do ALOVIA” ou “Adicionar por número”.</p>}
         {!!manualPhone&&<div className="settings-contact-preview"><ContactRound size={18}/><div><strong>{manualLabel||'Contato selecionado'}</strong><span>{manualPhone}</span></div></div>}
         {devicePhones.length>1&&<label>Número do contato<select value={manualPhone} onChange={event=>setManualPhone(event.target.value)}>{devicePhones.map(phone=><option value={phone} key={phone}>{phone}</option>)}</select><small>Este contato possui mais de um número. Escolha qual deve ficar sem resposta automática.</small></label>}
         <div className="contact-picker-fallbacks">
@@ -132,7 +132,7 @@ function Exclusions({conversations,exclusions,canEdit}:{conversations:Conversati
         {contactError&&<p className="form-error" role="alert">Não foi possível abrir ou ler o contato selecionado. Tente a busca do ALOVIA ou adicione o número manualmente.</p>}
       </>}
       {source==='customer'&&<>
-        <label>Contato do ALOVIA<select required value={customerId} onChange={event=>setCustomerId(event.target.value)}><option value="">Selecione um contato</option>{conversationContacts.map(item=><option value={item.phone} key={item.phone}>{item.name}{item.phone?' · +'+item.phone:''}</option>)}</select><small>Esta lista mostra os contatos das conversas existentes no ALOVIA.</small></label>
+        <label>Contato do ALOVIA<select required value={customerId} onChange={event=>setCustomerId(event.target.value)}><option value="">Selecione um contato</option>{conversationContacts.map(item=><option value={item.whatsappId} key={item.whatsappId}>{item.name}{item.displayPhone?' · +'+item.displayPhone:''}</option>)}</select><small>Esta lista mostra os contatos das conversas existentes no ALOVIA.</small></label>
         {!conversationContacts.length&&<p className="settings-note">Nenhum contato de conversa disponível. Você pode selecionar da agenda do aparelho ou adicionar pelo número.</p>}
       </>}
       {source==='manual'&&<>
