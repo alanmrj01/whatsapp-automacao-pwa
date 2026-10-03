@@ -31,11 +31,12 @@
     window_size = 60
     aggregate_by = ["ip", "domain"]
 
-# Payment endpoints get a conservative edge limit to reduce brute-force card
-# attempts without interfering with normal checkout retries or reconciliation.
+# Keep the exact checkout-creation route before the wildcard. Netlify uses
+# first-match routing; placing the wildcard first rewrites the empty splat as a
+# trailing slash and makes FastAPI answer 307 before the POST reaches the route.
 [[redirects]]
-  from = "/api/v1/billing/checkouts/*"
-  to = "https://native-checkout-sbx---whatsapp-backend-76kppogwfq-rj.a.run.app/api/v1/billing/checkouts/:splat"
+  from = "/api/v1/billing/checkouts"
+  to = "https://native-checkout-sbx---whatsapp-backend-76kppogwfq-rj.a.run.app/api/v1/billing/checkouts"
   status = 200
   force = true
   [redirects.rate_limit]
@@ -44,8 +45,8 @@
     aggregate_by = ["ip", "domain"]
 
 [[redirects]]
-  from = "/api/v1/billing/checkouts"
-  to = "https://native-checkout-sbx---whatsapp-backend-76kppogwfq-rj.a.run.app/api/v1/billing/checkouts"
+  from = "/api/v1/billing/checkouts/*"
+  to = "https://native-checkout-sbx---whatsapp-backend-76kppogwfq-rj.a.run.app/api/v1/billing/checkouts/:splat"
   status = 200
   force = true
   [redirects.rate_limit]
