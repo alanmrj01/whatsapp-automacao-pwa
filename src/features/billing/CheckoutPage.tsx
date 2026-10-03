@@ -100,25 +100,27 @@ function formatPhone(value:string) {
     .replace(/(\d{5})(\d)/,'$1-$2')
 }
 
+function cardNumberLimit(value:string) {
+  const number=digits(value,19)
+  if(/^3[47]/.test(number))return 15
+  if(/^4/.test(number))return 16
+  if(/^(5[1-5]|2(?:2[2-9]|[3-6]\d|7[01]|720))/.test(number))return 16
+  return 19
+}
+
 function formatCardNumber(value:string) {
-  return digits(value,19).replace(/(\d{4})(?=\d)/g,'$1 ').trim()
+  const limit=cardNumberLimit(value)
+  return digits(value,limit).replace(/(\d{4})(?=\d)/g,'$1 ').trim()
 }
 
 function isValidCardNumber(value:string) {
   const number=digits(value,19)
-  if(number.length<13||number.length>19)return false
-  let sum=0
-  let doubleDigit=false
-  for(let index=number.length-1;index>=0;index--) {
-    let digit=Number(number[index])
-    if(doubleDigit) {
-      digit*=2
-      if(digit>9)digit-=9
-    }
-    sum+=digit
-    doubleDigit=!doubleDigit
-  }
-  return sum%10===0
+  if(!number)return false
+  return number.length===cardNumberLimit(number)
+}
+
+function focusNext(ref:{current:HTMLInputElement|null}) {
+  window.requestAnimationFrame(()=>ref.current?.focus())
 }
 
 function formatRemaining(seconds:number) {
@@ -143,6 +145,17 @@ export function CheckoutPage() {
   const [submitting,setSubmitting]=useState(false)
   const [openStep,setOpenStep]=useState<1|2>(1)
   const previousIdentificationComplete=useRef(false)
+  const payerDocumentRef=useRef<HTMLInputElement|null>(null)
+  const payerPhoneRef=useRef<HTMLInputElement|null>(null)
+  const postalCodeRef=useRef<HTMLInputElement|null>(null)
+  const addressNumberRef=useRef<HTMLInputElement|null>(null)
+  const addressComplementRef=useRef<HTMLInputElement|null>(null)
+  const cardHolderNameRef=useRef<HTMLInputElement|null>(null)
+  const cardNumberRef=useRef<HTMLInputElement|null>(null)
+  const expiryMonthRef=useRef<HTMLInputElement|null>(null)
+  const expiryYearRef=useRef<HTMLInputElement|null>(null)
+  const ccvRef=useRef<HTMLInputElement|null>(null)
+  const submitRef=useRef<HTMLButtonElement|null>(null)
 
   const [payerName,setPayerName]=useState('')
   const [payerDocument,setPayerDocument]=useState('')
@@ -402,15 +415,53 @@ export function CheckoutPage() {
               <div className="checkout-field-grid">
               <label className="checkout-field checkout-field--wide">
                 <span>Nome completo do titular</span>
-                <input autoComplete="name" value={payerName} onChange={event=>{setPayerName(event.target.value);if(!cardHolderName)setCardHolderName(event.target.value)}} placeholder="Nome completo" required/>
+                <input
+                  autoComplete="name"
+                  maxLength={120}
+                  value={payerName}
+                  onChange={event=>{
+                    const value=event.target.value.slice(0,120)
+                    setPayerName(value)
+                    if(!cardHolderName)setCardHolderName(value)
+                    if(value.length===120)focusNext(payerDocumentRef)
+                  }}
+                  placeholder="Nome completo"
+                  required
+                />
               </label>
               <label className="checkout-field">
                 <span>CPF ou CNPJ</span>
-                <input inputMode="numeric" autoComplete="off" value={payerDocument} onChange={event=>setPayerDocument(formatDocument(event.target.value))} placeholder="CPF ou CNPJ" required/>
+                <input
+                  ref={payerDocumentRef}
+                  inputMode="numeric"
+                  autoComplete="off"
+                  maxLength={18}
+                  value={payerDocument}
+                  onChange={event=>{
+                    const formatted=formatDocument(event.target.value)
+                    setPayerDocument(formatted)
+                    if(digits(formatted,14).length===14)focusNext(payerPhoneRef)
+                  }}
+                  placeholder="CPF ou CNPJ"
+                  required
+                />
               </label>
               <label className="checkout-field">
                 <span>Celular</span>
-                <input inputMode="tel" autoComplete="tel" value={payerPhone} onChange={event=>setPayerPhone(formatPhone(event.target.value))} placeholder="Celular com DDD" required/>
+                <input
+                  ref={payerPhoneRef}
+                  inputMode="tel"
+                  autoComplete="tel"
+                  maxLength={15}
+                  value={payerPhone}
+                  onChange={event=>{
+                    const formatted=formatPhone(event.target.value)
+                    setPayerPhone(formatted)
+                    if(digits(formatted,11).length===11)focusNext(postalCodeRef)
+                  }}
+                  placeholder="Celular com DDD"
+                  required
+                />
               </label>
               <label className="checkout-field checkout-field--wide">
                 <span>E-mail da conta</span>
@@ -418,15 +469,60 @@ export function CheckoutPage() {
               </label>
               <label className="checkout-field">
                 <span>CEP</span>
-                <input inputMode="numeric" autoComplete="postal-code" value={postalCode} onChange={event=>setPostalCode(formatPostalCode(event.target.value))} placeholder="CEP" required/>
+                <input
+                  ref={postalCodeRef}
+                  inputMode="numeric"
+                  autoComplete="postal-code"
+                  maxLength={9}
+                  value={postalCode}
+                  onChange={event=>{
+                    const formatted=formatPostalCode(event.target.value)
+                    setPostalCode(formatted)
+                    if(digits(formatted,8).length===8)focusNext(addressNumberRef)
+                  }}
+                  placeholder="CEP"
+                  required
+                />
               </label>
               <label className="checkout-field">
                 <span>Número</span>
-                <input autoComplete="address-line2" value={addressNumber} onChange={event=>setAddressNumber(event.target.value)} placeholder="Número" required/>
+                <input
+                  ref={addressNumberRef}
+                  autoComplete="address-line2"
+                  maxLength={32}
+                  value={addressNumber}
+                  onChange={event=>{
+                    const value=event.target.value.slice(0,32)
+                    setAddressNumber(value)
+                    if(value.length===32)focusNext(addressComplementRef)
+                  }}
+                  onBlur={()=>{
+                    if(identificationComplete)setOpenStep(2)
+                  }}
+                  placeholder="Número"
+                  required
+                />
               </label>
               <label className="checkout-field checkout-field--wide">
                 <span>Complemento <small>opcional</small></span>
-                <input autoComplete="address-line2" value={addressComplement} onChange={event=>setAddressComplement(event.target.value)} placeholder="Sala, bloco, apartamento…"/>
+                <input
+                  ref={addressComplementRef}
+                  autoComplete="address-line2"
+                  maxLength={80}
+                  value={addressComplement}
+                  onChange={event=>{
+                    const value=event.target.value.slice(0,80)
+                    setAddressComplement(value)
+                    if(value.length===80) {
+                      setOpenStep(2)
+                      window.requestAnimationFrame(()=>cardHolderNameRef.current?.focus())
+                    }
+                  }}
+                  onBlur={()=>{
+                    if(identificationComplete)setOpenStep(2)
+                  }}
+                  placeholder="Sala, bloco, apartamento…"
+                />
               </label>
               </div>
             </div>
@@ -457,30 +553,98 @@ export function CheckoutPage() {
               <div className="checkout-field-grid">
               <label className="checkout-field checkout-field--wide">
                 <span>Nome impresso no cartão</span>
-                <input autoComplete="cc-name" value={cardHolderName} onChange={event=>setCardHolderName(event.target.value)} placeholder="Como aparece no cartão" required/>
+                <input
+                  ref={cardHolderNameRef}
+                  autoComplete="cc-name"
+                  maxLength={120}
+                  value={cardHolderName}
+                  onChange={event=>{
+                    const value=event.target.value.slice(0,120)
+                    setCardHolderName(value)
+                    if(value.length===120)focusNext(cardNumberRef)
+                  }}
+                  placeholder="Como aparece no cartão"
+                  required
+                />
               </label>
               <label className="checkout-field checkout-field--wide">
                 <span>Número do cartão</span>
-                <div className="checkout-input-with-icon"><CreditCard size={18}/><input inputMode="numeric" autoComplete="cc-number" value={cardNumber} onChange={event=>setCardNumber(formatCardNumber(event.target.value))} placeholder="Número do cartão" aria-invalid={cardNumber.length>0&&!isValidCardNumber(cardNumber)} required/></div>
-                {cardNumber.length>0&&!isValidCardNumber(cardNumber)&&<small className="checkout-field-hint checkout-field-hint--error">Confira o número do cartão.</small>}
+                <div className="checkout-input-with-icon"><CreditCard size={18}/><input
+                  ref={cardNumberRef}
+                  inputMode="numeric"
+                  autoComplete="cc-number"
+                  maxLength={23}
+                  value={cardNumber}
+                  onChange={event=>{
+                    const formatted=formatCardNumber(event.target.value)
+                    setCardNumber(formatted)
+                    if(isValidCardNumber(formatted))focusNext(expiryMonthRef)
+                  }}
+                  placeholder="Número do cartão"
+                  aria-invalid={cardNumber.length>0&&!isValidCardNumber(cardNumber)}
+                  required
+                /></div>
+                {cardNumber.length>0&&!isValidCardNumber(cardNumber)&&<small className="checkout-field-hint">Preencha o número completo do cartão.</small>}
               </label>
               <label className="checkout-field">
                 <span>Validade</span>
                 <div className="checkout-expiry-fields">
-                  <input inputMode="numeric" autoComplete="cc-exp-month" maxLength={2} value={expiryMonth} onChange={event=>setExpiryMonth(digits(event.target.value,2))} placeholder="MM" aria-label="Mês de validade" required/>
+                  <input
+                    ref={expiryMonthRef}
+                    inputMode="numeric"
+                    autoComplete="cc-exp-month"
+                    maxLength={2}
+                    value={expiryMonth}
+                    onChange={event=>{
+                      const value=digits(event.target.value,2)
+                      setExpiryMonth(value)
+                      if(value.length===2)focusNext(expiryYearRef)
+                    }}
+                    placeholder="MM"
+                    aria-label="Mês de validade"
+                    required
+                  />
                   <span>/</span>
-                  <input inputMode="numeric" autoComplete="cc-exp-year" maxLength={4} value={expiryYear} onChange={event=>setExpiryYear(digits(event.target.value,4))} placeholder="AAAA" aria-label="Ano de validade" required/>
+                  <input
+                    ref={expiryYearRef}
+                    inputMode="numeric"
+                    autoComplete="cc-exp-year"
+                    maxLength={4}
+                    value={expiryYear}
+                    onChange={event=>{
+                      const value=digits(event.target.value,4)
+                      setExpiryYear(value)
+                      if(value.length===4)focusNext(ccvRef)
+                    }}
+                    placeholder="AAAA"
+                    aria-label="Ano de validade"
+                    required
+                  />
                 </div>
               </label>
               <label className="checkout-field">
                 <span>Código de segurança</span>
-                <div className="checkout-input-with-icon"><LockKeyhole size={17}/><input type="password" inputMode="numeric" autoComplete="cc-csc" maxLength={4} value={ccv} onChange={event=>setCcv(digits(event.target.value,4))} placeholder="CVV" required/></div>
+                <div className="checkout-input-with-icon"><LockKeyhole size={17}/><input
+                  ref={ccvRef}
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="cc-csc"
+                  maxLength={4}
+                  value={ccv}
+                  onChange={event=>{
+                    const value=digits(event.target.value,4)
+                    setCcv(value)
+                    if(value.length===4)window.requestAnimationFrame(()=>submitRef.current?.focus())
+                  }}
+                  placeholder="CVV"
+                  required
+                /></div>
               </label>
               </div>
 
               {error&&<p className="form-error checkout-native-error" role="alert">{error}</p>}
 
-            <button className="primary-button checkout-native-submit" type="submit" disabled={submitting||expired}>
+            <button ref={submitRef} className="primary-button checkout-native-submit" type="submit" disabled={submitting||expired}>
               {submitting?'Processando com segurança…':`Assinar ${plan.name} por ${formatBRL(price.total)}${cycleParam==='monthly'?'/mês':''}`}
             </button>
               <p className="checkout-submit-note">Ao confirmar, você autoriza a cobrança recorrente do plano {cycle?.label.toLowerCase()}.</p>
