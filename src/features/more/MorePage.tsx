@@ -3,6 +3,7 @@ import { ListRow } from '../../components/ListRow'
 import { Section } from '../../components/Section'
 import { StatusBadge } from '../../components/StatusBadge'
 import { useEntitlements } from '../access/useEntitlements'
+import { SessionActions } from '../auth/SessionActions'
 import { useUpgradePrompt } from '../access/upgradePromptContext'
 import { useProductState } from '../product/productState'
 
@@ -20,7 +21,7 @@ export function MorePage(){
   const gated=(label:string)=>()=>openUpgrade(label)
 
   return <div className="page-stack operational-page compact-page">
-    <section className="operational-heading"><div><span className="eyebrow">{membership?.business_name??'Sua empresa'}</span><h1>Mais</h1></div></section>
+    <section className="operational-heading"><div><span className="eyebrow">{membership?.business_name??'Sua empresa'}</span><h1>Configurações</h1></div></section>
 
     {needsReview?<section className="setup-callout setup-callout--warning" role="status"><div><strong>Revise sua configuração</strong><span>{nonWhatsAppBlockingReasons.join(' ')}</span></div></section>:paid&&setup.data?.onboarding_completed&&!whatsappPending&&<section className="setup-callout setup-callout--complete"><div><strong>Configuração inicial concluída</strong><span>Você pode alterar os dados da operação a qualquer momento nas opções abaixo.</span></div></section>}
 
@@ -57,5 +58,9 @@ export function MorePage(){
         <ListRow icon={ShieldCheck} title="Privacidade" to="/app/mais/privacidade"/>
       </div>
     </Section>
+
+    <section className="settings-logout-section" aria-label="Sessão">
+      <SessionActions/>
+    </section>
   </div>
 }
