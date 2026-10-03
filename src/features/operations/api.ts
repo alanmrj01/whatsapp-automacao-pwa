@@ -170,6 +170,7 @@ export function useConversationContacts() {
       const items:Conversation[]=[]
       do {
         const result=await api.request<ConversationList>(`/conversations?page=${page}&page_size=${pageSize}`,{signal})
+        if(!result.items.length)break
         items.push(...result.items)
         total=result.total
         page+=1
