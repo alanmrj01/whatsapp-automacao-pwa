@@ -119,6 +119,10 @@ function isValidCardNumber(value:string) {
   return number.length===cardNumberLimit(number)
 }
 
+function cardSecurityCodeLimit(cardNumber:string) {
+  return /^3[47]/.test(digits(cardNumber,19))?4:3
+}
+
 function focusNext(ref:{current:HTMLInputElement|null}) {
   window.requestAnimationFrame(()=>ref.current?.focus())
 }
@@ -302,7 +306,7 @@ export function CheckoutPage() {
       !isValidCardNumber(cardDigits)||
       !monthDigits||
       !yearDigits||
-      ccvDigits.length<3
+      ccvDigits.length!==cardSecurityCodeLimit(cardDigits)
     ) {
       setError('Confira os campos obrigatórios antes de continuar.')
       return
@@ -625,12 +629,13 @@ export function CheckoutPage() {
                   type="password"
                   inputMode="numeric"
                   autoComplete="cc-csc"
-                  maxLength={4}
+                  maxLength={cardSecurityCodeLimit(cardNumber)}
                   value={ccv}
                   onChange={event=>{
-                    const value=digits(event.target.value,4)
+                    const limit=cardSecurityCodeLimit(cardNumber)
+                    const value=digits(event.target.value,limit)
                     setCcv(value)
-                    if(value.length===4)window.requestAnimationFrame(()=>submitRef.current?.focus())
+                    if(value.length===limit)window.requestAnimationFrame(()=>submitRef.current?.focus())
                   }}
                   placeholder="CVV"
                   required
