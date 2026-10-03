@@ -16,7 +16,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 export function CheckoutReturnPage() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
-  const {syncSession} = useAuth()
+  const {membership,syncSession} = useAuth()
   const checkoutId = params.get('checkout')
   const browserState = params.get('state')
   const [status,setStatus] = useState<CheckoutStatus['status'] | 'checking'>('checking')
@@ -40,7 +40,10 @@ export function CheckoutReturnPage() {
           finalizing.current = true
           setStatus('checking')
           try {
-            await syncSession()
+            // Admin-granted or otherwise already-paid accounts do not need an
+            // entitlement transition. Fresh free accounts sync once so the new
+            // commercial subscription is reflected before entering the app.
+            if (membership?.access_mode !== 'paid') await syncSession()
             if (!cancelled) navigate('/app',{replace:true})
           } catch {
             finalizing.current = false
@@ -62,7 +65,7 @@ export function CheckoutReturnPage() {
       cancelled = true
       if (timer) window.clearTimeout(timer)
     }
-  },[browserState,checkoutId,navigate,retry,syncSession,validCheckout])
+  },[browserState,checkoutId,membership?.access_mode,navigate,retry,syncSession,validCheckout])
 
   if (!validCheckout) return <Navigate to="/app/mais/plano" replace />
 
