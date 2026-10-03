@@ -95,3 +95,19 @@ test('compact upgrade prompt and account routes remain explicit', () => {
   assert.match(dashboard,/<h1>Dashboard<\/h1>/)
   assert.match(dashboard,/dashboard-business-name/)
 })
+
+test('checkout confirmation does not auto-reload or bounce through auth loading', () => {
+  const checkoutReturn = read('src/features/billing/CheckoutReturnPage.tsx')
+  const authProvider = read('src/features/auth/AuthProvider.tsx')
+  const vite = read('vite.config.ts')
+  const main = read('src/main.tsx')
+
+  assert.match(checkoutReturn,/syncSession/)
+  assert.doesNotMatch(checkoutReturn,/await reconnect\(\)/)
+  assert.match(authProvider,/const syncSession = useCallback/)
+  assert.match(authProvider,/api\.request<SessionUser>\('\/me'\)/)
+  assert.doesNotMatch(authProvider,/const syncSession[\s\S]*?setState\('loading'\)/)
+  assert.match(vite,/registerType: 'prompt'/)
+  assert.doesNotMatch(vite,/registerType: 'autoUpdate'/)
+  assert.match(main,/onNeedRefresh: \(\) => undefined/)
+})
