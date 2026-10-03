@@ -30,13 +30,27 @@ test('Configurações includes a second logout action at the bottom',()=>{
   assert.match(css,/\.settings-logout-section/)
 })
 
-test('device contact picker detects capabilities and preserves safe fallbacks',()=>{
+test('device contact picker is the default and preserves safe fallbacks',()=>{
   const automation=read('src/features/more/AutomationSettingsPage.tsx')
 
+  assert.match(automation,/useState<'device'\|'customer'\|'manual'>\('device'\)/)
   assert.match(automation,/getProperties/)
   assert.match(automation,/contacts!\.select\(properties,\{multiple:false\}\)/)
   assert.match(automation,/devicePhones\.length>1/)
   assert.match(automation,/Buscar no ALOVIA/)
   assert.match(automation,/Adicionar pelo número/)
   assert.match(automation,/Contatos salvos somente dentro do WhatsApp não são liberados diretamente para um PWA/)
+})
+
+test('ALOVIA contact source lists every current conversation contact in a collapsible select',()=>{
+  const automation=read('src/features/more/AutomationSettingsPage.tsx')
+  const api=read('src/features/operations/api.ts')
+
+  assert.match(api,/export function useConversationContacts\(\)/)
+  assert.match(api,/page_size=\$\{pageSize\}/)
+  assert.match(api,/while\(items\.length<total\)/)
+  assert.match(automation,/useConversationContacts\(\)/)
+  assert.match(automation,/Contato do ALOVIA<select/)
+  assert.match(automation,/conversationContacts\.map\(item=><option/)
+  assert.match(automation,/Esta lista mostra os contatos das conversas existentes no ALOVIA\./)
 })
