@@ -44,6 +44,7 @@ export function LoginPage() {
           <input id="login-password" type={visible?'text':'password'} autoComplete="current-password" required maxLength={1024} value={password} onChange={event=>setPassword(event.target.value)} disabled={busy} />
           <button type="button" className="icon-button" aria-label={visible?'Ocultar senha':'Mostrar senha'} aria-pressed={visible} onClick={()=>setVisible(!visible)}>{visible?<EyeOff size={20}/>:<Eye size={20}/>}</button>
         </div>
+        <Link to="/esqueci-senha" className="auth-forgot-link">Esqueceu sua senha?</Link>
         {error && <p className="form-error" role="alert">{error}</p>}
         <PrimaryButton type="submit" fullWidth disabled={busy} aria-busy={busy}>{busy?'Entrando…':'Entrar'}</PrimaryButton>
       </form>
