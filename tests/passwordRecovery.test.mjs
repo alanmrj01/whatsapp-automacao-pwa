@@ -38,6 +38,8 @@ test('forgot password keeps account existence undisclosed', () => {
     /Se existir uma conta com este e-mail, você receberá as instruções para redefinir sua senha\./,
   )
   assert.match(pages, /O link é válido por 30 minutos e pode ser usado uma única vez\./)
+  assert.match(pages, /location\.hash\.replace/)
+  assert.match(pages, /navigate\('\/redefinir-senha', \{replace:true\}\)/)
   assert.doesNotMatch(pages, /e-mail não cadastrado/i)
   assert.doesNotMatch(pages, /conta não existe/i)
 })
