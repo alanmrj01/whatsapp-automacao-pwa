@@ -1,6 +1,6 @@
 import { Eye, EyeOff, LockKeyhole } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { BrandMark } from '../../components/BrandMark'
 import { PrimaryButton } from '../../components/PrimaryButton'
 import { api } from '../../lib/api'
@@ -79,8 +79,9 @@ export function ForgotPasswordPage() {
 }
 
 export function ResetPasswordPage() {
-  const [params] = useSearchParams()
-  const token = params.get('token')?.trim() ?? ''
+  const location = useLocation()
+  const navigate = useNavigate()
+  const token = new URLSearchParams(location.hash.replace(/^#/, '')).get('token')?.trim() ?? ''
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
   const [visible, setVisible] = useState(false)
@@ -102,6 +103,7 @@ export function ResetPasswordPage() {
     setError('')
     try {
       await api.resetPassword(token, password)
+      navigate('/redefinir-senha', {replace:true})
       setPassword('')
       setConfirmation('')
       setDone(true)
