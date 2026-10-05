@@ -25,11 +25,12 @@ const titles: Record<string, string> = {
 }
 
 export function AppShell() {
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   const isConversationDetail = /^\/app\/conversas\/[^/]+$/.test(pathname)
   const isWhatsAppDetail = pathname.startsWith('/app/whatsapp/')
   const isSettingsDetail = pathname.startsWith('/app/mais/')
   const isDetail = isWhatsAppDetail||isSettingsDetail
+  const fromOnboarding = new URLSearchParams(search).get('from') === 'onboarding'
   const title = titles[pathname] ?? 'Conectar WhatsApp'
 
   if (isConversationDetail) {
@@ -49,7 +50,16 @@ export function AppShell() {
     <div className="app-layout">
       <DesktopSidebar />
       <div className="app-column">
-        <AppHeader title={title} showBack={isDetail} backTo={isSettingsDetail?'/app/mais':'/app/whatsapp'} actions={<NotificationCenter/>} />
+        <AppHeader
+          title={title}
+          showBack={isDetail}
+          backTo={isSettingsDetail
+            ? '/app/mais'
+            : fromOnboarding
+              ? '/app/onboarding'
+              : '/app/whatsapp'}
+          actions={<NotificationCenter/>}
+        />
         <main className="app-content" id="main-content">
           <div className="page-stack"><BusinessSelector /></div>
           <WhatsAppPendingBanner />
