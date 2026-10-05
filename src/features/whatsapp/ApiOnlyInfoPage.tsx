@@ -36,14 +36,14 @@ export function ApiOnlyInfoPage() {
               <small>Eles enviam mensagens pelo WhatsApp normalmente.</small>
             </span>
           </li>
-          <li>
+          <li className="whatsapp-exclusive-summary__warning">
             <Check size={17} aria-hidden="true" />
             <span>
               <strong>Você atende dentro da Alovia.</strong>
               <small>As novas conversas são vistas e respondidas pela Alovia.</small>
             </span>
           </li>
-          <li>
+          <li className="whatsapp-exclusive-summary__warning">
             <Check size={17} aria-hidden="true" />
             <span>
               <strong>Esse número não fica disponível no app WhatsApp Business.</strong>
