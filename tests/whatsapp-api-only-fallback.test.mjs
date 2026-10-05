@@ -89,3 +89,12 @@ test('exclusive connection PIN helper avoids infrastructure jargon', async () =>
   assert.match(source, /proteger a conexão deste número/)
   assert.doesNotMatch(source, /Cloud API|WABA|API only/i)
 })
+
+test('exclusive-mode change guidance appears only inside disconnect confirmation', async () => {
+  const source = await read('src/features/whatsapp/WhatsAppPage.tsx')
+  assert.match(source, /confirmDisconnect/)
+  assert.match(source, /mode==='api_only'/)
+  assert.match(source, /Ele não voltará automaticamente para o app WhatsApp Business/)
+  assert.match(source, /será necessário configurá-lo lá depois da desconexão/)
+  assert.doesNotMatch(source, /Quero usar também no WhatsApp Business/)
+})
