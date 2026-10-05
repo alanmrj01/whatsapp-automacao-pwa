@@ -253,8 +253,9 @@ export function ApiOnlyEmbeddedSignupButton({
       <label>
         <strong>PIN de verificação em duas etapas</strong>
         <input
+          type="password"
           inputMode="numeric"
-          autoComplete="off"
+          autoComplete="new-password"
           maxLength={6}
           value={registrationPin}
           onChange={event => setRegistrationPin(event.target.value.replace(/\D/g,'').slice(0,6))}
