@@ -52,7 +52,10 @@ test('paid accounts are guided through seven persisted onboarding steps before n
   assert.match(onboarding,/<Navigate to="\/app" replace\/>/)
   assert.match(onboarding,/!result\.onboarding_completed\|\|!result\.onboarding_completed_at/)
   assert.match(onboarding,/connection\.data\?\.status==='connected'\|\|setup\.data\?\.whatsapp===true/)
-  assert.match(router,/setup\.data\?\.onboarding_completed \? children : <Navigate to="\/app\/onboarding" replace\/>/)
+  assert.match(router,/const whatsappOnboardingRoute = pathname === '\/app\/whatsapp\/business'/)
+  assert.match(router,/pathname === '\/app\/whatsapp\/exclusivo'/)
+  assert.match(router,/setup\.data\?\.onboarding_completed \|\| whatsappOnboardingRoute/)
+  assert.match(router,/<Navigate to="\/app\/onboarding" replace\/>/)
 })
 
 test('company hours are configured independently from technicians and support weekdays plus weekends', () => {
@@ -100,7 +103,7 @@ test('completed onboarding stays unlocked and exposes configuration warnings wit
     assert.match(source,/Revise sua configuração/)
   }
   assert.match(dashboard,/Corrigir configuração/)
-  assert.match(router,/setup\.data\?\.onboarding_completed \? children/)
+  assert.match(router,/setup\.data\?\.onboarding_completed \|\| whatsappOnboardingRoute/)
 })
 
 test('notifications combine foreground refresh with real authenticated Web Push', () => {
