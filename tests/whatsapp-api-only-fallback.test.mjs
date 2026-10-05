@@ -28,6 +28,7 @@ test('existing-number fallback explains the operational impact in plain language
   assert.match(source, /Seus clientes continuam usando o mesmo número/)
   assert.match(source, /Você atende dentro da Alovia/)
   assert.match(source, /não fica disponível no app WhatsApp Business/)
+  assert.match(source, /whatsapp-exclusive-summary__warning/)
   assert.match(source, /O número continua sendo da sua empresa/)
   assert.match(source, /Quero usar outro número/)
   assert.match(source, /As conversas antigas do aplicativo não são transferidas para a Alovia/)
