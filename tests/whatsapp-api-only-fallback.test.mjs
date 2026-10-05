@@ -28,7 +28,7 @@ test('existing-number fallback requires explicit impact confirmation', async () 
   assert.match(source, /Entendi a mudança deste número/)
   assert.match(source, /O número já não está ativo no WhatsApp Business app/)
   assert.match(source, /Prefiro usar outro número/)
-  assert.match(source, /histórico existente do aplicativo não será migrado/)
+  assert.match(source, /histórico\s+existente do aplicativo não será migrado/)
 })
 
 test('api-only completion sends confirmation and PIN only to the backend', async () => {
