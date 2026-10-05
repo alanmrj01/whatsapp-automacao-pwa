@@ -251,7 +251,7 @@ export function ApiOnlyEmbeddedSignupButton({
         : phase === 'opening'
           ? 'Abrindo a Meta…'
           : phase === 'processing'
-            ? 'Registrando número…'
+            ? 'Conectando número…'
             : phase === 'error'
               ? 'Tentar novamente'
               : phase === 'success'
@@ -261,7 +261,7 @@ export function ApiOnlyEmbeddedSignupButton({
   return (
     <div className="embedded-signup-action">
       <label>
-        <strong>PIN de verificação em duas etapas</strong>
+        <strong>PIN de segurança do número</strong>
         <input
           type="password"
           inputMode="numeric"
@@ -274,8 +274,8 @@ export function ApiOnlyEmbeddedSignupButton({
         />
         <small>
           {intent === 'use_existing_number_platform_only'
-            ? 'Informe o PIN de 6 dígitos já usado na verificação em duas etapas. Se a Meta pedir um novo PIN durante a migração, use o mesmo valor aqui.'
-            : 'Escolha um PIN de 6 dígitos para proteger o número na Cloud API. Guarde esse PIN em local seguro.'}
+            ? 'Use o PIN de 6 dígitos deste número. Se a Meta pedir um novo PIN, use o mesmo valor aqui.'
+            : 'Escolha um PIN de 6 dígitos para proteger a conexão deste número. Guarde-o em local seguro.'}
         </small>
       </label>
       <PrimaryButton
@@ -317,9 +317,9 @@ export function ApiOnlyEmbeddedSignupButton({
       {phase === 'waiting' && resumeAvailable && <p role="status">
         Retome a validação com segurança. A tentativa atual será reutilizada.
       </p>}
-      {phase === 'processing' && <p role="status">Finalizando a conexão exclusiva…</p>}
+      {phase === 'processing' && <p role="status">Finalizando a conexão do número…</p>}
       {phase === 'success' && <p className="embedded-signup-action__success" role="status">
-        Conexão exclusiva confirmada{connected?.display_phone_number
+        WhatsApp conectado à Alovia{connected?.display_phone_number
           ? ` para o número ${connected.display_phone_number}`
           : ''}.
       </p>}
