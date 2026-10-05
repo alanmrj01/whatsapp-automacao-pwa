@@ -40,3 +40,32 @@ test('api-only completion sends confirmation and PIN only to the backend', async
   assert.match(source, /type="password"/)
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB/i)
 })
+
+
+test('pending onboarding can enter only the WhatsApp connection detail routes', async () => {
+  const router = await read('src/app/router.tsx')
+  assert.match(router, /pathname === '\/app\/whatsapp\/business'/)
+  assert.match(router, /pathname === '\/app\/whatsapp\/exclusivo'/)
+  assert.match(router, /onboarding_completed \|\| whatsappOnboardingRoute/)
+  assert.match(router, /Navigate to="\/app\/onboarding" replace/)
+})
+
+test('step seven preserves onboarding origin and resumes the persisted step', async () => {
+  const onboarding = await read('src/features/onboarding/OnboardingPage.tsx')
+  const sheet = await read('src/features/whatsapp/ConnectWhatsAppSheet.tsx')
+  assert.match(onboarding, /source="onboarding"/)
+  assert.match(onboarding, /next_step!=='company'/)
+  assert.match(sheet, /\?from=onboarding/)
+})
+
+test('WhatsApp setup returns directly to step seven after success or back navigation', async () => {
+  const shell = await read('src/app/AppShell.tsx')
+  const coexistence = await read('src/features/whatsapp/EmbeddedSignupButton.tsx')
+  const exclusive = await read('src/features/whatsapp/ApiOnlyEmbeddedSignupButton.tsx')
+  assert.match(shell, /fromOnboarding/)
+  assert.match(shell, /'\/app\/onboarding'/)
+  assert.match(coexistence, /phase === 'success' && fromOnboarding/)
+  assert.match(coexistence, /navigate\('\/app\/onboarding', \{replace:true\}\)/)
+  assert.match(exclusive, /phase === 'success' && fromOnboarding/)
+  assert.match(exclusive, /navigate\('\/app\/onboarding', \{replace:true\}\)/)
+})
