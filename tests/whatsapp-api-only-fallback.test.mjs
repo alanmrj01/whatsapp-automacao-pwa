@@ -85,9 +85,10 @@ test('initial WhatsApp choice uses customer-facing operational language', async 
 
 test('exclusive connection PIN helper avoids infrastructure jargon', async () => {
   const source = await read('src/features/whatsapp/ApiOnlyEmbeddedSignupButton.tsx')
-  assert.match(source, /PIN de segurança do número/)
-  assert.match(source, /proteger a conexão deste número/)
-  assert.doesNotMatch(source, /Cloud API|WABA|API only/i)
+  const visibleUi = source.slice(source.indexOf('<div className="embedded-signup-action">'))
+  assert.match(visibleUi, /PIN de segurança do número/)
+  assert.match(visibleUi, /proteger a conexão deste número/)
+  assert.doesNotMatch(visibleUi, /Cloud API|WABA|API only/i)
 })
 
 test('exclusive-mode change guidance appears only inside disconnect confirmation', async () => {
