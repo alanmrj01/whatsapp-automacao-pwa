@@ -98,8 +98,15 @@ export function WhatsAppPage() {
         </PrimaryButton>}
         {canDisconnect&&!confirmDisconnect&&<button className="danger-outline-button" type="button" onClick={()=>setConfirmDisconnect(true)}><Unplug size={18}/>Desconectar WhatsApp</button>}
         {canDisconnect&&confirmDisconnect&&<div className="disconnect-confirm" role="alert">
-          <strong>Desconectar este número do ALOVIA?</strong>
-          <p>O ALOVIA deixará de receber e enviar mensagens por esta conexão. Isso não exclui sua conta do WhatsApp ou da Meta.</p>
+          <strong>Desconectar este número da Alovia?</strong>
+          <p>A Alovia deixará de receber e enviar mensagens por esta conexão.</p>
+          {mode==='api_only'&&<div className="disconnect-confirm__mode-warning">
+            <strong>Importante sobre este número</strong>
+            <p>
+              Ele não voltará automaticamente para o app WhatsApp Business.
+              Se quiser usá-lo novamente no aplicativo, será necessário configurá-lo lá depois da desconexão.
+            </p>
+          </div>}
           <div><button className="compact-button" type="button" onClick={()=>setConfirmDisconnect(false)}>Cancelar</button><button className="danger-button" type="button" disabled={disconnect.isPending} onClick={()=>disconnect.mutate(undefined,{onSuccess:()=>setConfirmDisconnect(false)})}>{disconnect.isPending?'Desconectando…':'Confirmar desconexão'}</button></div>
           {disconnect.isError&&<p className="form-error" role="alert">Não foi possível desconectar. Tente novamente.</p>}
         </div>}
