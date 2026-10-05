@@ -258,8 +258,6 @@ function openEmbeddedSignup(
             }
           : {
               setup: {},
-              sessionInfoVersion: '3',
-              version: configuration.embedded_signup_version,
             },
       }
     const requestLogin = (resume: boolean) => {
