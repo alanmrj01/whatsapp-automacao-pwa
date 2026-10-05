@@ -32,6 +32,9 @@ const CoexistenceInfoPage = lazy(async () => ({default:(await import('../feature
 const WhatsAppPage = lazy(async () => ({default:(await import('../features/whatsapp/WhatsAppPage')).WhatsAppPage}))
 const AppShell = lazy(async () => ({default:(await import('./AppShell')).AppShell}))
 const LoginPage = lazy(async () => ({default:(await import('../features/auth/LoginPage')).LoginPage}))
+const PasswordRecoveryPages = () => import('../features/auth/PasswordRecoveryPages')
+const ForgotPasswordPage = lazy(async () => ({default:(await PasswordRecoveryPages()).ForgotPasswordPage}))
+const ResetPasswordPage = lazy(async () => ({default:(await PasswordRecoveryPages()).ResetPasswordPage}))
 const SignupPage = lazy(async () => ({default:(await import('../features/auth/SignupPage')).SignupPage}))
 const AdminPage = lazy(async () => ({default:(await import('../features/auth/AdminPage')).AdminPage}))
 const PlatformPreviewPage = lazy(async () => ({default:(await import('../features/preview/PlatformPreviewPage')).PlatformPreviewPage}))
@@ -67,6 +70,8 @@ export function AppRouter() {
       <Routes>
         <Route path="/" element={<PublicLandingPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/esqueci-senha" element={<ForgotPasswordPage />} />
+        <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
         <Route path="/criar-conta" element={<SignupPage />} />
         <Route element={<ProtectedRoute platform />}>
           <Route path="/admin" element={<AdminPage />} />
