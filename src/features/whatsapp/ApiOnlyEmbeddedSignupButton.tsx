@@ -15,12 +15,27 @@ import {
   resumeMetaEmbeddedSignup,
   type EmbeddedSignupConfiguration,
   type EmbeddedSignupObservation,
-  type EmbeddedSignupResult,
   type EmbeddedSignupPhase,
+  type EmbeddedSignupResult,
 } from './embeddedSignup'
 import type { WhatsAppConnection } from './types'
 
-export function EmbeddedSignupButton() {
+type ApiOnlyIntent =
+  | 'use_new_or_dedicated_number'
+  | 'use_existing_number_platform_only'
+
+type ApiOnlyStartConfiguration = EmbeddedSignupConfiguration & {
+  mode: 'api_only'
+  intent: ApiOnlyIntent
+}
+
+export function ApiOnlyEmbeddedSignupButton({
+  intent,
+  platformOnlyImpactConfirmed,
+}: {
+  intent: ApiOnlyIntent
+  platformOnlyImpactConfirmed: boolean
+}) {
   const {user, membership} = useAuth()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
@@ -28,25 +43,44 @@ export function EmbeddedSignupButton() {
   const fromOnboarding = searchParams.get('from') === 'onboarding'
   const [phase, setPhase] = useState<EmbeddedSignupPhase>('idle')
   const [message, setMessage] = useState<string | null>(null)
+  const [registrationPin, setRegistrationPin] = useState('')
   const [connected, setConnected] = useState<WhatsAppConnection | null>(null)
   const [resumeAvailable, setResumeAvailable] = useState(false)
-  const [failedAttempts, setFailedAttempts] = useState(0)
-  const queryKey = useMemo(
-    () => ['whatsapp-connection', user?.id, membership?.business_id],
-    [user?.id, membership?.business_id],
-  )
+  const [preparedConfiguration, setPreparedConfiguration] = useState<string | null>(null)
+  const [failedConfiguration, setFailedConfiguration] = useState<string | null>(null)
+  const [sdkAttempt, setSdkAttempt] = useState(0)
   const allowed = canStartEmbeddedSignup(
     membership?.access_mode,
     membership?.role,
   )
+  const confirmationReady = intent !== 'use_existing_number_platform_only'
+    || platformOnlyImpactConfirmed
   const attemptKey = membership?.business_id
+    ? `${membership.business_id}:api-only`
+    : undefined
+  const queryKey = useMemo(
+    () => ['whatsapp-connection', user?.id, membership?.business_id],
+    [user?.id, membership?.business_id],
+  )
   const configuration = useQuery({
-    queryKey: ['meta-embedded-signup-configuration', membership?.business_id],
-    queryFn: ({signal}) => api.request<EmbeddedSignupConfiguration>(
-      '/whatsapp/onboarding/embedded-signup/start',
-      {method:'POST', body:'{}', signal},
+    queryKey: [
+      'meta-api-only-signup-configuration',
+      membership?.business_id,
+      intent,
+      platformOnlyImpactConfirmed,
+    ],
+    queryFn: ({signal}) => api.request<ApiOnlyStartConfiguration>(
+      '/whatsapp/onboarding/api-only/start',
+      {
+        method:'POST',
+        body:JSON.stringify({
+          intent,
+          platform_only_impact_confirmed: platformOnlyImpactConfirmed,
+        }),
+        signal,
+      },
     ),
-    enabled: allowed,
+    enabled: allowed && confirmationReady,
     retry: false,
     staleTime: 60_000,
     gcTime: 0,
@@ -54,13 +88,11 @@ export function EmbeddedSignupButton() {
   const configurationKey = configuration.data
     ? JSON.stringify(configuration.data)
     : null
-  const [preparedConfiguration, setPreparedConfiguration] = useState<string | null>(null)
-  const [failedConfiguration, setFailedConfiguration] = useState<string | null>(null)
-  const [sdkAttempt, setSdkAttempt] = useState(0)
   const sdkReady = configurationKey !== null
     && preparedConfiguration === configurationKey
   const sdkFailed = configurationKey !== null
     && failedConfiguration === configurationKey
+  const pinValid = /^\d{6}$/.test(registrationPin)
 
   const reportObservation = useCallback((observation: EmbeddedSignupObservation) => {
     const payload = {
@@ -79,7 +111,8 @@ export function EmbeddedSignupButton() {
       }),
     }
     void api.request<void>('/whatsapp/onboarding/embedded-signup/telemetry', {
-      method:'POST', body:JSON.stringify(payload),
+      method:'POST',
+      body:JSON.stringify(payload),
     }).catch(() => {})
   }, [])
 
@@ -94,15 +127,16 @@ export function EmbeddedSignupButton() {
         setConnected(connection)
         setResumeAvailable(false)
         setMessage(null)
+        setRegistrationPin('')
         setPhase('success')
       }
     } catch {
-      // Resume remains available; connection checks must not abort onboarding.
+      // A verificação da conexão não deve interromper uma tentativa retomável.
     }
   }, [queryClient, queryKey])
 
   useEffect(() => {
-    if (!allowed || !configuration.data || !configurationKey) return
+    if (!allowed || !confirmationReady || !configuration.data || !configurationKey) return
     let active = true
     void prepareMetaEmbeddedSignup(configuration.data, window, reportObservation)
       .then(() => {
@@ -119,7 +153,14 @@ export function EmbeddedSignupButton() {
         }
       })
     return () => { active = false }
-  }, [allowed, configuration.data, configurationKey, reportObservation, sdkAttempt])
+  }, [
+    allowed,
+    confirmationReady,
+    configuration.data,
+    configurationKey,
+    reportObservation,
+    sdkAttempt,
+  ])
 
   useEffect(() => () => {
     if (attemptKey) cancelMetaEmbeddedSignup(attemptKey)
@@ -151,26 +192,42 @@ export function EmbeddedSignupButton() {
       },
     ),
     complete: (result: EmbeddedSignupResult) => api.request<WhatsAppConnection>(
-      '/whatsapp/onboarding/embedded-signup/complete',
-      {method:'POST', body:JSON.stringify(result)},
+      '/whatsapp/onboarding/api-only/complete',
+      {
+        method:'POST',
+        body:JSON.stringify({
+          ...result,
+          intent,
+          platform_only_impact_confirmed: platformOnlyImpactConfirmed,
+          registration_pin: registrationPin,
+        }),
+      },
     ),
     onPhase: (nextPhase, error) => {
       setPhase(nextPhase)
       setMessage(error?.message ?? null)
       if (nextPhase === 'error' || nextPhase === 'success') setResumeAvailable(false)
-      if (nextPhase === 'error' && error && !(error instanceof EmbeddedSignupCancelledError)) {
-        setFailedAttempts(value => value + 1)
-      }
-      if (nextPhase === 'success') setFailedAttempts(0)
     },
     onConnected: async (connection: WhatsAppConnection) => {
       setConnected(connection)
+      setRegistrationPin('')
       setResumeAvailable(false)
       queryClient.setQueryData(queryKey, connection)
       await queryClient.invalidateQueries({queryKey, refetchType:'none'})
     },
     onObservation: reportObservation,
-  }), [attemptKey, configuration.data, queryClient, queryKey, reconcileConnection, reportObservation, sdkReady])
+  }), [
+    attemptKey,
+    configuration.data,
+    intent,
+    platformOnlyImpactConfirmed,
+    queryClient,
+    queryKey,
+    reconcileConnection,
+    registrationPin,
+    reportObservation,
+    sdkReady,
+  ])
 
   if (!allowed) {
     return (
@@ -181,29 +238,55 @@ export function EmbeddedSignupButton() {
   }
 
   const busy = phase === 'opening' || phase === 'processing'
-  const preparing = configuration.isPending
+  const preparing = confirmationReady && (
+    configuration.isPending
     || (!!configuration.data && !sdkReady && !sdkFailed)
+  )
   const buttonLabel = preparing
     ? 'Preparando conexão…'
     : configuration.isError || sdkFailed
       ? 'Tentar preparar novamente'
       : phase === 'waiting'
         ? 'Retomar validação'
-      : phase === 'opening'
-    ? 'Abrindo a Meta…'
-    : phase === 'processing'
-      ? 'Validando conexão…'
-      : phase === 'error'
-        ? 'Tentar novamente'
-        : phase === 'success'
-          ? 'WhatsApp conectado'
-          : 'Continuar com a Meta'
+        : phase === 'opening'
+          ? 'Abrindo a Meta…'
+          : phase === 'processing'
+            ? 'Conectando número…'
+            : phase === 'error'
+              ? 'Tentar novamente'
+              : phase === 'success'
+                ? 'WhatsApp conectado'
+                : 'Continuar com a Meta'
 
   return (
     <div className="embedded-signup-action">
+      <label>
+        <strong>PIN de segurança do número</strong>
+        <input
+          type="password"
+          inputMode="numeric"
+          autoComplete="new-password"
+          maxLength={6}
+          value={registrationPin}
+          onChange={event => setRegistrationPin(event.target.value.replace(/\D/g,'').slice(0,6))}
+          placeholder="6 dígitos"
+          disabled={busy || phase === 'success'}
+        />
+        <small>
+          {intent === 'use_existing_number_platform_only'
+            ? 'Use o PIN de 6 dígitos deste número. Se a Meta pedir um novo PIN, use o mesmo valor aqui.'
+            : 'Escolha um PIN de 6 dígitos para proteger a conexão deste número. Guarde-o em local seguro.'}
+        </small>
+      </label>
       <PrimaryButton
         fullWidth
-        disabled={busy || preparing || phase === 'success'}
+        disabled={
+          busy
+          || preparing
+          || phase === 'success'
+          || !pinValid
+          || !confirmationReady
+        }
         icon={phase === 'error' ? <RotateCw size={18} /> : <ExternalLink size={18} />}
         onClick={() => {
           if (phase === 'waiting') {
@@ -234,28 +317,15 @@ export function EmbeddedSignupButton() {
       {phase === 'waiting' && resumeAvailable && <p role="status">
         Retome a validação com segurança. A tentativa atual será reutilizada.
       </p>}
-      {phase === 'processing' && <p role="status">Validando conexão…</p>}
+      {phase === 'processing' && <p role="status">Finalizando a conexão do número…</p>}
       {phase === 'success' && <p className="embedded-signup-action__success" role="status">
-        Conexão oficial confirmada{connected?.display_phone_number
+        WhatsApp conectado à Alovia{connected?.display_phone_number
           ? ` para o número ${connected.display_phone_number}`
           : ''}.
       </p>}
       {phase === 'error' && <p className="embedded-signup-action__error" role="alert">
         {message ?? new EmbeddedSignupCancelledError().message}
       </p>}
-      {failedAttempts >= 2 && phase === 'error' && <div className="embedded-signup-fallback">
-        <p>Se este número não puder usar o WhatsApp Business junto com a Alovia, você pode migrá-lo para uso exclusivo na plataforma.</p>
-        <button
-          className="compact-button"
-          type="button"
-          onClick={() => navigate(
-            '/app/whatsapp/exclusivo?origem=coexistence'
-              + (fromOnboarding ? '&from=onboarding' : ''),
-          )}
-        >
-          Usar este número somente na Alovia
-        </button>
-      </div>}
     </div>
   )
 }

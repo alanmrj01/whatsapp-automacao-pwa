@@ -10,7 +10,7 @@
 # Login gets a stricter per-IP edge limit before the generic auth/API proxies.
 [[redirects]]
   from = "/api/v1/auth/login"
-  to = "https://whatsapp-backend-186627697999.southamerica-east1.run.app/api/v1/auth/login"
+  to = "https://api-only-fallback-e2e---whatsapp-backend-76kppogwfq-rj.a.run.app/api/v1/auth/login"
   status = 200
   force = true
   [redirects.rate_limit]
@@ -22,7 +22,7 @@
 # with normal multi-tab session restoration.
 [[redirects]]
   from = "/api/v1/auth/*"
-  to = "https://whatsapp-backend-186627697999.southamerica-east1.run.app/api/v1/auth/:splat"
+  to = "https://api-only-fallback-e2e---whatsapp-backend-76kppogwfq-rj.a.run.app/api/v1/auth/:splat"
   status = 200
   force = true
   [redirects.rate_limit]
@@ -35,7 +35,7 @@
 # trailing slash and makes FastAPI answer 307 before the POST reaches the route.
 [[redirects]]
   from = "/api/v1/billing/checkouts"
-  to = "https://whatsapp-backend-186627697999.southamerica-east1.run.app/api/v1/billing/checkouts"
+  to = "https://api-only-fallback-e2e---whatsapp-backend-76kppogwfq-rj.a.run.app/api/v1/billing/checkouts"
   status = 200
   force = true
   [redirects.rate_limit]
@@ -45,7 +45,7 @@
 
 [[redirects]]
   from = "/api/v1/billing/checkouts/*"
-  to = "https://whatsapp-backend-186627697999.southamerica-east1.run.app/api/v1/billing/checkouts/:splat"
+  to = "https://api-only-fallback-e2e---whatsapp-backend-76kppogwfq-rj.a.run.app/api/v1/billing/checkouts/:splat"
   status = 200
   force = true
   [redirects.rate_limit]
@@ -55,7 +55,7 @@
 
 [[redirects]]
   from = "/api/*"
-  to = "https://whatsapp-backend-186627697999.southamerica-east1.run.app/api/:splat"
+  to = "https://api-only-fallback-e2e---whatsapp-backend-76kppogwfq-rj.a.run.app/api/:splat"
   status = 200
   force = true
 

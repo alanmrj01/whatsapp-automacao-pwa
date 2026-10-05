@@ -106,6 +106,16 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
     return refreshing as Promise<T | undefined>
   }
 
+  async function publicVoid(path: string, payload: object): Promise<void> {
+    const response = await raw(path, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+    if (!response.ok) {
+      await body<never>(response)
+    }
+  }
+
   async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     if (blocked) throw new ApiError(401)
     const expected = generation
@@ -165,6 +175,25 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
 
   return {
     request, requestBlob, refresh, clear, resume,
+    async forgotPassword(email: string) {
+      await publicVoid('/auth/password/forgot', {email})
+    },
+    async resetPassword(resetToken: string, newPassword: string) {
+      await publicVoid('/auth/password/reset', {
+        token: resetToken,
+        new_password: newPassword,
+      })
+      expire()
+    },
+    async changePassword(currentPassword: string, newPassword: string) {
+      await request<void>('/auth/password/change', {
+        method: 'POST',
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+        }),
+      })
+    },
     onExpired(listener: () => void) { onExpired = listener },
     async login<T = unknown>(email: string, password: string) {
       return startAuthentication<T>('/auth/login', {email,password})

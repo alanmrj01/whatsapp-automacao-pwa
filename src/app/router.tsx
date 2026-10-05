@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ReactNode } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
 import { useEntitlements } from '../features/access/useEntitlements'
@@ -32,6 +32,9 @@ const CoexistenceInfoPage = lazy(async () => ({default:(await import('../feature
 const WhatsAppPage = lazy(async () => ({default:(await import('../features/whatsapp/WhatsAppPage')).WhatsAppPage}))
 const AppShell = lazy(async () => ({default:(await import('./AppShell')).AppShell}))
 const LoginPage = lazy(async () => ({default:(await import('../features/auth/LoginPage')).LoginPage}))
+const PasswordRecoveryPages = () => import('../features/auth/PasswordRecoveryPages')
+const ForgotPasswordPage = lazy(async () => ({default:(await PasswordRecoveryPages()).ForgotPasswordPage}))
+const ResetPasswordPage = lazy(async () => ({default:(await PasswordRecoveryPages()).ResetPasswordPage}))
 const SignupPage = lazy(async () => ({default:(await import('../features/auth/SignupPage')).SignupPage}))
 const AdminPage = lazy(async () => ({default:(await import('../features/auth/AdminPage')).AdminPage}))
 const PlatformPreviewPage = lazy(async () => ({default:(await import('../features/preview/PlatformPreviewPage')).PlatformPreviewPage}))
@@ -50,10 +53,15 @@ function PaidOperationalGuard({children}:{children:ReactNode}) {
 function OnboardingGuard({children}:{children:ReactNode}) {
   const entitlement=useEntitlements()
   const setup=useSetupStatus()
+  const {pathname}=useLocation()
   if(!entitlement.isPaid)return children
   if(setup.isPending)return <div className="route-loading"><LoadingState/></div>
   if(setup.isError)return <div className="route-loading"><ErrorState onRetry={()=>void setup.refetch()}/></div>
-  return setup.data?.onboarding_completed ? children : <Navigate to="/app/onboarding" replace/>
+  const whatsappOnboardingRoute = pathname === '/app/whatsapp/business'
+    || pathname === '/app/whatsapp/exclusivo'
+  return setup.data?.onboarding_completed || whatsappOnboardingRoute
+    ? children
+    : <Navigate to="/app/onboarding" replace/>
 }
 
 export function AppRouter() {
@@ -62,6 +70,8 @@ export function AppRouter() {
       <Routes>
         <Route path="/" element={<PublicLandingPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/esqueci-senha" element={<ForgotPasswordPage />} />
+        <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
         <Route path="/criar-conta" element={<SignupPage />} />
         <Route element={<ProtectedRoute platform />}>
           <Route path="/admin" element={<AdminPage />} />

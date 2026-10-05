@@ -58,7 +58,10 @@ export function OnboardingPage(){
   const navigate=useNavigate()
 
   useEffect(()=>{
-    if(setup.data&&!setup.data.onboarding_completed)setStep(stepNumber[setup.data.next_step])
+    if(setup.data&&!setup.data.onboarding_completed){
+      setStep(stepNumber[setup.data.next_step])
+      if(setup.data.next_step!=='company')setStarted(true)
+    }
   },[setup.data])
 
   if(setup.isPending)return <OnboardingShell><LoadingState/></OnboardingShell>
@@ -683,7 +686,7 @@ function WhatsAppStep({onBack,onFinished}:{onBack:()=>void;onFinished:(deferred:
         ? <button className="primary-button" type="button" disabled={complete.isPending} onClick={()=>void finalize(false)}>{complete.isPending?'Finalizando…':'Finalizar configuração'}<ArrowRight size={17}/></button>
         : <button className="defer-whatsapp-button" type="button" disabled={complete.isPending} onClick={()=>void finalize(true)}>{complete.isPending?'Finalizando…':'Conectar Whatsapp Depois'}<ArrowRight size={17}/></button>}
     </div>
-    <ConnectWhatsAppSheet open={open} onClose={()=>{setOpen(false);void connection.refetch()}}/>
+    <ConnectWhatsAppSheet source="onboarding" open={open} onClose={()=>{setOpen(false);void connection.refetch()}}/>
   </StepCard>
 }
 function FieldError({children}:{children:React.ReactNode}){return <small className="field-error" role="alert">{children}</small>}

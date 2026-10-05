@@ -5,40 +5,46 @@ import { BottomSheet } from '../../components/BottomSheet'
 type ConnectWhatsAppSheetProps = {
   open: boolean
   onClose: () => void
+  source?: 'onboarding' | 'app'
 }
 
-export function ConnectWhatsAppSheet({ open, onClose }: ConnectWhatsAppSheetProps) {
+export function ConnectWhatsAppSheet({
+  open,
+  onClose,
+  source = 'app',
+}: ConnectWhatsAppSheetProps) {
   const navigate = useNavigate()
 
   const choose = (path: string) => {
     onClose()
-    navigate(path)
+    const suffix = source === 'onboarding' ? '?from=onboarding' : ''
+    navigate(path + suffix)
   }
 
   return (
     <BottomSheet
       open={open}
-      title="Como você utiliza este número?"
-      description="Escolha a opção que combina com o seu atendimento."
+      title="Como você quer usar este número?"
+      description="Escolha onde você quer atender as conversas."
       onClose={onClose}
     >
       <button className="choice-row" type="button" onClick={() => choose('/app/whatsapp/business')}>
         <span className="choice-row__icon"><BriefcaseBusiness size={23} /></span>
         <span className="choice-row__copy">
-          <strong>Já uso este número no WhatsApp Business</strong>
-          <small>Continuar usando WhatsApp Business junto com a automação.</small>
+          <strong>Continuar usando o WhatsApp Business</strong>
+          <small>O número continua no aplicativo e também funciona com a Alovia.</small>
         </span>
         <ArrowRight size={20} aria-hidden="true" />
       </button>
       <button className="choice-row" type="button" onClick={() => choose('/app/whatsapp/exclusivo')}>
         <span className="choice-row__icon"><Smartphone size={23} /></span>
         <span className="choice-row__copy">
-          <strong>É um número novo ou exclusivo para automação</strong>
-          <small>Usar o número diretamente pela plataforma.</small>
+          <strong>Usar este número somente na Alovia</strong>
+          <small>As conversas serão vistas e respondidas dentro da Alovia.</small>
         </span>
         <ArrowRight size={20} aria-hidden="true" />
       </button>
-      <p className="sheet-footnote">Você revisará a opção escolhida antes de concluir a autorização oficial.</p>
+      <p className="sheet-footnote">Você verá exatamente o que muda antes de confirmar.</p>
     </BottomSheet>
   )
 }
