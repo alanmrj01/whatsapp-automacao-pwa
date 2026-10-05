@@ -8,6 +8,7 @@ export function ApiOnlyInfoPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const fromCoexistence = searchParams.get('origem') === 'coexistence'
+  const fromOnboarding = searchParams.get('from') === 'onboarding'
   const [impactConfirmed, setImpactConfirmed] = useState(false)
   const [appRemovedConfirmed, setAppRemovedConfirmed] = useState(false)
   const intent = fromCoexistence
@@ -43,7 +44,9 @@ export function ApiOnlyInfoPage() {
             <button
               className="compact-button"
               type="button"
-              onClick={() => navigate('/app/whatsapp/exclusivo')}
+              onClick={() => navigate(
+                '/app/whatsapp/exclusivo' + (fromOnboarding ? '?from=onboarding' : ''),
+              )}
             >
               Prefiro usar outro número
             </button>
