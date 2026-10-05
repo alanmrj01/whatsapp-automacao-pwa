@@ -1,8 +1,7 @@
-import { Smartphone } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ApiOnlyEmbeddedSignupButton } from './ApiOnlyEmbeddedSignupButton'
-import { ConnectionInfoPage } from './ConnectionInfoPage'
 
 export function ApiOnlyInfoPage() {
   const navigate = useNavigate()
@@ -17,82 +16,92 @@ export function ApiOnlyInfoPage() {
   const migrationReady = !fromCoexistence || (impactConfirmed && appRemovedConfirmed)
 
   return (
-    <ConnectionInfoPage
-      mode="api_only"
-      icon={Smartphone}
-      title={fromCoexistence
-        ? 'Usar WhatsApp exclusivamente na Alovia'
-        : 'Atendimento centralizado'}
-      description={fromCoexistence
-        ? 'Se a coexistência não puder ser concluída, você pode usar outro número ou migrar este número para a Cloud API.'
-        : 'O atendimento automático e o atendimento humano deste número serão feitos pela plataforma.'}
-      benefits={fromCoexistence ? [
-        'Se você quiser preservar este WhatsApp Business como está, use outro número exclusivo na Alovia.',
-        'Para migrar o mesmo número, a conta desse número precisa deixar o WhatsApp Business app antes do cadastro na Cloud API.',
-        'Na migração exclusiva, o histórico existente do aplicativo não é levado para a Cloud API.',
-      ] : [
-        'O número será dedicado ao atendimento da empresa.',
-        'Conversas e agendamentos ficarão organizados em um só lugar.',
-        'A autorização e o registro do número acontecem pela conexão oficial da Meta.',
-      ]}
-      callout={fromCoexistence
-        ? 'A Alovia nunca remove nem migra seu número automaticamente. Faça backup do que precisar antes de optar pela migração exclusiva.'
-        : 'Use um número novo ou que você decidiu dedicar ao atendimento pela Alovia.'}
-      action={
-        <div className="api-only-onboarding-action">
-          {fromCoexistence && <>
-            <button
-              className="compact-button"
-              type="button"
-              onClick={() => navigate(
-                '/app/whatsapp/exclusivo' + (fromOnboarding ? '?from=onboarding' : ''),
-              )}
-            >
-              Prefiro usar outro número
-            </button>
-            <div className="embedded-signup-fallback">
-              <strong>Quero migrar este mesmo número</strong>
-              <p>
-                Antes de continuar, faça backup do que precisar e remova este número do
-                WhatsApp Business app. A Meta não permite registrar o mesmo número no
-                fluxo padrão da Cloud API enquanto ele continuar ativo no aplicativo.
-              </p>
-            </div>
-            <label className="onboarding-choice">
-              <input
-                type="checkbox"
-                checked={impactConfirmed}
-                onChange={event => setImpactConfirmed(event.target.checked)}
-              />
-              <span>
-                <strong>Entendi a mudança deste número</strong>
-                <small>
-                  Sei que ele deixará de operar no WhatsApp Business app e que o histórico
-                  existente do aplicativo não será migrado para a Cloud API.
-                </small>
-              </span>
-            </label>
-            <label className="onboarding-choice">
-              <input
-                type="checkbox"
-                checked={appRemovedConfirmed}
-                onChange={event => setAppRemovedConfirmed(event.target.checked)}
-              />
-              <span>
-                <strong>O número já não está ativo no WhatsApp Business app</strong>
-                <small>
-                  Confirmo que concluí a remoção necessária antes de iniciar o cadastro
-                  exclusivo pela Meta.
-                </small>
-              </span>
-            </label>
-          </>}
-          <ApiOnlyEmbeddedSignupButton
-            intent={intent}
-            platformOnlyImpactConfirmed={migrationReady}
-          />
-        </div>
-      }
-    />
+    <div className="page-stack connection-info-page whatsapp-exclusive-choice">
+      <section className="whatsapp-exclusive-choice__intro">
+        <span className="eyebrow">Forma de atendimento</span>
+        <h1>Usar este número somente na Alovia</h1>
+        <p>
+          Seus clientes continuam falando com este número pelo WhatsApp.
+          O que muda é onde sua equipe atende.
+        </p>
+      </section>
+
+      <section className="whatsapp-exclusive-summary" aria-labelledby="exclusive-summary-title">
+        <h2 id="exclusive-summary-title">O que muda no dia a dia</h2>
+        <ul>
+          <li>
+            <Check size={17} aria-hidden="true" />
+            <span>
+              <strong>Seus clientes continuam usando o mesmo número.</strong>
+              <small>Eles enviam mensagens pelo WhatsApp normalmente.</small>
+            </span>
+          </li>
+          <li>
+            <Check size={17} aria-hidden="true" />
+            <span>
+              <strong>Você atende dentro da Alovia.</strong>
+              <small>As novas conversas são vistas e respondidas pela Alovia.</small>
+            </span>
+          </li>
+          <li>
+            <Check size={17} aria-hidden="true" />
+            <span>
+              <strong>Esse número não fica disponível no app WhatsApp Business.</strong>
+              <small>Enquanto estiver conectado dessa forma, o atendimento desse número acontece pela Alovia.</small>
+            </span>
+          </li>
+        </ul>
+        <p className="whatsapp-exclusive-summary__ownership">
+          <strong>O número continua sendo da sua empresa.</strong> A Alovia apenas administra o atendimento.
+        </p>
+      </section>
+
+      {fromCoexistence && (
+        <section className="whatsapp-exclusive-confirmation">
+          <button
+            className="compact-button"
+            type="button"
+            onClick={() => navigate(
+              '/app/whatsapp/exclusivo' + (fromOnboarding ? '?from=onboarding' : ''),
+            )}
+          >
+            Quero usar outro número
+          </button>
+
+          <div className="whatsapp-exclusive-confirmation__notice">
+            <strong>Antes de usar este mesmo número</strong>
+            <p>
+              Faça backup do que precisar e retire este número do app WhatsApp Business.
+              As conversas antigas do aplicativo não são transferidas para a Alovia.
+            </p>
+          </div>
+
+          <label className="whatsapp-exclusive-confirmation__check">
+            <input
+              type="checkbox"
+              checked={impactConfirmed}
+              onChange={event => setImpactConfirmed(event.target.checked)}
+            />
+            <span>
+              Entendi que vou atender este número pela Alovia, e não pelo app WhatsApp Business.
+            </span>
+          </label>
+
+          <label className="whatsapp-exclusive-confirmation__check">
+            <input
+              type="checkbox"
+              checked={appRemovedConfirmed}
+              onChange={event => setAppRemovedConfirmed(event.target.checked)}
+            />
+            <span>Já retirei este número do app WhatsApp Business.</span>
+          </label>
+        </section>
+      )}
+
+      <ApiOnlyEmbeddedSignupButton
+        intent={intent}
+        platformOnlyImpactConfirmed={migrationReady}
+      />
+    </div>
   )
 }
