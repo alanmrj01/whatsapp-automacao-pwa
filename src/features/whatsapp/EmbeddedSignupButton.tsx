@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ExternalLink, RotateCw, ShieldCheck } from 'lucide-react'
 import { PrimaryButton } from '../../components/PrimaryButton'
 import { api } from '../../lib/api'
@@ -24,6 +24,8 @@ export function EmbeddedSignupButton() {
   const {user, membership} = useAuth()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const fromOnboarding = searchParams.get('from') === 'onboarding'
   const [phase, setPhase] = useState<EmbeddedSignupPhase>('idle')
   const [message, setMessage] = useState<string | null>(null)
   const [connected, setConnected] = useState<WhatsAppConnection | null>(null)
@@ -122,6 +124,12 @@ export function EmbeddedSignupButton() {
   useEffect(() => () => {
     if (attemptKey) cancelMetaEmbeddedSignup(attemptKey)
   }, [attemptKey])
+
+  useEffect(() => {
+    if (phase === 'success' && fromOnboarding) {
+      navigate('/app/onboarding', {replace:true})
+    }
+  }, [fromOnboarding, navigate, phase])
 
   const run = useMemo(() => createEmbeddedSignupRunner({
     start: () => {
@@ -240,7 +248,10 @@ export function EmbeddedSignupButton() {
         <button
           className="compact-button"
           type="button"
-          onClick={() => navigate('/app/whatsapp/exclusivo?origem=coexistence')}
+          onClick={() => navigate(
+            '/app/whatsapp/exclusivo?origem=coexistence'
+              + (fromOnboarding ? '&from=onboarding' : ''),
+          )}
         >
           Usar este número somente na Alovia
         </button>
