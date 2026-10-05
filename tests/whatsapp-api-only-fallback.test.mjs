@@ -24,8 +24,11 @@ test('existing-number fallback requires explicit impact confirmation', async () 
   const source = await read('src/features/whatsapp/ApiOnlyInfoPage.tsx')
   assert.match(source, /use_existing_number_platform_only/)
   assert.match(source, /impactConfirmed/)
+  assert.match(source, /appRemovedConfirmed/)
   assert.match(source, /Entendi a mudança deste número/)
-  assert.match(source, /deixar de usar este número no aplicativo WhatsApp Business/)
+  assert.match(source, /O número já não está ativo no WhatsApp Business app/)
+  assert.match(source, /Prefiro usar outro número/)
+  assert.match(source, /histórico existente do aplicativo não será migrado/)
 })
 
 test('api-only completion sends confirmation and PIN only to the backend', async () => {
