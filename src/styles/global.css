@@ -103,6 +103,9 @@
 .whatsapp-exclusive-confirmation__notice p { font-size:.8rem; line-height:1.45; }
 .whatsapp-exclusive-confirmation__check { display:flex; align-items:flex-start; gap:10px; padding:12px 13px; border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--color-surface); color:var(--color-text); font-size:.82rem; font-weight:650; line-height:1.4; cursor:pointer; }
 .whatsapp-exclusive-confirmation__check input { flex:0 0 auto; width:18px; height:18px; margin:1px 0 0; accent-color:var(--color-primary-600); }
+.disconnect-confirm__mode-warning { padding:12px 13px; border:1px solid #e5c66a; border-radius:var(--radius-md); background:#fff6cf; text-align:left; }
+.disconnect-confirm__mode-warning strong { display:block; margin-bottom:4px; color:#5c4300; }
+.disconnect-confirm__mode-warning p { margin:0; color:#6b551b; font-size:.8rem; line-height:1.45; }
 
 @media (max-width: 520px) {
   .whatsapp-exclusive-summary { padding:16px; }
