@@ -5,14 +5,20 @@ import { BottomSheet } from '../../components/BottomSheet'
 type ConnectWhatsAppSheetProps = {
   open: boolean
   onClose: () => void
+  source?: 'onboarding' | 'app'
 }
 
-export function ConnectWhatsAppSheet({ open, onClose }: ConnectWhatsAppSheetProps) {
+export function ConnectWhatsAppSheet({
+  open,
+  onClose,
+  source = 'app',
+}: ConnectWhatsAppSheetProps) {
   const navigate = useNavigate()
 
   const choose = (path: string) => {
     onClose()
-    navigate(path)
+    const suffix = source === 'onboarding' ? '?from=onboarding' : ''
+    navigate(path + suffix)
   }
 
   return (
