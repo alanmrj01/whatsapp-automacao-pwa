@@ -73,6 +73,12 @@
 .embedded-signup-action p { margin:0; font-size:.86rem; text-align:center; }
 .embedded-signup-action__success { color:#087443; }
 .embedded-signup-action__error { color:#a32d2d; }
+.embedded-signup-action label { display:grid; gap:7px; color:var(--color-text); font-size:.84rem; font-weight:700; }
+.embedded-signup-action label small { color:var(--color-text-soft); font-size:.76rem; font-weight:500; line-height:1.45; }
+.embedded-signup-action input { width:100%; min-height:48px; padding:11px 12px; border:1px solid var(--color-border-strong); border-radius:var(--radius-md); color:var(--color-text); background:var(--color-surface); font:inherit; letter-spacing:.18em; }
+.embedded-signup-fallback { display:grid; gap:10px; padding:13px; border:1px solid #f1d59f; border-radius:var(--radius-md); background:#fffaf0; }
+.embedded-signup-fallback p { color:#6e4a0b; text-align:left; }
+.api-only-onboarding-action { display:grid; gap:14px; }
 
 * {
   box-sizing: border-box;
