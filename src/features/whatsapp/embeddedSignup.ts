@@ -231,6 +231,16 @@ function openEmbeddedSignup(
       }
       if (hasCurrentStep) {
         observe('intermediate_step_received', {intermediate_step_received:true})
+        if (wabaId) {
+          try {
+            hooks.onAssetsObserved?.({
+              waba_id:wabaId,
+              ...(phoneNumberId ? {phone_number_id:phoneNumberId} : {}),
+            })
+          } catch {
+            // Persisting resumable state must never break Meta's primary flow.
+          }
+        }
         return
       }
       // The current Meta sample treats WA_EMBEDDED_SIGNUP SessionInfo as
