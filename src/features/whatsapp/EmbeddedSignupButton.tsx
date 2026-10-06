@@ -221,14 +221,7 @@ export function EmbeddedSignupButton() {
             setSdkAttempt(value => value + 1)
             return
           }
-          void run().catch((error: unknown) => {
-            if (error instanceof EmbeddedSignupCancelledError) {
-              void api.request<void>(
-                '/whatsapp/onboarding/embedded-signup/attempt/cancel',
-                {method:'POST', body:'{}'},
-              ).then(() => queryClient.invalidateQueries({queryKey})).catch(() => {})
-            }
-          })
+          void run().catch(() => {})
         }}
       >
         {buttonLabel}
