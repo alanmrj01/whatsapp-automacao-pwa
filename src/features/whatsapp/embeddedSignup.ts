@@ -19,6 +19,7 @@ type EmbeddedSignupHooks = {
   attemptKey?: string
   onObservation?: (observation: EmbeddedSignupObservation) => void
   onResumeRequired?: () => void
+  onAssetsObserved?: (assets: {waba_id:string; phone_number_id?:string}) => void
 }
 
 export type EmbeddedSignupConfiguration = {
@@ -236,7 +237,17 @@ function openEmbeddedSignup(
       // complete based on its assets, not on a closed list of event names.
       // Messages that only describe an intermediate current_step remain open.
       if (!wabaId) return
-      assets ??= {waba_id:wabaId, ...(phoneNumberId ? {phone_number_id:phoneNumberId} : {})}
+      if (!assets) {
+        assets = {
+          waba_id:wabaId,
+          ...(phoneNumberId ? {phone_number_id:phoneNumberId} : {}),
+        }
+        try {
+          hooks.onAssetsObserved?.(assets)
+        } catch {
+          // Persisting resumable state must never break Meta's primary flow.
+        }
+      }
       maybeFinish()
     }
 
