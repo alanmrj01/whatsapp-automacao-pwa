@@ -57,6 +57,41 @@
   min-height: 50px;
 }
 
+
+
+.auth-forgot-link {
+  align-self: flex-end;
+  margin-top: 2px;
+  color: #0b67f0;
+  font-size: .84rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.auth-secondary-link--standalone {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.auth-status-note {
+  margin-top: 20px;
+  padding: 13px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid #cfe8dc;
+  border-radius: 14px;
+  color: #176b4b;
+  background: #f1fbf6;
+  font-size: .84rem;
+  line-height: 1.5;
+}
+
+.auth-status-note svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
 .auth-secondary-button:disabled {
   cursor: not-allowed;
   opacity: .6;
