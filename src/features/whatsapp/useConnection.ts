@@ -13,9 +13,12 @@ export function useConnection() {
     queryFn:({signal})=>api.request<WhatsAppConnection>('/whatsapp/connection',{signal}),
     enabled:!!membership && canRead,
     retry:false,
-    staleTime:60_000,
+    staleTime:30_000,
     gcTime:5*60_000,
-    refetchOnWindowFocus:false,
+    refetchOnWindowFocus:true,
+    refetchInterval: query => (
+      query.state.data?.status === 'pending' ? 15_000 : false
+    ),
   })
 }
 
