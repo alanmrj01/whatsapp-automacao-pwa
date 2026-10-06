@@ -121,8 +121,13 @@ export function EmbeddedSignupButton() {
   }, [attemptKey])
 
   const run = useMemo(() => createEmbeddedSignupRunner({
-    start: () => {
+    start: async () => {
       if (!configuration.data || !sdkReady) throw new Error('Meta unavailable')
+      const pending = await api.request<WhatsAppConnection>(
+        '/whatsapp/onboarding/embedded-signup/attempt',
+        {method:'POST', body:'{}'},
+      )
+      queryClient.setQueryData(queryKey, pending)
       return configuration.data
     },
     launch: (signupConfiguration) => launchMetaEmbeddedSignup(
@@ -136,6 +141,12 @@ export function EmbeddedSignupButton() {
           setMessage(null)
           setResumeAvailable(true)
           void reconcileConnection()
+        },
+        onAssetsObserved: (assets) => {
+          void api.request<void>(
+            '/whatsapp/onboarding/embedded-signup/assets',
+            {method:'POST', body:JSON.stringify(assets)},
+          ).catch(() => {})
         },
       },
     ),
@@ -210,7 +221,14 @@ export function EmbeddedSignupButton() {
             setSdkAttempt(value => value + 1)
             return
           }
-          void run().catch(() => {})
+          void run().catch((error: unknown) => {
+            if (error instanceof EmbeddedSignupCancelledError) {
+              void api.request<void>(
+                '/whatsapp/onboarding/embedded-signup/attempt/cancel',
+                {method:'POST', body:'{}'},
+              ).then(() => queryClient.invalidateQueries({queryKey})).catch(() => {})
+            }
+          })
         }}
       >
         {buttonLabel}
