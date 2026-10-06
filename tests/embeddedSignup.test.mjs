@@ -177,6 +177,7 @@ test('SessionInfo válido não depende de whitelist rígida de event', async () 
 
 test('evento com current_step não conclui antes do SessionInfo terminal', async () => {
   let terminalSent = false
+  const observedAssets = []
   const runtime = runtimeFor(({listeners, callback}) => {
     callback({authResponse:{code:'short-lived-code'}})
     send(listeners, {
@@ -194,11 +195,16 @@ test('evento com current_step não conclui antes do SessionInfo terminal', async
     }, 10)
   })
 
-  assert.deepEqual(await launchMetaEmbeddedSignup(configuration, runtime), {
+  assert.deepEqual(await launchMetaEmbeddedSignup(configuration, runtime, {
+    onAssetsObserved: assets => observedAssets.push(assets),
+  }), {
     authorization_code:'short-lived-code',
     waba_id:'333333333333333',
   })
   assert.equal(terminalSent, true)
+  assert.deepEqual(observedAssets[0], {
+    waba_id:'333333333333333',
+  })
   assert.match(JSON.stringify(runtime.logs), /intermediate_step_received/)
 })
 
