@@ -231,16 +231,20 @@ test('blocked free actions open the compact subscription prompt instead of becom
   assert.match(prompt,/Ver planos/)
 })
 
-test('WhatsApp status is contextual and connection data avoids refetch on every tab focus', () => {
+test('WhatsApp status keeps pending Meta onboarding visible and refreshes it safely', () => {
   const dashboard = read('src/features/dashboard/DashboardPage.tsx')
   const whatsapp = read('src/features/whatsapp/WhatsAppPage.tsx')
   const connection = read('src/features/whatsapp/useConnection.ts')
   assert.match(dashboard,/whatsapp-summary/)
   for (const state of ['disconnected','pending','connected','error']) assert.match(whatsapp,new RegExp(state))
   assert.match(whatsapp,/connection-facts/)
-  assert.match(connection,/staleTime:60_000/)
+  assert.match(whatsapp,/Retomar conexão/)
+  assert.match(whatsapp,/reviewStatus==='rejected'/)
+  assert.match(whatsapp,/Revisão da Meta requer atenção/)
+  assert.match(connection,/staleTime:30_000/)
   assert.match(connection,/gcTime:5\s*\*\s*60_000/)
-  assert.match(connection,/refetchOnWindowFocus:false/)
+  assert.match(connection,/refetchOnWindowFocus:true/)
+  assert.match(connection,/status === 'pending' \? 15_000 : false/)
 })
 
 test('paid agenda reads the hydrated membership without loading unused product setup data', () => {

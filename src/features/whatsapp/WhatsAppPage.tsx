@@ -58,9 +58,11 @@ export function WhatsAppPage() {
 
   if (connection.isPending) return <div className="page-stack whatsapp-page"><section className="operational-heading"><div><span className="eyebrow">Canal principal</span><h1>WhatsApp</h1></div></section><LoadingState /></div>
   if (connection.isError) return <div className="page-stack whatsapp-page"><section className="operational-heading"><div><span className="eyebrow">Canal principal</span><h1>WhatsApp</h1></div></section><ErrorState onRetry={()=>void connection.refetch()} /></div>
-  const {status,mode} = connection.data
+  const {status,mode,review_status:reviewStatus} = connection.data
   const canConfigure = canConfigureWhatsApp(membership?.role)
-  const canConnect = entitlement.isPaid && canConfigure && (status === 'disconnected' || status === 'error')
+  const canConnect = entitlement.isPaid && canConfigure && (
+    status === 'disconnected' || status === 'error' || status === 'pending'
+  )
   const canDisconnect = entitlement.isPaid && canConfigure && status==='connected'
 
   return (
@@ -75,7 +77,8 @@ export function WhatsAppPage() {
         <ConnectionStatusBadge status={status} />
         <p>
           {status === 'connected' ? 'O número da empresa está conectado e pronto para organizar os atendimentos no ALOVIA.' :
-            status === 'pending' ? 'Estamos concluindo a autorização. Você pode sair desta tela e acompanhar o status depois.' :
+            status === 'pending'
+              ? 'A conexão foi iniciada, mas a Meta ainda não entregou a confirmação final. Você pode sair desta tela e retomar a autorização depois.' :
             status === 'error' ? 'Não foi possível manter a conexão. Revise a autorização e tente novamente quando estiver pronto.' :
             'Conecte o número que será usado pelo ALOVIA para receber pedidos, organizar conversas e gerar agendamentos.'}
         </p>
@@ -84,6 +87,10 @@ export function WhatsAppPage() {
           {mode&&<div><dt>Forma de operação</dt><dd>{connectionModeLabels[mode]}</dd></div>}
           <div><dt>Situação</dt><dd>Conexão ativa</dd></div>
         </dl>}
+        {reviewStatus==='rejected'&&<div className="account-note">
+          <strong>Revisão da Meta requer atenção</strong>
+          <span>A conexão está registrada na Alovia, mas a Meta informou que a revisão desta conta não foi aprovada. Verifique o painel da Meta antes de alterar ou reconectar o número.</span>
+        </div>}
         {readOnly&&<div className="account-note">
           <strong>Dados da conexão preservados</strong>
           <span>Seu acesso operacional está pausado. Reative uma assinatura para alterar ou reconectar o WhatsApp.</span>
@@ -94,7 +101,11 @@ export function WhatsAppPage() {
           icon={<ArrowRight size={19} />}
           onClick={() => setIsSheetOpen(true)}
         >
-          {status==='error'?'Tentar conectar novamente':'Conectar WhatsApp'}
+          {status==='pending'
+            ? 'Retomar conexão'
+            : status==='error'
+              ? 'Tentar conectar novamente'
+              : 'Conectar WhatsApp'}
         </PrimaryButton>}
         {canDisconnect&&!confirmDisconnect&&<button className="danger-outline-button" type="button" onClick={()=>setConfirmDisconnect(true)}><Unplug size={18}/>Desconectar WhatsApp</button>}
         {canDisconnect&&confirmDisconnect&&<div className="disconnect-confirm" role="alert">
