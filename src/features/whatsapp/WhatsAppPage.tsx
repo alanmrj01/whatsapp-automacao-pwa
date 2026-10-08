@@ -135,6 +135,13 @@ export function WhatsAppPage() {
               ? 'Tentar conectar novamente'
               : 'Conectar WhatsApp'}
         </PrimaryButton>}
+        {canDisconnect&&<PrimaryButton
+          fullWidth
+          icon={<ArrowRight size={19}/>}
+          onClick={()=>setIsSheetOpen(true)}
+        >
+          Alterar forma de uso
+        </PrimaryButton>}
         {canDisconnect&&!confirmDisconnect&&<button className="danger-outline-button" type="button" onClick={()=>setConfirmDisconnect(true)}><Unplug size={18}/>Desconectar WhatsApp</button>}
         {canDisconnect&&confirmDisconnect&&<div className="disconnect-confirm" role="alert">
           <strong>Desconectar este número do ALOVIA?</strong>
@@ -153,7 +160,7 @@ export function WhatsAppPage() {
         </div>
       </section>
 
-      {canConnect && <ConnectWhatsAppSheet open={isSheetOpen} onClose={() => setIsSheetOpen(false)} />}
+      {(canConnect||canDisconnect) && <ConnectWhatsAppSheet open={isSheetOpen} currentMode={canDisconnect?mode:null} onClose={() => setIsSheetOpen(false)} />}
     </div>
   )
 }
