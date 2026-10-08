@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ExternalLink, RotateCw, ShieldCheck } from 'lucide-react'
@@ -31,7 +31,6 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
   const [connected, setConnected] = useState<WhatsAppConnection | null>(null)
   const [resumeAvailable, setResumeAvailable] = useState(false)
   const [failedAttempts,setFailedAttempts]=useState(0)
-  const autoStarted = useRef(false)
   const [autoReady,setAutoReady] = useState(false)
   const queryKey = useMemo(
     () => ['whatsapp-connection', user?.id, membership?.business_id],
@@ -191,21 +190,6 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
     if (autoStart && sdkReady) setAutoReady(true)
   }, [autoStart, sdkReady])
 
-  useEffect(() => {
-    if (!autoStart || autoStarted.current || !allowed || !sdkReady) return
-    // Do not launch a popup from a mount effect: mobile browsers block it.
-    return
-    if (phase !== 'idle' && phase !== 'waiting') return
-    autoStarted.current = true
-    if (phase === 'waiting' && resumeMetaEmbeddedSignup(attemptKey)) {
-      setResumeAvailable(false)
-      setPhase('opening')
-      return
-    }
-    void run().catch(() => {
-      autoStarted.current = false
-    })
-  }, [allowed, attemptKey, autoStart, phase, run, sdkReady])
 
   if (!allowed) {
     return (
