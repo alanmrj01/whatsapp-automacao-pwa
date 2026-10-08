@@ -1,6 +1,6 @@
 import { ArrowRight, BriefcaseBusiness, Smartphone } from 'lucide-react'
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { BottomSheet } from '../../components/BottomSheet'
 
 type ConnectWhatsAppSheetProps = {
@@ -10,16 +10,20 @@ type ConnectWhatsAppSheetProps = {
 
 export function ConnectWhatsAppSheet({ open, onClose }: ConnectWhatsAppSheetProps) {
   const navigate = useNavigate()
+  const {pathname} = useLocation()
   const [step, setStep] = useState<'goal' | 'current'>('goal')
+  const fromOnboarding = pathname === '/app/onboarding'
 
   const close = () => {
     setStep('goal')
     onClose()
   }
 
-  const choose = (path: string) => {
+  const choose = (path: string, params: Record<string,string> = {}) => {
+    const query = new URLSearchParams(params)
+    if (fromOnboarding) query.set('from','onboarding')
     close()
-    navigate(path)
+    navigate(path + (query.size ? `?${query.toString()}` : ''))
   }
 
   return (
@@ -50,7 +54,7 @@ export function ConnectWhatsAppSheet({ open, onClose }: ConnectWhatsAppSheetProp
         </>
       ) : (
         <>
-          <button className="choice-row" type="button" onClick={() => choose('/app/whatsapp/business')}>
+          <button className="choice-row" type="button" onClick={() => choose('/app/whatsapp/business', {auto:'1'})}>
             <span className="choice-row__icon"><BriefcaseBusiness size={23} /></span>
             <span className="choice-row__copy">
               <strong>Já utilizo o WhatsApp Business</strong>
@@ -58,11 +62,11 @@ export function ConnectWhatsAppSheet({ open, onClose }: ConnectWhatsAppSheetProp
             </span>
             <ArrowRight size={20} aria-hidden="true" />
           </button>
-          <button className="choice-row" type="button" onClick={() => choose('/app/whatsapp/business')}>
+          <button className="choice-row" type="button" onClick={() => choose('/app/whatsapp/business', {preparar:'1'})}>
             <span className="choice-row__icon"><Smartphone size={23} /></span>
             <span className="choice-row__copy">
               <strong>Ainda não tenho o WhatsApp Business</strong>
-              <small>Receber orientação para instalar e configurar antes de conectar.</small>
+              <small>A Alovia acompanha você para proteger as conversas, instalar o Business e conectar.</small>
             </span>
             <ArrowRight size={20} aria-hidden="true" />
           </button>
