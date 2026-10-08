@@ -14,7 +14,8 @@ test('pending banner continues the WhatsApp action instead of stopping at the st
   assert.match(whatsapp,/business\?auto=1/)
   assert.match(coexistence,/autoStart=\{searchParams\.get\('auto'\)==='1'\}/)
   assert.match(embedded,/autoStart=false/)
-  assert.match(embedded,/autoStarted\.current/)
+  assert.match(embedded,/setAutoReady\(true\)/)
+  assert.match(embedded,/Conexão preparada\. Toque abaixo para abrir a autorização da Meta\./)
 })
 
 test('connection choice starts with desired experience and only then asks about WhatsApp Business', () => {
