@@ -13,6 +13,12 @@ import {
 } from './webPush'
 
 export type WebPushState='loading'|'unsupported'|'disabled'|'default'|'denied'|'active'|'error'
+export type ForegroundPushAlert={
+  eventId?:string
+  title:string
+  body:string
+  targetPath:string
+}
 
 export function useWebPush(){
   const entitlement=useEntitlements()
@@ -20,6 +26,7 @@ export function useWebPush(){
   const [state,setState]=useState<WebPushState>('loading')
   const [config,setConfig]=useState<WebPushConfig|null>(null)
   const [busy,setBusy]=useState(false)
+  const [foregroundAlert,setForegroundAlert]=useState<ForegroundPushAlert|null>(null)
 
   const refresh=useCallback(async()=>{
     if(!entitlement.canReadOperationalData||!businessId){setState('disabled');return}
@@ -47,6 +54,19 @@ export function useWebPush(){
     const receive=(event:MessageEvent)=>{
       if(event.data?.type!=='ALOVIA_WEB_PUSH_EVENT')return
       void queryClient.invalidateQueries({queryKey:['operations',businessId]})
+      const title=typeof event.data.title==='string'?event.data.title:''
+      const body=typeof event.data.body==='string'?event.data.body:''
+      const targetPath=typeof event.data.target_path==='string'&&event.data.target_path.startsWith('/app')
+        ? event.data.target_path
+        : '/app'
+      if(title&&body){
+        setForegroundAlert({
+          eventId:typeof event.data.event_id==='string'?event.data.event_id:undefined,
+          title,
+          body,
+          targetPath,
+        })
+      }
     }
     navigator.serviceWorker.addEventListener('message',receive)
     return()=>navigator.serviceWorker.removeEventListener('message',receive)
@@ -69,5 +89,5 @@ export function useWebPush(){
     finally{setBusy(false)}
   },[])
 
-  return{state,busy,enable,disable,refresh}
+  return{state,busy,enable,disable,refresh,foregroundAlert,dismissForegroundAlert:()=>setForegroundAlert(null)}
 }
