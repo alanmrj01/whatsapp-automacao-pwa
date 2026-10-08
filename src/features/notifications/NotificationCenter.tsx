@@ -1,10 +1,9 @@
 import { Bell, Check } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useEntitlements } from '../access/useEntitlements'
 import { useAuth } from '../auth/useAuth'
 import { useConversations, useMarkNotificationRead, useNotifications } from '../operations/api'
-import type { OperationalNotification } from '../operations/types'
 import { useWebPush } from './useWebPush'
 
 export function NotificationCenter({backgroundOnly=false}:{backgroundOnly?:boolean}){
@@ -15,32 +14,12 @@ export function NotificationCenter({backgroundOnly=false}:{backgroundOnly?:boole
   const markRead=useMarkNotificationRead()
   const navigate=useNavigate()
   const [open,setOpen]=useState(false)
-  const [latest,setLatest]=useState<OperationalNotification|null>(null)
   const webPush=useWebPush()
-  const knownIds=useRef<Set<string>|null>(null)
   const notificationItems=notifications.data?.items
   const items=notificationItems??[]
   const unreadItems=items.filter(item=>!item.read)
   const unreadCount=unreadItems.length
   const unreadMessages=(conversations.data?.items??[]).reduce((total,item)=>total+item.unread_count,0)
-
-  useEffect(()=>{knownIds.current=null},[businessId])
-
-  useEffect(()=>{
-    if(!notificationItems)return
-    if(knownIds.current===null){knownIds.current=new Set(notificationItems.map(item=>item.id));return}
-    const fresh=notificationItems.filter(item=>!knownIds.current?.has(item.id))
-    notificationItems.forEach(item=>knownIds.current?.add(item.id))
-    const newest=fresh[0]
-    if(!newest)return
-    setLatest(newest)
-  },[notificationItems])
-
-  useEffect(()=>{
-    if(!latest)return
-    const timer=window.setTimeout(()=>setLatest(null),6000)
-    return ()=>window.clearTimeout(timer)
-  },[latest])
 
   if(!entitlement.canReadOperationalData)return null
   const openPushAlert=()=>{
@@ -63,8 +42,9 @@ export function NotificationCenter({backgroundOnly=false}:{backgroundOnly?:boole
   }
 
   if(backgroundOnly){
-    if(webPush.foregroundAlert)return <button className="notification-toast" type="button" onClick={openPushAlert}><strong>{webPush.foregroundAlert.title}</strong><span>{webPush.foregroundAlert.body}</span></button>
-    return latest?<button className="notification-toast" type="button" onClick={()=>void openItem(latest)}><strong>{latest.title}</strong><span>{latest.body}</span></button>:null
+    return webPush.foregroundAlert
+      ? <button className="notification-toast" type="button" onClick={openPushAlert}><strong>{webPush.foregroundAlert.title}</strong><span>{webPush.foregroundAlert.body}</span></button>
+      : null
   }
 
   return <div className="notification-center">
@@ -93,9 +73,7 @@ export function NotificationCenter({backgroundOnly=false}:{backgroundOnly?:boole
       {webPush.state==='unsupported'&&<small>Este navegador não oferece suporte a notificações em segundo plano.</small>}
       {webPush.state==='error'&&<small>Não foi possível atualizar os alertas deste aparelho. Tente novamente.</small>}
     </section>}
-    {webPush.foregroundAlert
-      ? <button className="notification-toast" type="button" onClick={openPushAlert}><strong>{webPush.foregroundAlert.title}</strong><span>{webPush.foregroundAlert.body}</span></button>
-      : latest&&<button className="notification-toast" type="button" onClick={()=>void openItem(latest)}><strong>{latest.title}</strong><span>{latest.body}</span></button>}
+    {webPush.foregroundAlert&&<button className="notification-toast" type="button" onClick={openPushAlert}><strong>{webPush.foregroundAlert.title}</strong><span>{webPush.foregroundAlert.body}</span></button>}
   </div>
 }
 
