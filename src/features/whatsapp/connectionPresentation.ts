@@ -1,6 +1,6 @@
 import type { WhatsAppConnectionMode } from './types'
 
 export const connectionModeLabels: Record<WhatsAppConnectionMode, string> = {
-  coexistence: 'WhatsApp Business + Automação',
-  api_only: 'Atendimento pela plataforma',
+  coexistence: 'Alovia + WhatsApp Business',
+  api_only: 'Somente pela Alovia',
 }
