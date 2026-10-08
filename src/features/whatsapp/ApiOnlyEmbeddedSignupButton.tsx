@@ -41,6 +41,7 @@ export function ApiOnlyEmbeddedSignupButton({
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const fromOnboarding = searchParams.get('from') === 'onboarding'
+  const keepCoexistencePreference = searchParams.get('fallback') === '1'
   const [phase, setPhase] = useState<EmbeddedSignupPhase>('idle')
   const [message, setMessage] = useState<string | null>(null)
   const [registrationPin, setRegistrationPin] = useState('')
@@ -209,10 +210,25 @@ export function ApiOnlyEmbeddedSignupButton({
       if (nextPhase === 'error' || nextPhase === 'success') setResumeAvailable(false)
     },
     onConnected: async (connection: WhatsAppConnection) => {
-      setConnected(connection)
+      let finalConnection=connection
+      if(keepCoexistencePreference){
+        try{
+          finalConnection=await api.request<WhatsAppConnection>(
+            '/whatsapp/mode-preference',
+            {
+              method:'POST',
+              body:JSON.stringify({preferred_mode:'coexistence'}),
+            },
+          )
+        }catch{
+          // The exclusive connection is already valid. A failed preference save
+          // must not turn a successful WhatsApp connection into an error.
+        }
+      }
+      setConnected(finalConnection)
       setRegistrationPin('')
       setResumeAvailable(false)
-      queryClient.setQueryData(queryKey, connection)
+      queryClient.setQueryData(queryKey, finalConnection)
       await queryClient.invalidateQueries({queryKey, refetchType:'none'})
     },
     onObservation: reportObservation,
@@ -220,6 +236,7 @@ export function ApiOnlyEmbeddedSignupButton({
     attemptKey,
     configuration.data,
     intent,
+    keepCoexistencePreference,
     platformOnlyImpactConfirmed,
     queryClient,
     queryKey,
