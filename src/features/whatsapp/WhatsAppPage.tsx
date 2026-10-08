@@ -73,21 +73,25 @@ export function WhatsAppPage() {
     )
   }
 
-  if (connection.isPending) return <div className="page-stack whatsapp-page"><section className="operational-heading"><div><span className="eyebrow">Canal principal</span><h1>WhatsApp</h1></div></section><LoadingState /></div>
-  if (connection.isError) return <div className="page-stack whatsapp-page"><section className="operational-heading"><div><span className="eyebrow">Canal principal</span><h1>WhatsApp</h1></div></section><ErrorState onRetry={()=>void connection.refetch()} /></div>
-  const {status,mode,review_status:reviewStatus} = connection.data
+  const status=connection.data?.status??'disconnected'
+  const mode=connection.data?.mode??null
+  const reviewStatus=connection.data?.review_status
   const canConfigure = canConfigureWhatsApp(membership?.role)
-  const canConnect = entitlement.isPaid && canConfigure && (
+  const canConnect = entitlement.isPaid && canConfigure && !!connection.data && (
     status === 'disconnected' || status === 'error' || status === 'pending'
   )
   const canDisconnect = entitlement.isPaid && canConfigure && status==='connected'
 
-
   useEffect(()=>{
+    if(connection.isPending||connection.isError||!connection.data)return
     if(smartContinuationHandled.current||searchParams.get('continuar')!=='1'||!canConnect)return
     smartContinuationHandled.current=true
     continueConnection(status,mode)
-  },[canConnect,mode,searchParams,status])
+  },[canConnect,connection.data,connection.isError,connection.isPending,mode,searchParams,status])
+
+  if (connection.isPending) return <div className="page-stack whatsapp-page"><section className="operational-heading"><div><span className="eyebrow">Canal principal</span><h1>WhatsApp</h1></div></section><LoadingState /></div>
+  if (connection.isError) return <div className="page-stack whatsapp-page"><section className="operational-heading"><div><span className="eyebrow">Canal principal</span><h1>WhatsApp</h1></div></section><ErrorState onRetry={()=>void connection.refetch()} /></div>
+  if (!connection.data) return null
 
   return (
     <div className="page-stack whatsapp-page">
