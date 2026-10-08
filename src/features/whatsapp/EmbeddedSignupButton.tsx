@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ExternalLink, RotateCw, ShieldCheck } from 'lucide-react'
 import { PrimaryButton } from '../../components/PrimaryButton'
 import { api } from '../../lib/api'
@@ -22,10 +23,16 @@ import type { WhatsAppConnection } from './types'
 export function EmbeddedSignupButton() {
   const {user, membership} = useAuth()
   const queryClient = useQueryClient()
+  const navigate=useNavigate()
+  const [searchParams]=useSearchParams()
+  const autoStart=searchParams.get('autostart')==='1'
+  const fromOnboarding=searchParams.get('from')==='onboarding'
+  const autoStarted=useRef(false)
   const [phase, setPhase] = useState<EmbeddedSignupPhase>('idle')
   const [message, setMessage] = useState<string | null>(null)
   const [connected, setConnected] = useState<WhatsAppConnection | null>(null)
   const [resumeAvailable, setResumeAvailable] = useState(false)
+  const [failedAttempts,setFailedAttempts]=useState(0)
   const queryKey = useMemo(
     () => ['whatsapp-connection', user?.id, membership?.business_id],
     [user?.id, membership?.business_id],
@@ -120,6 +127,12 @@ export function EmbeddedSignupButton() {
     if (attemptKey) cancelMetaEmbeddedSignup(attemptKey)
   }, [attemptKey])
 
+  useEffect(()=>{
+    if(phase==='success'&&fromOnboarding){
+      navigate('/app/onboarding',{replace:true})
+    }
+  },[fromOnboarding,navigate,phase])
+
   const run = useMemo(() => createEmbeddedSignupRunner({
     start: async () => {
       if (!configuration.data || !sdkReady) throw new Error('Meta unavailable')
@@ -158,6 +171,10 @@ export function EmbeddedSignupButton() {
       setPhase(nextPhase)
       setMessage(error?.message ?? null)
       if (nextPhase === 'error' || nextPhase === 'success') setResumeAvailable(false)
+      if(nextPhase==='error'&&error&&!(error instanceof EmbeddedSignupCancelledError)){
+        setFailedAttempts(value=>value+1)
+      }
+      if(nextPhase==='success')setFailedAttempts(0)
     },
     onConnected: async (connection: WhatsAppConnection) => {
       setConnected(connection)
@@ -167,6 +184,12 @@ export function EmbeddedSignupButton() {
     },
     onObservation: reportObservation,
   }), [attemptKey, configuration.data, queryClient, queryKey, reconcileConnection, reportObservation, sdkReady])
+
+  useEffect(()=>{
+    if(!autoStart||autoStarted.current||!sdkReady||phase!=='idle')return
+    autoStarted.current=true
+    void run().catch(()=>{})
+  },[autoStart,phase,run,sdkReady])
 
   if (!allowed) {
     return (
@@ -239,6 +262,20 @@ export function EmbeddedSignupButton() {
       {phase === 'error' && <p className="embedded-signup-action__error" role="alert">
         {message ?? new EmbeddedSignupCancelledError().message}
       </p>}
+      {failedAttempts>=1&&phase==='error'&&<div className="embedded-signup-fallback">
+        <strong>Você não precisa ficar parado por causa dessa etapa.</strong>
+        <p>Se a Meta ainda não liberar o uso simultâneo neste número, você pode começar atendendo exclusivamente pela Alovia e tentar usar os dois juntos depois.</p>
+        <button
+          className="compact-button"
+          type="button"
+          onClick={()=>navigate(
+            '/app/whatsapp/exclusivo?origem=coexistence&autostart=1'
+              +(fromOnboarding?'&from=onboarding':''),
+          )}
+        >
+          Começar usando somente a Alovia
+        </button>
+      </div>}
     </div>
   )
 }

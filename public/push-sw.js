@@ -6,6 +6,8 @@ function safeTarget(value) {
   if (typeof value !== 'string') return FALLBACK_TARGET
   if (/^\/app\/conversas\/[0-9a-f-]{36}$/i.test(value)) return value
   if (value === '/app/agenda' || value.startsWith('/app/agenda?')) return value
+  if (value === '/app/whatsapp' || value.startsWith('/app/whatsapp?')) return value
+  if (value === '/app/mais/plano' || value.startsWith('/app/mais/plano?')) return value
   return FALLBACK_TARGET
 }
 
@@ -19,7 +21,17 @@ self.addEventListener('push', event => {
     const targetPath = safeTarget(payload.target_path)
     const openClients = await clients.matchAll({type:'window',includeUncontrolled:true})
     for (const client of openClients) {
-      client.postMessage({type:'ALOVIA_WEB_PUSH_EVENT',target_path:targetPath})
+      client.postMessage({
+        type:'ALOVIA_WEB_PUSH_EVENT',
+        target_path:targetPath,
+        payload:{
+          type:typeof payload.type==='string'?payload.type:'action_required',
+          event_id:typeof payload.event_id==='string'?payload.event_id:undefined,
+          title:payload.title,
+          body:payload.body,
+          target_path:targetPath,
+        },
+      })
     }
 
     // A minimized/background PWA is still returned by matchAll(). Only suppress

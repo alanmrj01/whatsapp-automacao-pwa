@@ -383,7 +383,7 @@ test('WhatsApp is the only onboarding step that can be deferred and remains visi
   assert.match(onboarding,/A conexão com o WhatsApp ficou pendente/)
   assert.match(shell,/Conexão com WhatsApp pendente/)
   assert.match(shell,/setup\.data\?\.onboarding_completed===true&&!connected/)
-  assert.match(shell,/to="\/app\/whatsapp"/)
+  assert.match(shell,/to="\/app\/whatsapp\?continuar=1"/)
   assert.match(dashboard,/nonWhatsAppBlockingReasons/)
   assert.match(more,/whatsappPending/)
 })

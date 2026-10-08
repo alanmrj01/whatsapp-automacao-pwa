@@ -661,8 +661,8 @@ function WhatsAppStep({onBack,onFinished}:{onBack:()=>void;onFinished:(deferred:
     onFinished(deferred)
   }
 
-  return <StepCard number={7} title="Conectar WhatsApp" description="Última etapa. Conecte o número que será usado pelo ALOVIA para receber conversas e criar agendamentos.">
-    <div className="onboarding-info onboarding-info--important"><strong>Se você quer continuar usando o mesmo número no celular</strong><span>Esse número precisa estar ativo no aplicativo WhatsApp Business para usar o modo de coexistência. Se for um número novo ou exclusivo para automação, escolha o caminho exclusivo durante a conexão.</span></div>
+  return <StepCard number={7} title="Conectar WhatsApp" description="Última etapa. Escolha como quer acompanhar as conversas e a Alovia mostra o caminho mais rápido para colocar a automação para funcionar.">
+    <div className="onboarding-info onboarding-info--important"><strong>Não usa WhatsApp Business ainda? Sem problema.</strong><span>Isso não impede você de começar com a Alovia. Se quiser usar os dois aplicativos juntos, vamos orientar a mudança com segurança e lembrar do backup antes de continuar.</span></div>
     {connection.isPending&&!connected&&<LoadingState/>}
     {connection.isError&&!connected&&<ErrorState onRetry={()=>void connection.refetch()}/>}
     {(connection.data||connected)&&<div className="onboarding-whatsapp">
@@ -683,7 +683,7 @@ function WhatsAppStep({onBack,onFinished}:{onBack:()=>void;onFinished:(deferred:
         ? <button className="primary-button" type="button" disabled={complete.isPending} onClick={()=>void finalize(false)}>{complete.isPending?'Finalizando…':'Finalizar configuração'}<ArrowRight size={17}/></button>
         : <button className="defer-whatsapp-button" type="button" disabled={complete.isPending} onClick={()=>void finalize(true)}>{complete.isPending?'Finalizando…':'Conectar Whatsapp Depois'}<ArrowRight size={17}/></button>}
     </div>
-    <ConnectWhatsAppSheet open={open} onClose={()=>{setOpen(false);void connection.refetch()}}/>
+    <ConnectWhatsAppSheet open={open} fromOnboarding onClose={()=>{setOpen(false);void connection.refetch()}}/>
   </StepCard>
 }
 function FieldError({children}:{children:React.ReactNode}){return <small className="field-error" role="alert">{children}</small>}

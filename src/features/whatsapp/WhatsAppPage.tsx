@@ -1,5 +1,6 @@
 import { ArrowRight, CalendarClock, LockKeyhole, MessageCircleMore, Snowflake, Unplug, Wrench } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PrimaryButton } from '../../components/PrimaryButton'
 import { LoadingState } from '../../components/LoadingState'
 import { ErrorState } from '../../components/ErrorState'
@@ -16,6 +17,9 @@ import { ConnectionStatusBadge } from './ConnectionStatusBadge'
 export function WhatsAppPage() {
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [confirmDisconnect,setConfirmDisconnect]=useState(false)
+  const navigate=useNavigate()
+  const [searchParams]=useSearchParams()
+  const automaticContinuationHandled=useRef(false)
   const {membership} = useAuth()
   const entitlement = useEntitlements()
   const {openUpgrade} = useUpgradePrompt()
@@ -23,6 +27,41 @@ export function WhatsAppPage() {
   const readOnly = entitlement.isReadOnlyRetained
   const connection = useConnection()
   const disconnect = useDisconnectWhatsApp()
+
+  useEffect(()=>{
+    if(
+      automaticContinuationHandled.current
+      || connection.isPending
+      || connection.isError
+      || !connection.data
+    )return
+    const shouldContinue=searchParams.get('continuar')==='1'
+    const changeTo=searchParams.get('alterar')
+    if(!shouldContinue&&!changeTo)return
+    automaticContinuationHandled.current=true
+    const data=connection.data
+    if(changeTo==='coexistence'){
+      navigate('/app/whatsapp/business?autostart=1',{replace:true})
+      return
+    }
+    if(changeTo==='api_only'){
+      navigate('/app/whatsapp/exclusivo?autostart=1',{replace:true})
+      return
+    }
+    const preferred=data.status==='pending'
+      ? data.mode
+      : data.desired_mode
+    if(data.status!=='connected'&&preferred){
+      navigate(
+        preferred==='coexistence'
+          ? '/app/whatsapp/business?autostart=1'
+          : '/app/whatsapp/exclusivo?autostart=1',
+        {replace:true},
+      )
+      return
+    }
+    setIsSheetOpen(true)
+  },[connection.data,connection.isError,connection.isPending,navigate,searchParams])
 
   if (demo) {
     return (
@@ -64,6 +103,18 @@ export function WhatsAppPage() {
     status === 'disconnected' || status === 'error' || status === 'pending'
   )
   const canDisconnect = entitlement.isPaid && canConfigure && status==='connected'
+  const continueConnection=()=>{
+    const preferred=status==='pending'?mode:connection.data.desired_mode
+    if(status!=='connected'&&preferred){
+      navigate(
+        preferred==='coexistence'
+          ? '/app/whatsapp/business?autostart=1'
+          : '/app/whatsapp/exclusivo?autostart=1',
+      )
+      return
+    }
+    setIsSheetOpen(true)
+  }
 
   return (
     <div className="page-stack whatsapp-page">
@@ -99,7 +150,7 @@ export function WhatsAppPage() {
         {canConnect && <PrimaryButton
           fullWidth
           icon={<ArrowRight size={19} />}
-          onClick={() => setIsSheetOpen(true)}
+          onClick={continueConnection}
         >
           {status==='pending'
             ? 'Retomar conexão'
@@ -107,6 +158,16 @@ export function WhatsAppPage() {
               ? 'Tentar conectar novamente'
               : 'Conectar WhatsApp'}
         </PrimaryButton>}
+        {status==='connected'&&canConfigure&&<button className="compact-button whatsapp-change-mode" type="button" onClick={()=>setIsSheetOpen(true)}>Alterar forma de uso</button>}
+        {status==='connected'&&mode==='api_only'&&connection.data.desired_mode==='coexistence'&&connection.data.review_status!=='approved'&&<div className="account-note settings-note--important">
+          <strong>Você já pode usar a Alovia normalmente</strong>
+          <span>A Meta ainda não concluiu a análise necessária para tentar usar este número também no WhatsApp Business. A Alovia verificará essa situação periodicamente e avisará quando houver uma nova etapa disponível.</span>
+        </div>}
+        {status==='connected'&&mode==='api_only'&&connection.data.desired_mode==='coexistence'&&connection.data.review_status==='approved'&&<div className="account-note settings-note--important">
+          <strong>A Meta concluiu a análise desta conta</strong>
+          <span>Você já pode tentar ativar o uso simultâneo na Alovia e no WhatsApp Business.</span>
+          <PrimaryButton fullWidth onClick={()=>navigate('/app/whatsapp/business?autostart=1')}>Tentar usar os dois juntos</PrimaryButton>
+        </div>}
         {canDisconnect&&!confirmDisconnect&&<button className="danger-outline-button" type="button" onClick={()=>setConfirmDisconnect(true)}><Unplug size={18}/>Desconectar WhatsApp</button>}
         {canDisconnect&&confirmDisconnect&&<div className="disconnect-confirm" role="alert">
           <strong>Desconectar este número do ALOVIA?</strong>
