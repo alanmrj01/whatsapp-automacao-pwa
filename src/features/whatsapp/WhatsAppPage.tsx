@@ -49,7 +49,8 @@ export function WhatsAppPage() {
   const awaitingCoexistence=status==='connected'
     && mode==='api_only'
     && preferredMode==='coexistence'
-  const coexistenceReviewReady=awaitingCoexistence&&reviewStatus==='approved'
+  // A business review approval is not proof that a number supports coexistence.
+  const coexistenceReviewReady=false
   const canConfigure = canConfigureWhatsApp(membership?.role)
   const canConnect = entitlement.isPaid && canConfigure && !!connection.data && (
     status === 'disconnected' || status === 'error' || status === 'pending'
@@ -123,7 +124,7 @@ export function WhatsAppPage() {
         </dl>}
         {awaitingCoexistence&&<div className="account-note">
           <strong>{coexistenceReviewReady
-            ? 'A próxima etapa do WhatsApp Business está disponível'
+            ? 'Verifique a disponibilidade do uso conjunto'
             : reviewStatus==='rejected'
               ? 'Sua preferência está salva'
               : 'Você já pode usar a Alovia enquanto aguarda'}</strong>
@@ -131,7 +132,7 @@ export function WhatsAppPage() {
             ? 'A Meta concluiu uma revisão da conta. Sua conexão atual continua ativa até você confirmar a tentativa de uso conjunto com o WhatsApp Business.'
             : reviewStatus==='rejected'
               ? 'A revisão mais recente da Meta não foi aprovada. Isso não desliga seu atendimento atual pela Alovia; a preferência por usar também o WhatsApp Business continua registrada.'
-              : 'Seu número continua funcionando exclusivamente pela Alovia. Guardamos sua preferência por usar também o WhatsApp Business e a Alovia fará novas verificações sem interromper o atendimento.'}</span>
+              : 'Seu número continua funcionando exclusivamente pela Alovia. Guardamos sua preferência por usar também o WhatsApp Business. A disponibilidade depende da Meta e não há prazo garantido; nenhuma mudança será feita sem sua confirmação.'}</span>
           {coexistenceReviewReady&&<PrimaryButton
             fullWidth
             icon={<ArrowRight size={19}/>}
