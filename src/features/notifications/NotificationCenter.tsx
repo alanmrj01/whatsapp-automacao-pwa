@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useEntitlements } from '../access/useEntitlements'
 import { useConversations, useMarkNotificationRead, useNotifications } from '../operations/api'
+import type { OperationalNotification } from '../operations/types'
 import { useWebPush } from './useWebPush'
 
 export function NotificationCenter({backgroundOnly=false}:{backgroundOnly?:boolean}){
