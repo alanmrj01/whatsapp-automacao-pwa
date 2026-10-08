@@ -9,4 +9,8 @@ export type WhatsAppConnection = {
   display_phone_number?: string
   pending_state?: WhatsAppConnectionPendingState
   review_status?: WhatsAppMetaReviewStatus
+  preferred_mode?: WhatsAppConnectionMode
+  mode_switch_requested_at?: string
+  mode_switch_last_checked_at?: string
+  mode_switch_next_check_at?: string
 }
