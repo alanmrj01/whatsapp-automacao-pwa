@@ -50,3 +50,38 @@ test('exclusive Alovia path uses the guarded Meta API-only flow', () => {
   assert.match(button,/registration_pin/)
   assert.match(button,/PIN de segurança do número/)
 })
+
+
+test('connected users can change mode without disabling the current connection first', () => {
+  const sheet=read('src/features/whatsapp/ConnectWhatsAppSheet.tsx')
+  const page=read('src/features/whatsapp/WhatsAppPage.tsx')
+  const coexistence=read('src/features/whatsapp/CoexistenceInfoPage.tsx')
+  assert.match(sheet,/currentMode==='api_only'/)
+  assert.match(sheet,/business'.*troca:'1'/s)
+  assert.doesNotMatch(sheet,/currentMode==='api_only'[\s\S]{0,160}preparar:'1'/)
+  assert.match(page,/Alterar forma de uso/)
+  assert.match(coexistence,/Nada é desligado antes da confirmação/)
+})
+
+test('exclusive fallback remembers the users coexistence preference', () => {
+  const button=read('src/features/whatsapp/ApiOnlyEmbeddedSignupButton.tsx')
+  const connection=read('src/features/whatsapp/useConnection.ts')
+  const page=read('src/features/whatsapp/WhatsAppPage.tsx')
+  assert.match(button,/searchParams\.get\('fallback'\) === '1'/)
+  assert.match(button,/\/whatsapp\/mode-preference/)
+  assert.match(button,/preferred_mode:'coexistence'/)
+  assert.match(connection,/useSetWhatsAppModePreference/)
+  assert.match(page,/preferred_mode/)
+  assert.match(page,/Tentar ativar WhatsApp Business \+ Alovia/)
+  assert.match(page,/Não quero mais mudar agora/)
+})
+
+test('device notification surfaces only action-required Web Push events', () => {
+  const center=read('src/features/notifications/NotificationCenter.tsx')
+  const worker=read('public/push-sw.js')
+  assert.match(center,/Ativar alertas importantes/)
+  assert.match(center,/somente quando algo precisar da sua ação/)
+  assert.match(worker,/ALOVIA_WEB_PUSH_EVENT/)
+  assert.match(worker,/\/app\/whatsapp/)
+  assert.match(worker,/\/app\/mais\/plano/)
+})
