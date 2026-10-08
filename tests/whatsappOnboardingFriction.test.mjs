@@ -56,11 +56,16 @@ test('connected users can change mode without disabling the current connection f
   const sheet=read('src/features/whatsapp/ConnectWhatsAppSheet.tsx')
   const page=read('src/features/whatsapp/WhatsAppPage.tsx')
   const coexistence=read('src/features/whatsapp/CoexistenceInfoPage.tsx')
+  const migration=read('src/features/whatsapp/ApiOnlyToCoexistenceGuide.tsx')
   assert.match(sheet,/currentMode==='api_only'/)
   assert.match(sheet,/business'.*troca:'1'/s)
   assert.doesNotMatch(sheet,/currentMode==='api_only'[\s\S]{0,160}preparar:'1'/)
   assert.match(page,/Alterar forma de uso/)
-  assert.match(coexistence,/Nada é desligado antes da confirmação/)
+  assert.match(coexistence,/ApiOnlyToCoexistenceGuide/)
+  assert.match(migration,/\/whatsapp\/mode-switch\/prepare-coexistence/)
+  assert.match(migration,/temporariamente pausado/)
+  assert.match(migration,/Sua conexão atual não foi alterada/)
+  assert.match(migration,/Este número já está funcionando no WhatsApp Business/)
 })
 
 test('exclusive fallback remembers the users coexistence preference', () => {
