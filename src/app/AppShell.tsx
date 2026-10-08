@@ -74,6 +74,6 @@ function WhatsAppPendingBanner() {
       <strong>Conexão com WhatsApp pendente</strong>
       <span>Você pode visualizar o ALOVIA, mas o atendimento automático pelo WhatsApp ficará indisponível até concluir a conexão.</span>
     </div>
-    <Link className="compact-button" to="/app/whatsapp">Conectar WhatsApp</Link>
+    <Link className="compact-button" to="/app/whatsapp?continuar=1">Conectar WhatsApp</Link>
   </section>
 }
