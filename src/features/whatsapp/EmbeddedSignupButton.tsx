@@ -30,6 +30,7 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
   const [message, setMessage] = useState<string | null>(null)
   const [connected, setConnected] = useState<WhatsAppConnection | null>(null)
   const [resumeAvailable, setResumeAvailable] = useState(false)
+  const [failedAttempts,setFailedAttempts]=useState(0)
   const autoStarted = useRef(false)
   const queryKey = useMemo(
     () => ['whatsapp-connection', user?.id, membership?.business_id],
@@ -169,6 +170,10 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
       setPhase(nextPhase)
       setMessage(error?.message ?? null)
       if (nextPhase === 'error' || nextPhase === 'success') setResumeAvailable(false)
+      if (nextPhase === 'error' && error && !(error instanceof EmbeddedSignupCancelledError)) {
+        setFailedAttempts(value=>value+1)
+      }
+      if (nextPhase === 'success') setFailedAttempts(0)
     },
     onConnected: async (connection: WhatsAppConnection) => {
       setConnected(connection)
@@ -264,6 +269,13 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
       {phase === 'error' && <p className="embedded-signup-action__error" role="alert">
         {message ?? new EmbeddedSignupCancelledError().message}
       </p>}
+      {failedAttempts>=2&&phase==='error'&&<div className="embedded-signup-fallback">
+        <strong>Quer começar pela Alovia sem esperar por esta conexão?</strong>
+        <p>A Meta ainda não concluiu o uso conjunto deste número. Você pode tentar novamente depois ou escolher o uso exclusivo pela Alovia. No modo exclusivo, este número deixa de funcionar simultaneamente no aplicativo WhatsApp Business.</p>
+        <button className="compact-button" type="button" onClick={()=>{
+          navigate('/app/whatsapp/exclusivo?origem=coexistence&fallback=1'+(fromOnboarding?'&from=onboarding':''))
+        }}>Ver opção de uso exclusivo</button>
+      </div>}
     </div>
   )
 }
