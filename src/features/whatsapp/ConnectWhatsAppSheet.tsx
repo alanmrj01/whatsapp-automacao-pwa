@@ -39,7 +39,7 @@ export function ConnectWhatsAppSheet({ open, onClose, currentMode=null }: Connec
 
   const chooseCoexistence = () => {
     if(currentMode==='api_only'){
-      choose('/app/whatsapp/business',{preparar:'1',troca:'1'})
+      choose('/app/whatsapp/business',{troca:'1'})
       return
     }
     setStep('current')
