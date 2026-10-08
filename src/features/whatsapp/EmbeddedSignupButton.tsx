@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ExternalLink, RotateCw, ShieldCheck } from 'lucide-react'
 import { PrimaryButton } from '../../components/PrimaryButton'
@@ -19,13 +19,14 @@ import {
 } from './embeddedSignup'
 import type { WhatsAppConnection } from './types'
 
-export function EmbeddedSignupButton() {
+export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}) {
   const {user, membership} = useAuth()
   const queryClient = useQueryClient()
   const [phase, setPhase] = useState<EmbeddedSignupPhase>('idle')
   const [message, setMessage] = useState<string | null>(null)
   const [connected, setConnected] = useState<WhatsAppConnection | null>(null)
   const [resumeAvailable, setResumeAvailable] = useState(false)
+  const autoStarted = useRef(false)
   const queryKey = useMemo(
     () => ['whatsapp-connection', user?.id, membership?.business_id],
     [user?.id, membership?.business_id],
@@ -167,6 +168,20 @@ export function EmbeddedSignupButton() {
     },
     onObservation: reportObservation,
   }), [attemptKey, configuration.data, queryClient, queryKey, reconcileConnection, reportObservation, sdkReady])
+
+  useEffect(() => {
+    if (!autoStart || autoStarted.current || !allowed || !sdkReady) return
+    if (phase !== 'idle' && phase !== 'waiting') return
+    autoStarted.current = true
+    if (phase === 'waiting' && resumeMetaEmbeddedSignup(attemptKey)) {
+      setResumeAvailable(false)
+      setPhase('opening')
+      return
+    }
+    void run().catch(() => {
+      autoStarted.current = false
+    })
+  }, [allowed, attemptKey, autoStart, phase, run, sdkReady])
 
   if (!allowed) {
     return (
