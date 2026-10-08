@@ -1,8 +1,13 @@
 import { BriefcaseBusiness } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
 import { ConnectionInfoPage } from './ConnectionInfoPage'
 import { EmbeddedSignupButton } from './EmbeddedSignupButton'
+import { WhatsAppBusinessSetupGuide } from './WhatsAppBusinessSetupGuide'
 
 export function CoexistenceInfoPage() {
+  const [searchParams]=useSearchParams()
+  if(searchParams.get('preparar')==='1')return <WhatsAppBusinessSetupGuide/>
+
   return (
     <ConnectionInfoPage
       mode="coexistence"
@@ -15,7 +20,7 @@ export function CoexistenceInfoPage() {
         'A Meta valida sua autorização antes de a conexão ser ativada.',
       ]}
       callout="A autorização acontece diretamente na Meta. A Alovia não recebe sua senha e não expõe credenciais no navegador."
-      action={<EmbeddedSignupButton />}
+      action={<EmbeddedSignupButton autoStart={searchParams.get('auto')==='1'} />}
     />
   )
 }
