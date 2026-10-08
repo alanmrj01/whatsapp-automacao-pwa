@@ -102,7 +102,7 @@ test('completed onboarding stays unlocked and exposes configuration warnings wit
     assert.match(source,/Revise sua configuração/)
   }
   assert.match(dashboard,/Corrigir configuração/)
-  assert.match(router,/setup\.data\?\.onboarding_completed \? children/)
+  assert.match(router,/setup\.data\?\.onboarding_completed \|\| whatsappOnboardingRoute/)
 })
 
 test('notifications combine foreground refresh with real authenticated Web Push', () => {
