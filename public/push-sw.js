@@ -6,6 +6,8 @@ function safeTarget(value) {
   if (typeof value !== 'string') return FALLBACK_TARGET
   if (/^\/app\/conversas\/[0-9a-f-]{36}$/i.test(value)) return value
   if (value === '/app/agenda' || value.startsWith('/app/agenda?')) return value
+  if (value === '/app/whatsapp' || value.startsWith('/app/whatsapp?')) return value
+  if (value === '/app/mais/plano' || value.startsWith('/app/mais/plano?')) return value
   return FALLBACK_TARGET
 }
 
