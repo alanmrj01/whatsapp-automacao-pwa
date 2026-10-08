@@ -3,11 +3,13 @@ import { useSearchParams } from 'react-router-dom'
 import { ConnectionInfoPage } from './ConnectionInfoPage'
 import { EmbeddedSignupButton } from './EmbeddedSignupButton'
 import { WhatsAppBusinessSetupGuide } from './WhatsAppBusinessSetupGuide'
+import { ApiOnlyToCoexistenceGuide } from './ApiOnlyToCoexistenceGuide'
 
 export function CoexistenceInfoPage() {
   const [searchParams]=useSearchParams()
   const changingMode=searchParams.get('troca')==='1'
   if(searchParams.get('preparar')==='1')return <WhatsAppBusinessSetupGuide/>
+  if(changingMode)return <ApiOnlyToCoexistenceGuide/>
 
   return (
     <ConnectionInfoPage
