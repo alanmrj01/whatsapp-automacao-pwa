@@ -32,6 +32,7 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
   const [resumeAvailable, setResumeAvailable] = useState(false)
   const [failedAttempts,setFailedAttempts]=useState(0)
   const autoStarted = useRef(false)
+  const [autoReady,setAutoReady] = useState(false)
   const queryKey = useMemo(
     () => ['whatsapp-connection', user?.id, membership?.business_id],
     [user?.id, membership?.business_id],
@@ -184,8 +185,16 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
     onObservation: reportObservation,
   }), [attemptKey, configuration.data, queryClient, queryKey, reconcileConnection, reportObservation, sdkReady])
 
+  // Meta's login dialog requires a user gesture on many browsers.
+  // Preparing automatically is safe; opening the popup is explicitly confirmed.
+  useEffect(() => {
+    if (autoStart && sdkReady) setAutoReady(true)
+  }, [autoStart, sdkReady])
+
   useEffect(() => {
     if (!autoStart || autoStarted.current || !allowed || !sdkReady) return
+    // Do not launch a popup from a mount effect: mobile browsers block it.
+    return
     if (phase !== 'idle' && phase !== 'waiting') return
     autoStarted.current = true
     if (phase === 'waiting' && resumeMetaEmbeddedSignup(attemptKey)) {
@@ -227,6 +236,7 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
 
   return (
     <div className="embedded-signup-action">
+      {autoReady && phase === 'idle' && <p role="status">Conexão preparada. Toque abaixo para abrir a autorização da Meta.</p>}
       <PrimaryButton
         fullWidth
         disabled={busy || preparing || phase === 'success'}
