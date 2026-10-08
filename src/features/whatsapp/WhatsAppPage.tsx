@@ -1,5 +1,6 @@
 import { ArrowRight, CalendarClock, LockKeyhole, MessageCircleMore, Snowflake, Unplug, Wrench } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PrimaryButton } from '../../components/PrimaryButton'
 import { LoadingState } from '../../components/LoadingState'
 import { ErrorState } from '../../components/ErrorState'
@@ -16,6 +17,9 @@ import { ConnectionStatusBadge } from './ConnectionStatusBadge'
 export function WhatsAppPage() {
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [confirmDisconnect,setConfirmDisconnect]=useState(false)
+  const navigate=useNavigate()
+  const [searchParams]=useSearchParams()
+  const smartContinuationHandled=useRef(false)
   const {membership} = useAuth()
   const entitlement = useEntitlements()
   const {openUpgrade} = useUpgradePrompt()
@@ -23,6 +27,19 @@ export function WhatsAppPage() {
   const readOnly = entitlement.isReadOnlyRetained
   const connection = useConnection()
   const disconnect = useDisconnectWhatsApp()
+
+
+  const continueConnection = (status:string, mode:string|null) => {
+    if ((status === 'pending' || status === 'error') && mode === 'coexistence') {
+      navigate('/app/whatsapp/business?auto=1')
+      return
+    }
+    if ((status === 'pending' || status === 'error') && mode === 'api_only') {
+      navigate('/app/whatsapp/exclusivo')
+      return
+    }
+    setIsSheetOpen(true)
+  }
 
   if (demo) {
     return (
@@ -65,6 +82,13 @@ export function WhatsAppPage() {
   )
   const canDisconnect = entitlement.isPaid && canConfigure && status==='connected'
 
+
+  useEffect(()=>{
+    if(smartContinuationHandled.current||searchParams.get('continuar')!=='1'||!canConnect)return
+    smartContinuationHandled.current=true
+    continueConnection(status,mode)
+  },[canConnect,mode,searchParams,status])
+
   return (
     <div className="page-stack whatsapp-page">
       <section className="connection-card connection-card--alovia">
@@ -99,7 +123,7 @@ export function WhatsAppPage() {
         {canConnect && <PrimaryButton
           fullWidth
           icon={<ArrowRight size={19} />}
-          onClick={() => setIsSheetOpen(true)}
+          onClick={() => continueConnection(status,mode)}
         >
           {status==='pending'
             ? 'Retomar conexão'
