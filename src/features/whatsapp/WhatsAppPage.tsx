@@ -9,7 +9,7 @@ import { useEntitlements } from '../access/useEntitlements'
 import { useUpgradePrompt } from '../access/upgradePromptContext'
 import { useAuth } from '../auth/useAuth'
 import { canConfigureWhatsApp } from '../auth/types'
-import { useConnection, useDisconnectWhatsApp } from './useConnection'
+import { useConnection, useDisconnectWhatsApp, useSetWhatsAppModePreference } from './useConnection'
 import { connectionModeLabels } from './connectionPresentation'
 import { ConnectWhatsAppSheet } from './ConnectWhatsAppSheet'
 import { ConnectionStatusBadge } from './ConnectionStatusBadge'
@@ -27,6 +27,7 @@ export function WhatsAppPage() {
   const readOnly = entitlement.isReadOnlyRetained
   const connection = useConnection()
   const disconnect = useDisconnectWhatsApp()
+  const modePreference = useSetWhatsAppModePreference()
 
 
   const continueConnection = useCallback((status:string, mode:string|null) => {
@@ -44,6 +45,11 @@ export function WhatsAppPage() {
   const status=connection.data?.status??'disconnected'
   const mode=connection.data?.mode??null
   const reviewStatus=connection.data?.review_status
+  const preferredMode=connection.data?.preferred_mode??null
+  const awaitingCoexistence=status==='connected'
+    && mode==='api_only'
+    && preferredMode==='coexistence'
+  const coexistenceReviewReady=awaitingCoexistence&&reviewStatus==='approved'
   const canConfigure = canConfigureWhatsApp(membership?.role)
   const canConnect = entitlement.isPaid && canConfigure && !!connection.data && (
     status === 'disconnected' || status === 'error' || status === 'pending'
@@ -115,9 +121,37 @@ export function WhatsAppPage() {
           {mode&&<div><dt>Forma de operação</dt><dd>{connectionModeLabels[mode]}</dd></div>}
           <div><dt>Situação</dt><dd>Conexão ativa</dd></div>
         </dl>}
-        {reviewStatus==='rejected'&&<div className="account-note">
-          <strong>Revisão da Meta requer atenção</strong>
-          <span>A conexão está registrada na Alovia, mas a Meta informou que a revisão desta conta não foi aprovada. Verifique o painel da Meta antes de alterar ou reconectar o número.</span>
+        {awaitingCoexistence&&<div className="account-note">
+          <strong>{coexistenceReviewReady
+            ? 'A próxima etapa do WhatsApp Business está disponível'
+            : reviewStatus==='rejected'
+              ? 'Sua preferência está salva'
+              : 'Você já pode usar a Alovia enquanto aguarda'}</strong>
+          <span>{coexistenceReviewReady
+            ? 'A Meta concluiu uma revisão da conta. Sua conexão atual continua ativa até você confirmar a tentativa de uso conjunto com o WhatsApp Business.'
+            : reviewStatus==='rejected'
+              ? 'A revisão mais recente da Meta não foi aprovada. Isso não desliga seu atendimento atual pela Alovia; a preferência por usar também o WhatsApp Business continua registrada.'
+              : 'Seu número continua funcionando exclusivamente pela Alovia. Guardamos sua preferência por usar também o WhatsApp Business e a Alovia fará novas verificações sem interromper o atendimento.'}</span>
+          {coexistenceReviewReady&&<PrimaryButton
+            fullWidth
+            icon={<ArrowRight size={19}/>}
+            onClick={()=>navigate('/app/whatsapp/business?troca=1')}
+          >
+            Tentar ativar WhatsApp Business + Alovia
+          </PrimaryButton>}
+          <button
+            className="compact-button"
+            type="button"
+            disabled={modePreference.isPending}
+            onClick={()=>modePreference.mutate(null)}
+          >
+            {modePreference.isPending?'Atualizando…':'Não quero mais mudar agora'}
+          </button>
+          {modePreference.isError&&<p className="form-error" role="alert">Não foi possível atualizar sua preferência. Tente novamente.</p>}
+        </div>}
+        {!awaitingCoexistence&&reviewStatus==='rejected'&&<div className="account-note">
+          <strong>Revisão da Meta não aprovada</strong>
+          <span>Essa revisão é separada da conexão técnica. Se o WhatsApp aparece como conectado, ele continua ativo; não é necessário reconectar apenas por causa deste aviso.</span>
         </div>}
         {readOnly&&<div className="account-note">
           <strong>Dados da conexão preservados</strong>
