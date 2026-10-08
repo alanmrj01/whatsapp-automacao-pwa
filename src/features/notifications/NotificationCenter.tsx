@@ -43,6 +43,14 @@ export function NotificationCenter({backgroundOnly=false}:{backgroundOnly?:boole
   },[latest])
 
   if(!entitlement.canReadOperationalData)return null
+  const openPushAlert=()=>{
+    const alert=webPush.foregroundAlert
+    if(!alert)return
+    webPush.dismissForegroundAlert()
+    setOpen(false)
+    navigate(safeTarget(alert.targetPath))
+  }
+
   const openItem=async(item:OperationalNotification)=>{
     try{
       if(entitlement.canMutateOperationalData)await markRead.mutateAsync(item.id)
@@ -54,7 +62,10 @@ export function NotificationCenter({backgroundOnly=false}:{backgroundOnly?:boole
     navigate(safeTarget(item.target_path))
   }
 
-  if(backgroundOnly)return latest?<button className="notification-toast" type="button" onClick={()=>void openItem(latest)}><strong>{latest.title}</strong><span>{latest.body}</span></button>:null
+  if(backgroundOnly){
+    if(webPush.foregroundAlert)return <button className="notification-toast" type="button" onClick={openPushAlert}><strong>{webPush.foregroundAlert.title}</strong><span>{webPush.foregroundAlert.body}</span></button>
+    return latest?<button className="notification-toast" type="button" onClick={()=>void openItem(latest)}><strong>{latest.title}</strong><span>{latest.body}</span></button>:null
+  }
 
   return <div className="notification-center">
     <button className="notification-center__trigger" type="button" aria-label={unreadCount?`Notificações — ${unreadCount} não lida(s)`:'Notificações'} aria-expanded={open} onClick={()=>{
@@ -82,7 +93,9 @@ export function NotificationCenter({backgroundOnly=false}:{backgroundOnly?:boole
       {webPush.state==='unsupported'&&<small>Este navegador não oferece suporte a notificações em segundo plano.</small>}
       {webPush.state==='error'&&<small>Não foi possível atualizar os alertas deste aparelho. Tente novamente.</small>}
     </section>}
-    {latest&&<button className="notification-toast" type="button" onClick={()=>void openItem(latest)}><strong>{latest.title}</strong><span>{latest.body}</span></button>}
+    {webPush.foregroundAlert
+      ? <button className="notification-toast" type="button" onClick={openPushAlert}><strong>{webPush.foregroundAlert.title}</strong><span>{webPush.foregroundAlert.body}</span></button>
+      : latest&&<button className="notification-toast" type="button" onClick={()=>void openItem(latest)}><strong>{latest.title}</strong><span>{latest.body}</span></button>}
   </div>
 }
 
