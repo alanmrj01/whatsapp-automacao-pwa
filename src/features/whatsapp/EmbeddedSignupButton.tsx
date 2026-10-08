@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ExternalLink, RotateCw, ShieldCheck } from 'lucide-react'
 import { PrimaryButton } from '../../components/PrimaryButton'
 import { api } from '../../lib/api'
@@ -22,6 +23,9 @@ import type { WhatsAppConnection } from './types'
 export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}) {
   const {user, membership} = useAuth()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const fromOnboarding = searchParams.get('from') === 'onboarding'
   const [phase, setPhase] = useState<EmbeddedSignupPhase>('idle')
   const [message, setMessage] = useState<string | null>(null)
   const [connected, setConnected] = useState<WhatsAppConnection | null>(null)
@@ -120,6 +124,12 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
   useEffect(() => () => {
     if (attemptKey) cancelMetaEmbeddedSignup(attemptKey)
   }, [attemptKey])
+
+  useEffect(() => {
+    if (phase === 'success' && fromOnboarding) {
+      navigate('/app/onboarding', {replace:true})
+    }
+  }, [fromOnboarding, navigate, phase])
 
   const run = useMemo(() => createEmbeddedSignupRunner({
     start: async () => {
