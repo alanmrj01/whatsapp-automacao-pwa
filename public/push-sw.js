@@ -23,6 +23,7 @@ self.addEventListener('push', event => {
     for (const client of openClients) {
       client.postMessage({
         type:'ALOVIA_WEB_PUSH_EVENT',
+        target_path:targetPath,
         payload:{
           type:typeof payload.type==='string'?payload.type:'action_required',
           event_id:typeof payload.event_id==='string'?payload.event_id:undefined,
