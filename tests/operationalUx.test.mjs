@@ -52,7 +52,9 @@ test('paid accounts are guided through seven persisted onboarding steps before n
   assert.match(onboarding,/<Navigate to="\/app" replace\/>/)
   assert.match(onboarding,/!result\.onboarding_completed\|\|!result\.onboarding_completed_at/)
   assert.match(onboarding,/connection\.data\?\.status==='connected'\|\|setup\.data\?\.whatsapp===true/)
-  assert.match(router,/setup\.data\?\.onboarding_completed \? children : <Navigate to="\/app\/onboarding" replace\/>/)
+  assert.match(router,/const whatsappOnboardingRoute = pathname === '\/app\/whatsapp\/business'/)
+  assert.match(router,/pathname === '\/app\/whatsapp\/exclusivo'/)
+  assert.match(router,/setup\.data\?\.onboarding_completed \|\| whatsappOnboardingRoute/)
 })
 
 test('company hours are configured independently from technicians and support weekdays plus weekends', () => {
@@ -383,7 +385,7 @@ test('WhatsApp is the only onboarding step that can be deferred and remains visi
   assert.match(onboarding,/A conexão com o WhatsApp ficou pendente/)
   assert.match(shell,/Conexão com WhatsApp pendente/)
   assert.match(shell,/setup\.data\?\.onboarding_completed===true&&!connected/)
-  assert.match(shell,/to="\/app\/whatsapp"/)
+  assert.match(shell,/to="\/app\/whatsapp\?continuar=1"/)
   assert.match(dashboard,/nonWhatsAppBlockingReasons/)
   assert.match(more,/whatsappPending/)
 })
