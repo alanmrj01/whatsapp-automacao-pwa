@@ -87,7 +87,7 @@ export function NotificationCenter({backgroundOnly=false}:{backgroundOnly?:boole
         <small>A Alovia só envia um popup quando você precisa fazer alguma coisa, como assumir um atendimento, resolver um pagamento ou concluir uma etapa da conexão do WhatsApp.</small>
         <button className="compact-button" type="button" disabled={webPush.busy} onClick={()=>void webPush.enable()}>Ativar alertas importantes</button>
       </div>}
-      {webPush.state==='active'&&<div className="notification-permission-callout"><strong>Alertas importantes ativos</strong><small>Este aparelho receberá avisos quando sua intervenção for necessária.</small><button className="compact-button" type="button" disabled={webPush.busy} onClick={()=>void webPush.disable()}>Desativar neste aparelho</button></div>}
+      {webPush.state==='active'&&<div className="notification-permission-callout"><strong>Alertas em segundo plano ativos para ações importantes</strong><small>Este aparelho receberá avisos quando sua intervenção for necessária.</small><button className="compact-button" type="button" disabled={webPush.busy} onClick={()=>void webPush.disable()}>Desativar neste aparelho</button></div>}
       {webPush.state==='denied'&&<small>As notificações do aparelho estão bloqueadas. Você pode reativá-las nas configurações do navegador ou do sistema.</small>}
       {webPush.state==='unsupported'&&<small>Este navegador não oferece suporte a notificações em segundo plano.</small>}
       {webPush.state==='error'&&<small>Não foi possível atualizar os alertas deste aparelho. Tente novamente.</small>}
