@@ -10,6 +10,7 @@ export function WhatsAppBusinessSetupGuide(){
   const [searchParams]=useSearchParams()
   const [backupConfirmed,setBackupConfirmed]=useState(false)
   const [businessReady,setBusinessReady]=useState(false)
+  const [storeOpened,setStoreOpened]=useState(false)
   const fromOnboarding=searchParams.get('from')==='onboarding'
   const storeUrl=/iPad|iPhone|iPod/.test(navigator.userAgent)?IOS_URL:ANDROID_URL
 
@@ -48,16 +49,17 @@ export function WhatsAppBusinessSetupGuide(){
       <span className="eyebrow">Passo 2 de 3</span>
       <h2>Instale ou abra o WhatsApp Business</h2>
       <p>Use a loja oficial do seu celular. Se o WhatsApp Business já estiver instalado, a loja mostrará a opção de abrir o aplicativo.</p>
-      <a className="primary-button" href={storeUrl} target="_blank" rel="noreferrer" aria-disabled={!backupConfirmed} onClick={event=>{if(!backupConfirmed)event.preventDefault()}}>
+      <a className="primary-button" href={storeUrl} target="_blank" rel="noreferrer" aria-disabled={!backupConfirmed} onClick={event=>{if(!backupConfirmed)event.preventDefault();else setStoreOpened(true)}}>
         <Download size={18}/>Abrir WhatsApp Business
       </a>
       {!backupConfirmed&&<small>Confirme o backup antes de continuar.</small>}
+      {storeOpened&&<p role="status">Após configurar seu número no WhatsApp Business, volte a esta tela da Alovia.</p>}
     </section>
 
     <section className="connection-card">
       <span className="eyebrow">Passo 3 de 3</span>
       <h2>Configure este número no WhatsApp Business</h2>
-      <p>Abra o WhatsApp Business e conclua a ativação deste mesmo número. Quando ele estiver funcionando no Business, volte para a Alovia.</p>
+      <p>Abra o WhatsApp Business e conclua a ativação deste mesmo número. Quando ele estiver funcionando no Business, volte para a Alovia. A disponibilidade do uso simultâneo depende de uma validação da Meta; instalar o aplicativo não garante aprovação.</p>
       <label className="whatsapp-exclusive-confirmation__check">
         <input type="checkbox" disabled={!backupConfirmed} checked={businessReady} onChange={event=>setBusinessReady(event.target.checked)}/>
         <span>Este número já está funcionando no WhatsApp Business.</span>
