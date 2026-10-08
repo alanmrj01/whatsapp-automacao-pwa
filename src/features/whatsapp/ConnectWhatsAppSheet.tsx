@@ -58,7 +58,7 @@ export function ConnectWhatsAppSheet({ open, onClose }: ConnectWhatsAppSheetProp
             </span>
             <ArrowRight size={20} aria-hidden="true" />
           </button>
-          <button className="choice-row" type="button" onClick={() => choose('/app/whatsapp/business?orientar=1')}>
+          <button className="choice-row" type="button" onClick={() => choose('/app/whatsapp/business')}>
             <span className="choice-row__icon"><Smartphone size={23} /></span>
             <span className="choice-row__copy">
               <strong>Ainda não tenho o WhatsApp Business</strong>
