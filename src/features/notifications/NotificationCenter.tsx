@@ -2,13 +2,11 @@ import { Bell, Check } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useEntitlements } from '../access/useEntitlements'
-import { useAuth } from '../auth/useAuth'
 import { useConversations, useMarkNotificationRead, useNotifications } from '../operations/api'
 import { useWebPush } from './useWebPush'
 
 export function NotificationCenter({backgroundOnly=false}:{backgroundOnly?:boolean}){
   const entitlement=useEntitlements()
-  const businessId=useAuth().membership?.business_id
   const notifications=useNotifications(false)
   const conversations=useConversations('','')
   const markRead=useMarkNotificationRead()
