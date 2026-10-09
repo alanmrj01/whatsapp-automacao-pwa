@@ -1,5 +1,5 @@
 import { StatusBadge, type StatusTone } from '../../components/StatusBadge'
-import type { WhatsAppConnectionStatus } from './types'
+import type { WhatsAppConnectionPendingState, WhatsAppConnectionStatus } from './types'
 
 const statusPresentation: Record<WhatsAppConnectionStatus, { label: string; tone: StatusTone }> = {
   disconnected: { label: 'Não conectado', tone: 'neutral' },
@@ -8,7 +8,15 @@ const statusPresentation: Record<WhatsAppConnectionStatus, { label: string; tone
   error: { label: 'Atenção necessária', tone: 'danger' },
 }
 
-export function ConnectionStatusBadge({ status }: { status: WhatsAppConnectionStatus }) {
-  const presentation = statusPresentation[status]
+export function ConnectionStatusBadge({
+  status,
+  pendingState,
+}: {
+  status: WhatsAppConnectionStatus
+  pendingState?: WhatsAppConnectionPendingState
+}) {
+  const presentation = status==='pending'&&pendingState==='meta_review_pending'
+    ? {label:'Aguardando Meta',tone:'warning' as StatusTone}
+    : statusPresentation[status]
   return <StatusBadge tone={presentation.tone}>{presentation.label}</StatusBadge>
 }

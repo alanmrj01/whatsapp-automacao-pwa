@@ -20,7 +20,7 @@ import {
 } from './embeddedSignup'
 import type { WhatsAppConnection } from './types'
 
-export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}) {
+export function EmbeddedSignupButton({autoStart=false,idleLabel='Continuar com a Meta'}:{autoStart?:boolean;idleLabel?:string} = {}) {
   const {user, membership} = useAuth()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
@@ -216,7 +216,7 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
         ? 'Tentar novamente'
         : phase === 'success'
           ? 'WhatsApp conectado'
-          : 'Continuar com a Meta'
+          : idleLabel
 
   return (
     <div className="embedded-signup-action">
