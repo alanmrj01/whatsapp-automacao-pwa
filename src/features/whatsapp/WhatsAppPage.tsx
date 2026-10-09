@@ -11,6 +11,7 @@ import { useAuth } from '../auth/useAuth'
 import { canConfigureWhatsApp } from '../auth/types'
 import { useConnection, useDisconnectWhatsApp, useSetWhatsAppModePreference } from './useConnection'
 import { connectionModeLabels } from './connectionPresentation'
+import { loadWhatsAppBusinessPreparation } from './businessPreparation'
 import { ConnectWhatsAppSheet } from './ConnectWhatsAppSheet'
 import { ConnectionStatusBadge } from './ConnectionStatusBadge'
 
@@ -39,8 +40,15 @@ export function WhatsAppPage() {
       navigate('/app/whatsapp/exclusivo')
       return
     }
+    if (
+      status === 'disconnected'
+      && loadWhatsAppBusinessPreparation(membership?.business_id)
+    ) {
+      navigate('/app/whatsapp/business?preparar=1')
+      return
+    }
     setIsSheetOpen(true)
-  },[navigate])
+  },[membership?.business_id,navigate])
 
   const status=connection.data?.status??'disconnected'
   const mode=connection.data?.mode??null
@@ -56,6 +64,9 @@ export function WhatsAppPage() {
     status === 'disconnected' || status === 'error' || status === 'pending'
   )
   const canDisconnect = entitlement.isPaid && canConfigure && status==='connected'
+  const savedBusinessPreparation=status==='disconnected'
+    ? loadWhatsAppBusinessPreparation(membership?.business_id)
+    : null
 
   useEffect(()=>{
     if(connection.isPending||connection.isError||!connection.data)return
@@ -168,7 +179,9 @@ export function WhatsAppPage() {
             ? 'Retomar conexão'
             : status==='error'
               ? 'Tentar conectar novamente'
-              : 'Conectar WhatsApp'}
+              : savedBusinessPreparation
+                ? `Continuar preparação · passo ${savedBusinessPreparation.step} de 3`
+                : 'Conectar WhatsApp'}
         </PrimaryButton>}
         {canDisconnect&&<PrimaryButton
           fullWidth
