@@ -6,6 +6,7 @@ import { BusinessSelector } from '../features/auth/BusinessSelector'
 import { UpgradePromptProvider } from '../features/access/UpgradePrompt'
 import { NotificationCenter } from '../features/notifications/NotificationCenter'
 import { useSetupStatus } from '../features/operations/api'
+import { EmbeddedSignupButton } from '../features/whatsapp/EmbeddedSignupButton'
 import { useConnection } from '../features/whatsapp/useConnection'
 
 const titles: Record<string, string> = {
@@ -66,14 +67,35 @@ export function AppShell() {
 function WhatsAppPendingBanner() {
   const setup=useSetupStatus()
   const connection=useConnection()
-  const connected=setup.data?.whatsapp===true||connection.data?.status==='connected'
+  const status=connection.data?.status
+  const mode=connection.data?.mode
+  const pendingState=connection.data?.pending_state
+  const connected=setup.data?.whatsapp===true||status==='connected'
   const pending=setup.data?.onboarding_completed===true&&!connected
+  const awaitingMetaReview=status==='pending'
+    && mode==='coexistence'
+    && pendingState==='meta_review_pending'
+  const canOpenMetaDirectly=(status==='pending'||status==='error')
+    && mode==='coexistence'
+
   if(!pending)return null
-  return <section className="app-pending-banner" role="status">
+
+  if(awaitingMetaReview){
+    return <section className="app-pending-banner">
+      <div role="status">
+        <strong>Aguardando verificação da Meta</strong>
+        <span>A Meta está analisando sua conexão. A análise pode levar até 24 horas; não é necessário conectar novamente agora.</span>
+      </div>
+    </section>
+  }
+
+  return <section className="app-pending-banner">
     <div>
       <strong>Conexão com WhatsApp pendente</strong>
       <span>Você pode visualizar o ALOVIA, mas o atendimento automático pelo WhatsApp ficará indisponível até concluir a conexão.</span>
     </div>
-    <Link className="compact-button" to="/app/whatsapp?continuar=1">Conectar WhatsApp</Link>
+    {canOpenMetaDirectly
+      ? <EmbeddedSignupButton idleLabel="Conectar WhatsApp" />
+      : <Link className="compact-button" to="/app/whatsapp?continuar=1">Conectar WhatsApp</Link>}
   </section>
 }
