@@ -53,14 +53,18 @@ export function WhatsAppPage() {
   const status=connection.data?.status??'disconnected'
   const mode=connection.data?.mode??null
   const reviewStatus=connection.data?.review_status
+  const pendingState=connection.data?.pending_state
   const preferredMode=connection.data?.preferred_mode??null
+  const awaitingMetaReview=status==='pending'
+    && mode==='coexistence'
+    && pendingState==='meta_review_pending'
   const awaitingCoexistence=status==='connected'
     && mode==='api_only'
     && preferredMode==='coexistence'
   // A business review approval is not proof that a number supports coexistence.
   const coexistenceReviewReady=false
   const canConfigure = canConfigureWhatsApp(membership?.role)
-  const canConnect = entitlement.isPaid && canConfigure && !!connection.data && (
+  const canConnect = entitlement.isPaid && canConfigure && !!connection.data && !awaitingMetaReview && (
     status === 'disconnected' || status === 'error' || status === 'pending'
   )
   const canDisconnect = entitlement.isPaid && canConfigure && status==='connected'
@@ -120,14 +124,20 @@ export function WhatsAppPage() {
         </div>
         <span className="eyebrow">Canal principal de atendimento</span>
         <h1>WhatsApp</h1>
-        <ConnectionStatusBadge status={status} />
+        <ConnectionStatusBadge status={status} pendingState={pendingState} />
         <p>
           {status === 'connected' ? 'O número da empresa está conectado e pronto para organizar os atendimentos no ALOVIA.' :
             status === 'pending'
-              ? 'A conexão foi iniciada, mas a Meta ainda não entregou a confirmação final. Você pode sair desta tela e retomar a autorização depois.' :
+              ? awaitingMetaReview
+                ? 'Aguardando verificação da Meta. A análise informada durante a conexão pode levar até 24 horas.'
+                : 'A autorização com a Meta ainda precisa ser concluída. Continue a conexão quando estiver pronto.' :
             status === 'error' ? 'Não foi possível manter a conexão. Revise a autorização e tente novamente quando estiver pronto.' :
             'Conecte o número que será usado pelo ALOVIA para receber pedidos, organizar conversas e gerar agendamentos.'}
         </p>
+        {awaitingMetaReview&&<div className="account-note">
+          <strong>Aguardando verificação da Meta</strong>
+          <span>A Meta está analisando sua conexão. Você não precisa refazer a autorização agora. Assim que a análise for concluída, a Alovia atualizará esta situação automaticamente.</span>
+        </div>}
         {status==='connected'&&<dl className="connection-facts">
           {connection.data.display_phone_number&&<div><dt>Número conectado</dt><dd>{connection.data.display_phone_number}</dd></div>}
           {mode&&<div><dt>Forma de operação</dt><dd>{connectionModeLabels[mode]}</dd></div>}
@@ -176,7 +186,7 @@ export function WhatsAppPage() {
           onClick={() => continueConnection(status,mode)}
         >
           {status==='pending'
-            ? 'Retomar conexão'
+            ? 'Continuar conexão com a Meta'
             : status==='error'
               ? 'Tentar conectar novamente'
               : savedBusinessPreparationStep
