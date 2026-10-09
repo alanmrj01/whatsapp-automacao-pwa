@@ -1,5 +1,6 @@
 import { ArrowRight, CalendarClock, LockKeyhole, MessageCircleMore, Snowflake, Unplug, Wrench } from 'lucide-react'
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PrimaryButton } from '../../components/PrimaryButton'
 import { LoadingState } from '../../components/LoadingState'
 import { ErrorState } from '../../components/ErrorState'
@@ -8,7 +9,7 @@ import { useEntitlements } from '../access/useEntitlements'
 import { useUpgradePrompt } from '../access/upgradePromptContext'
 import { useAuth } from '../auth/useAuth'
 import { canConfigureWhatsApp } from '../auth/types'
-import { useConnection, useDisconnectWhatsApp } from './useConnection'
+import { useConnection, useDisconnectWhatsApp, useSetWhatsAppModePreference } from './useConnection'
 import { connectionModeLabels } from './connectionPresentation'
 import { ConnectWhatsAppSheet } from './ConnectWhatsAppSheet'
 import { ConnectionStatusBadge } from './ConnectionStatusBadge'
@@ -16,6 +17,9 @@ import { ConnectionStatusBadge } from './ConnectionStatusBadge'
 export function WhatsAppPage() {
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [confirmDisconnect,setConfirmDisconnect]=useState(false)
+  const navigate=useNavigate()
+  const [searchParams]=useSearchParams()
+  const smartContinuationHandled=useRef(false)
   const {membership} = useAuth()
   const entitlement = useEntitlements()
   const {openUpgrade} = useUpgradePrompt()
@@ -23,6 +27,53 @@ export function WhatsAppPage() {
   const readOnly = entitlement.isReadOnlyRetained
   const connection = useConnection()
   const disconnect = useDisconnectWhatsApp()
+  const modePreference = useSetWhatsAppModePreference()
+
+
+  const continueConnection = useCallback((status:string, mode:string|null) => {
+    if ((status === 'pending' || status === 'error') && mode === 'coexistence') {
+      navigate('/app/whatsapp/business?auto=1')
+      return
+    }
+    if ((status === 'pending' || status === 'error') && mode === 'api_only') {
+      navigate('/app/whatsapp/exclusivo')
+      return
+    }
+    const preparationStep=searchParams.get('preparacao')
+    if (
+      status === 'disconnected'
+      && (preparationStep==='1'||preparationStep==='2'||preparationStep==='3')
+    ) {
+      navigate(`/app/whatsapp/business?preparar=1&passo=${preparationStep}`)
+      return
+    }
+    setIsSheetOpen(true)
+  },[navigate,searchParams])
+
+  const status=connection.data?.status??'disconnected'
+  const mode=connection.data?.mode??null
+  const reviewStatus=connection.data?.review_status
+  const preferredMode=connection.data?.preferred_mode??null
+  const awaitingCoexistence=status==='connected'
+    && mode==='api_only'
+    && preferredMode==='coexistence'
+  // A business review approval is not proof that a number supports coexistence.
+  const coexistenceReviewReady=false
+  const canConfigure = canConfigureWhatsApp(membership?.role)
+  const canConnect = entitlement.isPaid && canConfigure && !!connection.data && (
+    status === 'disconnected' || status === 'error' || status === 'pending'
+  )
+  const canDisconnect = entitlement.isPaid && canConfigure && status==='connected'
+  const savedBusinessPreparationStep=status==='disconnected'
+    ? searchParams.get('preparacao')
+    : null
+
+  useEffect(()=>{
+    if(connection.isPending||connection.isError||!connection.data)return
+    if(smartContinuationHandled.current||searchParams.get('continuar')!=='1'||!canConnect)return
+    smartContinuationHandled.current=true
+    continueConnection(status,mode)
+  },[canConnect,connection.data,connection.isError,connection.isPending,continueConnection,mode,searchParams,status])
 
   if (demo) {
     return (
@@ -58,12 +109,7 @@ export function WhatsAppPage() {
 
   if (connection.isPending) return <div className="page-stack whatsapp-page"><section className="operational-heading"><div><span className="eyebrow">Canal principal</span><h1>WhatsApp</h1></div></section><LoadingState /></div>
   if (connection.isError) return <div className="page-stack whatsapp-page"><section className="operational-heading"><div><span className="eyebrow">Canal principal</span><h1>WhatsApp</h1></div></section><ErrorState onRetry={()=>void connection.refetch()} /></div>
-  const {status,mode,review_status:reviewStatus} = connection.data
-  const canConfigure = canConfigureWhatsApp(membership?.role)
-  const canConnect = entitlement.isPaid && canConfigure && (
-    status === 'disconnected' || status === 'error' || status === 'pending'
-  )
-  const canDisconnect = entitlement.isPaid && canConfigure && status==='connected'
+  if (!connection.data) return null
 
   return (
     <div className="page-stack whatsapp-page">
@@ -87,9 +133,37 @@ export function WhatsAppPage() {
           {mode&&<div><dt>Forma de operação</dt><dd>{connectionModeLabels[mode]}</dd></div>}
           <div><dt>Situação</dt><dd>Conexão ativa</dd></div>
         </dl>}
-        {reviewStatus==='rejected'&&<div className="account-note">
-          <strong>Revisão da Meta requer atenção</strong>
-          <span>A conexão está registrada na Alovia, mas a Meta informou que a revisão desta conta não foi aprovada. Verifique o painel da Meta antes de alterar ou reconectar o número.</span>
+        {awaitingCoexistence&&<div className="account-note">
+          <strong>{coexistenceReviewReady
+            ? 'Verifique a disponibilidade do uso conjunto'
+            : reviewStatus==='rejected'
+              ? 'Sua preferência está salva'
+              : 'Você já pode usar a Alovia enquanto aguarda'}</strong>
+          <span>{coexistenceReviewReady
+            ? 'A Meta concluiu uma revisão da conta. Sua conexão atual continua ativa até você confirmar a tentativa de uso conjunto com o WhatsApp Business.'
+            : reviewStatus==='rejected'
+              ? 'A revisão mais recente da Meta não foi aprovada. Isso não desliga seu atendimento atual pela Alovia; a preferência por usar também o WhatsApp Business continua registrada.'
+              : 'Seu número continua funcionando exclusivamente pela Alovia. Guardamos sua preferência por usar também o WhatsApp Business. A disponibilidade depende da Meta e não há prazo garantido; nenhuma mudança será feita sem sua confirmação.'}</span>
+          {coexistenceReviewReady&&<PrimaryButton
+            fullWidth
+            icon={<ArrowRight size={19}/>}
+            onClick={()=>navigate('/app/whatsapp/business?troca=1')}
+          >
+            Tentar ativar WhatsApp Business + Alovia
+          </PrimaryButton>}
+          <button
+            className="compact-button"
+            type="button"
+            disabled={modePreference.isPending}
+            onClick={()=>modePreference.mutate(null)}
+          >
+            {modePreference.isPending?'Atualizando…':'Não quero mais mudar agora'}
+          </button>
+          {modePreference.isError&&<p className="form-error" role="alert">Não foi possível atualizar sua preferência. Tente novamente.</p>}
+        </div>}
+        {!awaitingCoexistence&&reviewStatus==='rejected'&&<div className="account-note">
+          <strong>Revisão da Meta não aprovada</strong>
+          <span>Essa revisão é separada da conexão técnica. Se o WhatsApp aparece como conectado, ele continua ativo; não é necessário reconectar apenas por causa deste aviso.</span>
         </div>}
         {readOnly&&<div className="account-note">
           <strong>Dados da conexão preservados</strong>
@@ -99,13 +173,22 @@ export function WhatsAppPage() {
         {canConnect && <PrimaryButton
           fullWidth
           icon={<ArrowRight size={19} />}
-          onClick={() => setIsSheetOpen(true)}
+          onClick={() => continueConnection(status,mode)}
         >
           {status==='pending'
             ? 'Retomar conexão'
             : status==='error'
               ? 'Tentar conectar novamente'
-              : 'Conectar WhatsApp'}
+              : savedBusinessPreparationStep
+                ? `Continuar preparação · passo ${savedBusinessPreparationStep} de 3`
+                : 'Conectar WhatsApp'}
+        </PrimaryButton>}
+        {canDisconnect&&<PrimaryButton
+          fullWidth
+          icon={<ArrowRight size={19}/>}
+          onClick={()=>setIsSheetOpen(true)}
+        >
+          Alterar forma de uso
         </PrimaryButton>}
         {canDisconnect&&!confirmDisconnect&&<button className="danger-outline-button" type="button" onClick={()=>setConfirmDisconnect(true)}><Unplug size={18}/>Desconectar WhatsApp</button>}
         {canDisconnect&&confirmDisconnect&&<div className="disconnect-confirm" role="alert">
@@ -125,7 +208,7 @@ export function WhatsAppPage() {
         </div>
       </section>
 
-      {canConnect && <ConnectWhatsAppSheet open={isSheetOpen} onClose={() => setIsSheetOpen(false)} />}
+      {(canConnect||canDisconnect) && <ConnectWhatsAppSheet open={isSheetOpen} currentMode={canDisconnect?mode:null} onClose={() => setIsSheetOpen(false)} />}
     </div>
   )
 }

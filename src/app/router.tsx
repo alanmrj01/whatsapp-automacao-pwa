@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ReactNode } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
 import { useEntitlements } from '../features/access/useEntitlements'
@@ -53,10 +53,15 @@ function PaidOperationalGuard({children}:{children:ReactNode}) {
 function OnboardingGuard({children}:{children:ReactNode}) {
   const entitlement=useEntitlements()
   const setup=useSetupStatus()
+  const {pathname}=useLocation()
   if(!entitlement.isPaid)return children
   if(setup.isPending)return <div className="route-loading"><LoadingState/></div>
   if(setup.isError)return <div className="route-loading"><ErrorState onRetry={()=>void setup.refetch()}/></div>
-  return setup.data?.onboarding_completed ? children : <Navigate to="/app/onboarding" replace/>
+  const whatsappOnboardingRoute = pathname === '/app/whatsapp/business'
+    || pathname === '/app/whatsapp/exclusivo'
+  return setup.data?.onboarding_completed || whatsappOnboardingRoute
+    ? children
+    : <Navigate to="/app/onboarding" replace/>
 }
 
 export function AppRouter() {

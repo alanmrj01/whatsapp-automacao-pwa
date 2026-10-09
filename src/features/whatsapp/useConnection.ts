@@ -3,7 +3,7 @@ import { queryClient } from '../../app/queryClient'
 import { api } from '../../lib/api'
 import { entitlementsFor } from '../access/entitlements'
 import { useAuth } from '../auth/useAuth'
-import type { WhatsAppConnection } from './types'
+import type { WhatsAppConnection, WhatsAppConnectionMode } from './types'
 
 export function useConnection() {
   const {user,membership} = useAuth()
@@ -30,6 +30,29 @@ export function useDisconnectWhatsApp() {
     onSuccess:async()=> {
       await queryClient.invalidateQueries({queryKey:['whatsapp-connection',user?.id,membership?.business_id]})
       await queryClient.invalidateQueries({queryKey:['operations',membership?.business_id,'setup']})
+    },
+  })
+}
+
+
+export function useSetWhatsAppModePreference() {
+  const {user,membership} = useAuth()
+  return useMutation({
+    mutationFn:(preferredMode:WhatsAppConnectionMode|null)=>api.request<WhatsAppConnection>(
+      '/whatsapp/mode-preference',
+      {
+        method:'POST',
+        body:JSON.stringify({preferred_mode:preferredMode}),
+      },
+    ),
+    onSuccess:async(connection)=> {
+      queryClient.setQueryData(
+        ['whatsapp-connection',user?.id,membership?.business_id],
+        connection,
+      )
+      await queryClient.invalidateQueries({
+        queryKey:['whatsapp-connection',user?.id,membership?.business_id],
+      })
     },
   })
 }

@@ -34,6 +34,7 @@ import type { CatalogItem, Employee, OperationalRole, Service } from '../operati
 import { ConnectWhatsAppSheet } from '../whatsapp/ConnectWhatsAppSheet'
 import { ConnectionStatusBadge } from '../whatsapp/ConnectionStatusBadge'
 import { useConnection } from '../whatsapp/useConnection'
+import { useWebPush } from '../notifications/useWebPush'
 import './onboarding.css'
 
 const TOTAL_STEPS=7
@@ -56,6 +57,7 @@ export function OnboardingPage(){
   const [finished,setFinished]=useState(false)
   const [whatsappDeferred,setWhatsappDeferred]=useState(false)
   const navigate=useNavigate()
+  const webPush=useWebPush()
 
   useEffect(()=>{
     if(setup.data&&!setup.data.onboarding_completed)setStep(stepNumber[setup.data.next_step])
@@ -85,6 +87,12 @@ export function OnboardingPage(){
       <p>{whatsappDeferred
         ? <>As etapas obrigatórias foram concluídas. A conexão com o WhatsApp ficou pendente e continuará destacada no app até você conectar um número.</>
         : <>Sua configuração inicial foi concluída. Você pode alterar qualquer uma dessas informações depois em <strong>Mais</strong>.</>}</p>
+      {webPush.state==='default'&&<section className="account-note">
+        <strong>Ative os alertas importantes</strong>
+        <span>A Alovia avisa quando você precisa intervir em um atendimento, revisar uma pendência de pagamento ou resolver uma ação importante.</span>
+        <button className="compact-button" type="button" disabled={webPush.busy} onClick={()=>void webPush.enable()}>Ativar alertas importantes</button>
+      </section>}
+      {webPush.state==='active'&&<p className="form-success">Alertas importantes estão ativos neste aparelho.</p>}
       <PrimaryButton fullWidth onClick={()=>navigate('/app',{replace:true})}>Entrar no ALOVIA</PrimaryButton>
     </div>
   </OnboardingShell>
