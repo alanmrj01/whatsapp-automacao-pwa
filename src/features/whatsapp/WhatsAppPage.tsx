@@ -39,8 +39,16 @@ export function WhatsAppPage() {
       navigate('/app/whatsapp/exclusivo')
       return
     }
+    const preparationStep=searchParams.get('preparacao')
+    if (
+      status === 'disconnected'
+      && (preparationStep==='1'||preparationStep==='2'||preparationStep==='3')
+    ) {
+      navigate(`/app/whatsapp/business?preparar=1&passo=${preparationStep}`)
+      return
+    }
     setIsSheetOpen(true)
-  },[navigate])
+  },[navigate,searchParams])
 
   const status=connection.data?.status??'disconnected'
   const mode=connection.data?.mode??null
@@ -56,6 +64,9 @@ export function WhatsAppPage() {
     status === 'disconnected' || status === 'error' || status === 'pending'
   )
   const canDisconnect = entitlement.isPaid && canConfigure && status==='connected'
+  const savedBusinessPreparationStep=status==='disconnected'
+    ? searchParams.get('preparacao')
+    : null
 
   useEffect(()=>{
     if(connection.isPending||connection.isError||!connection.data)return
@@ -168,7 +179,9 @@ export function WhatsAppPage() {
             ? 'Retomar conexão'
             : status==='error'
               ? 'Tentar conectar novamente'
-              : 'Conectar WhatsApp'}
+              : savedBusinessPreparationStep
+                ? `Continuar preparação · passo ${savedBusinessPreparationStep} de 3`
+                : 'Conectar WhatsApp'}
         </PrimaryButton>}
         {canDisconnect&&<PrimaryButton
           fullWidth
