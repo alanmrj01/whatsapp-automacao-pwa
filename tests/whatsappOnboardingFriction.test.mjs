@@ -4,6 +4,14 @@ import test from 'node:test'
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 
+test('Meta SDK preparation can recover from a stale failed script', () => {
+  const embedded=read('src/features/whatsapp/embeddedSignup.ts')
+  assert.match(embedded,/connect\.facebook\.net\/en_US\/sdk\.js/)
+  assert.match(embedded,/existing\.remove\(\)/)
+  assert.match(embedded,/script\?\.remove\(\)/)
+  assert.match(embedded,/setInterval/)
+})
+
 test('pending banner continues the WhatsApp action instead of stopping at the status page', () => {
   const shell=read('src/app/AppShell.tsx')
   const whatsapp=read('src/features/whatsapp/WhatsAppPage.tsx')
@@ -34,6 +42,11 @@ test('users without WhatsApp Business receive a backup-first guided migration', 
   assert.match(guide,/proteja suas conversas/i)
   assert.match(guide,/Backup de conversas/)
   assert.match(guide,/mensagens antigas podem ser perdidas/i)
+  assert.match(guide,/Instalar WhatsApp Business/)
+  assert.match(guide,/installStarted\?'Abrir WhatsApp Business':'Instalar WhatsApp Business'/)
+  assert.match(guide,/Use o mesmo número no WhatsApp Business e conclua a ativação\./)
+  assert.match(guide,/Depois volte para a Alovia\./)
+  assert.match(guide,/whatsapp-setup-wizard__notice/)
   assert.match(guide,/play\.google\.com\/store\/apps\/details\?id=com\.whatsapp\.w4b/)
   assert.match(guide,/apps\.apple\.com\/app\/whatsapp-business\/id1386412985/)
   assert.match(guide,/Este número já está funcionando no WhatsApp Business/)
