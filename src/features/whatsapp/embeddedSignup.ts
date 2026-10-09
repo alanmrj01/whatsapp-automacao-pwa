@@ -489,29 +489,68 @@ function optionalNumericMetaId(value: unknown): string | undefined {
   return value === undefined ? undefined : numericMetaId(value) ?? undefined
 }
 
+const FACEBOOK_SDK_ID='facebook-jssdk'
+const FACEBOOK_SDK_URL='https://connect.facebook.net/en_US/sdk.js'
+
 function loadFacebookSdk(runtime: EmbeddedSignupWindow): Promise<FacebookSdk> {
   if (runtime.FB) return Promise.resolve(runtime.FB)
+
   return new Promise((resolve, reject) => {
-    const existing = runtime.document.getElementById('facebook-jssdk') as HTMLScriptElement | null
-    const timeout = runtime.setTimeout(() => reject(new EmbeddedSignupError()), 15_000)
-    const ready = () => {
+    let settled=false
+    let poll:number|null=null
+
+    const cleanup=()=>{
       runtime.clearTimeout(timeout)
-      if (runtime.FB) resolve(runtime.FB)
-      else reject(new EmbeddedSignupError())
+      if(poll!==null){
+        runtime.clearInterval(poll)
+        poll=null
+      }
     }
-    runtime.fbAsyncInit = ready
-    if (existing) {
-      existing.addEventListener('load', ready, {once:true})
-      existing.addEventListener('error', () => reject(new EmbeddedSignupError()), {once:true})
-      return
+
+    const fail=()=>{
+      if(settled)return
+      settled=true
+      cleanup()
+      const script=runtime.document.getElementById(FACEBOOK_SDK_ID)
+      script?.remove()
+      reject(new EmbeddedSignupError())
     }
-    const script = runtime.document.createElement('script')
-    script.id = 'facebook-jssdk'
-    script.async = true
-    script.defer = true
-    script.crossOrigin = 'anonymous'
-    script.src = 'https://connect.facebook.net/pt_BR/sdk.js'
-    script.addEventListener('error', () => reject(new EmbeddedSignupError()), {once:true})
+
+    const ready=()=>{
+      if(settled||!runtime.FB)return false
+      settled=true
+      cleanup()
+      resolve(runtime.FB)
+      return true
+    }
+
+    const timeout=runtime.setTimeout(fail,15_000)
+
+    // A previous failed route can leave an already-loaded script element behind.
+    // Reusing it is unsafe because its load event will not fire again, so a retry
+    // would wait until timeout forever. Remove stale markup and load a fresh SDK.
+    const existing=runtime.document.getElementById(FACEBOOK_SDK_ID)
+    if(existing&&!runtime.FB)existing.remove()
+
+    runtime.fbAsyncInit=()=>{
+      ready()
+    }
+
+    const script=runtime.document.createElement('script')
+    script.id=FACEBOOK_SDK_ID
+    script.async=true
+    script.defer=true
+    script.src=FACEBOOK_SDK_URL
+    script.addEventListener('load',()=>{
+      if(ready())return
+      // Some browsers expose window.FB just after the script load event.
+      if(poll===null){
+        poll=runtime.setInterval(()=>{
+          ready()
+        },50)
+      }
+    },{once:true})
+    script.addEventListener('error',fail,{once:true})
     runtime.document.head.appendChild(script)
   })
 }
