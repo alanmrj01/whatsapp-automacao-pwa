@@ -11,7 +11,6 @@ import { useAuth } from '../auth/useAuth'
 import { canConfigureWhatsApp } from '../auth/types'
 import { useConnection, useDisconnectWhatsApp, useSetWhatsAppModePreference } from './useConnection'
 import { connectionModeLabels } from './connectionPresentation'
-import { loadWhatsAppBusinessPreparation } from './businessPreparation'
 import { ConnectWhatsAppSheet } from './ConnectWhatsAppSheet'
 import { ConnectionStatusBadge } from './ConnectionStatusBadge'
 
@@ -40,15 +39,16 @@ export function WhatsAppPage() {
       navigate('/app/whatsapp/exclusivo')
       return
     }
+    const preparationStep=searchParams.get('preparacao')
     if (
       status === 'disconnected'
-      && loadWhatsAppBusinessPreparation(membership?.business_id)
+      && (preparationStep==='1'||preparationStep==='2'||preparationStep==='3')
     ) {
-      navigate('/app/whatsapp/business?preparar=1')
+      navigate(`/app/whatsapp/business?preparar=1&passo=${preparationStep}`)
       return
     }
     setIsSheetOpen(true)
-  },[membership?.business_id,navigate])
+  },[navigate,searchParams])
 
   const status=connection.data?.status??'disconnected'
   const mode=connection.data?.mode??null
@@ -64,8 +64,8 @@ export function WhatsAppPage() {
     status === 'disconnected' || status === 'error' || status === 'pending'
   )
   const canDisconnect = entitlement.isPaid && canConfigure && status==='connected'
-  const savedBusinessPreparation=status==='disconnected'
-    ? loadWhatsAppBusinessPreparation(membership?.business_id)
+  const savedBusinessPreparationStep=status==='disconnected'
+    ? searchParams.get('preparacao')
     : null
 
   useEffect(()=>{
@@ -179,8 +179,8 @@ export function WhatsAppPage() {
             ? 'Retomar conexão'
             : status==='error'
               ? 'Tentar conectar novamente'
-              : savedBusinessPreparation
-                ? `Continuar preparação · passo ${savedBusinessPreparation.step} de 3`
+              : savedBusinessPreparationStep
+                ? `Continuar preparação · passo ${savedBusinessPreparationStep} de 3`
                 : 'Conectar WhatsApp'}
         </PrimaryButton>}
         {canDisconnect&&<PrimaryButton
