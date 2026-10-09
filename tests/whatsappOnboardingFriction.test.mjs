@@ -12,20 +12,23 @@ test('Meta SDK preparation can recover from a stale failed script', () => {
   assert.match(embedded,/setInterval/)
 })
 
-test('pending banner continues the WhatsApp action instead of stopping at the status page', () => {
+test('pending banner launches Meta directly and review waiting has no reconnect CTA', () => {
   const shell=read('src/app/AppShell.tsx')
   const whatsapp=read('src/features/whatsapp/WhatsAppPage.tsx')
-  const coexistence=read('src/features/whatsapp/CoexistenceInfoPage.tsx')
   const embedded=read('src/features/whatsapp/EmbeddedSignupButton.tsx')
+  const types=read('src/features/whatsapp/types.ts')
+  assert.match(shell,/EmbeddedSignupButton idleLabel="Conectar WhatsApp"/)
+  assert.match(shell,/pendingState==='meta_review_pending'/)
+  assert.match(shell,/Aguardando verificação da Meta/)
+  assert.match(shell,/não é necessário conectar novamente agora/)
   assert.match(shell,/whatsapp\?continuar=1/)
-  assert.match(whatsapp,/continueConnection/)
-  assert.match(whatsapp,/business\?auto=1/)
-  assert.match(coexistence,/autoStart=\{searchParams\.get\('auto'\)==='1'\}/)
-  assert.match(embedded,/autoStart=false/)
-  assert.match(embedded,/setAutoReady\(true\)/)
-  assert.match(embedded,/Conexão preparada\. Toque abaixo para abrir a autorização da Meta\./)
+  assert.match(whatsapp,/awaitingMetaReview/)
+  assert.match(whatsapp,/!awaitingMetaReview/)
+  assert.match(whatsapp,/Aguardando verificação da Meta/)
+  assert.match(whatsapp,/Continuar conexão com a Meta/)
+  assert.match(embedded,/idleLabel='Continuar com a Meta'/)
+  assert.match(types,/meta_review_pending/)
 })
-
 test('connection choice starts with desired experience and only then asks about WhatsApp Business', () => {
   const sheet=read('src/features/whatsapp/ConnectWhatsAppSheet.tsx')
   assert.match(sheet,/Como você quer usar a Alovia com este número\?/)
