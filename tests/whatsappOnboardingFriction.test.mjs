@@ -4,6 +4,14 @@ import test from 'node:test'
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 
+test('Meta SDK preparation can recover from a stale failed script', () => {
+  const embedded=read('src/features/whatsapp/embeddedSignup.ts')
+  assert.match(embedded,/connect\.facebook\.net\/en_US\/sdk\.js/)
+  assert.match(embedded,/existing\.remove\(\)/)
+  assert.match(embedded,/script\?\.remove\(\)/)
+  assert.match(embedded,/setInterval/)
+})
+
 test('pending banner continues the WhatsApp action instead of stopping at the status page', () => {
   const shell=read('src/app/AppShell.tsx')
   const whatsapp=read('src/features/whatsapp/WhatsAppPage.tsx')
