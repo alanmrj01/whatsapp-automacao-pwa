@@ -1,5 +1,5 @@
 import { ArrowRight } from 'lucide-react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BottomSheet } from '../../components/BottomSheet'
@@ -19,10 +19,12 @@ type ReengagementPromptData = {
 export function ReengagementPrompt(){
   const {user,membership}=useAuth()
   const navigate=useNavigate()
+  const queryClient=useQueryClient()
   const [closed,setClosed]=useState(false)
   const allowedRole=membership?.role==='owner'||membership?.role==='admin'
+  const queryKey=['reengagement-prompt',user?.id,membership?.business_id] as const
   const prompt=useQuery({
-    queryKey:['reengagement-prompt',user?.id,membership?.business_id],
+    queryKey,
     queryFn:()=>api.request<ReengagementPromptData|null>(
       '/reengagement/claim',
       {method:'POST',body:'{}'},
@@ -43,11 +45,13 @@ export function ReengagementPrompt(){
   const close=()=>{
     if(!data)return
     setClosed(true)
+    queryClient.setQueryData(queryKey,null)
     interaction.mutate({id:data.id,action:'dismiss'})
   }
   const act=()=>{
     if(!data)return
     setClosed(true)
+    queryClient.setQueryData(queryKey,null)
     interaction.mutate({id:data.id,action:'cta'})
     navigate(safeTarget(data.cta_path))
   }
