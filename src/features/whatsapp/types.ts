@@ -1,9 +1,9 @@
 export type WhatsAppConnectionStatus = 'disconnected' | 'pending' | 'connected' | 'error'
 export type WhatsAppConnectionMode = 'coexistence' | 'api_only'
-export type WhatsAppConnectionPendingState = 'authorization_pending' | 'meta_review_pending'
+export type WhatsAppConnectionPendingState = 'authorization_pending' | 'meta_review_pending' | 'meta_review_rejected'
 export type WhatsAppMetaReviewStatus = 'approved' | 'rejected'
-export type WhatsAppConnectionJourneyState = 'not_started' | 'authorization_pending' | 'meta_review_pending' | 'connected' | 'error'
-export type WhatsAppConnectionNextAction = 'choose_mode' | 'continue_authorization' | 'wait_for_meta_review' | 'resolve_connection' | 'none'
+export type WhatsAppConnectionJourneyState = 'not_started' | 'authorization_pending' | 'meta_review_pending' | 'meta_review_rejected' | 'connected' | 'error'
+export type WhatsAppConnectionNextAction = 'choose_mode' | 'continue_authorization' | 'wait_for_meta_review' | 'review_meta_rejection' | 'resolve_connection' | 'none'
 
 export type WhatsAppConnection = {
   status: WhatsAppConnectionStatus
