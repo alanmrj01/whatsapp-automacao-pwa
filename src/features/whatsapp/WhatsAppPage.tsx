@@ -11,6 +11,7 @@ import { useAuth } from '../auth/useAuth'
 import { canConfigureWhatsApp } from '../auth/types'
 import { useConnection, useDisconnectWhatsApp, useSetWhatsAppModePreference } from './useConnection'
 import { connectionModeLabels } from './connectionPresentation'
+import { deriveConnectionJourney } from './connectionJourney'
 import { ConnectWhatsAppSheet } from './ConnectWhatsAppSheet'
 import { ConnectionStatusBadge } from './ConnectionStatusBadge'
 
@@ -30,18 +31,25 @@ export function WhatsAppPage() {
   const modePreference = useSetWhatsAppModePreference()
 
 
-  const continueConnection = useCallback((status:string, mode:string|null) => {
-    if ((status === 'pending' || status === 'error') && mode === 'coexistence') {
+  const continueConnection = useCallback((
+    status:string,
+    mode:string|null,
+    nextAction:'choose_mode'|'continue_authorization'|'wait_for_meta_review'|'resolve_connection'|'none',
+  ) => {
+    if (nextAction === 'wait_for_meta_review' || nextAction === 'none') return
+    const directProviderStep = nextAction === 'continue_authorization' || nextAction === 'resolve_connection'
+    if (directProviderStep && mode === 'coexistence') {
       navigate('/app/whatsapp/business?auto=1')
       return
     }
-    if ((status === 'pending' || status === 'error') && mode === 'api_only') {
+    if (directProviderStep && mode === 'api_only') {
       navigate('/app/whatsapp/exclusivo')
       return
     }
     const preparationStep=searchParams.get('preparacao')
     if (
-      status === 'disconnected'
+      nextAction === 'choose_mode'
+      && status === 'disconnected'
       && (preparationStep==='1'||preparationStep==='2'||preparationStep==='3')
     ) {
       navigate(`/app/whatsapp/business?preparar=1&passo=${preparationStep}`)
@@ -52,8 +60,8 @@ export function WhatsAppPage() {
 
   const status=connection.data?.status??'disconnected'
   const mode=connection.data?.mode??null
-  const pendingState=connection.data?.pending_state
-  const metaReviewPending=status==='pending'&&pendingState==='meta_review_pending'
+  const journey=deriveConnectionJourney(connection.data)
+  const metaReviewPending=journey.state==='meta_review_pending'
   const reviewStatus=connection.data?.review_status
   const preferredMode=connection.data?.preferred_mode??null
   const awaitingCoexistence=status==='connected'
@@ -62,7 +70,7 @@ export function WhatsAppPage() {
   // A business review approval is not proof that a number supports coexistence.
   const coexistenceReviewReady=false
   const canConfigure = canConfigureWhatsApp(membership?.role)
-  const canConnect = entitlement.isPaid && canConfigure && !!connection.data && !metaReviewPending && (
+  const canConnect = entitlement.isPaid && canConfigure && !!connection.data && journey.requiresUserAction && (
     status === 'disconnected' || status === 'error' || status === 'pending'
   )
   const canDisconnect = entitlement.isPaid && canConfigure && status==='connected'
@@ -74,8 +82,8 @@ export function WhatsAppPage() {
     if(connection.isPending||connection.isError||!connection.data)return
     if(smartContinuationHandled.current||searchParams.get('continuar')!=='1'||!canConnect)return
     smartContinuationHandled.current=true
-    continueConnection(status,mode)
-  },[canConnect,connection.data,connection.isError,connection.isPending,continueConnection,mode,searchParams,status])
+    continueConnection(status,mode,journey.nextAction)
+  },[canConnect,connection.data,connection.isError,connection.isPending,continueConnection,journey.nextAction,mode,searchParams,status])
 
   if (demo) {
     return (
@@ -125,23 +133,21 @@ export function WhatsAppPage() {
         {metaReviewPending
           ? <StatusBadge tone="warning">Aguardando verificação da Meta</StatusBadge>
           : <ConnectionStatusBadge status={status} />}
-        <p>
-          {status === 'connected' ? 'O número da empresa está conectado e pronto para organizar os atendimentos no ALOVIA.' :
-            status === 'pending'
-              ? metaReviewPending
-                ? 'A Meta está verificando sua conta. Você não precisa refazer a conexão agora. O ALOVIA continuará acompanhando o status e atualizará esta tela quando a análise for concluída.'
-                : 'A conexão foi iniciada, mas a autorização da Meta ainda não foi concluída. Continue de onde parou para finalizar a conexão.' :
-            status === 'error' ? 'Não foi possível manter a conexão. Revise a autorização e tente novamente quando estiver pronto.' :
-            'Conecte o número que será usado pelo ALOVIA para receber pedidos, organizar conversas e gerar agendamentos.'}
-        </p>
+        <p>{journey.message}</p>
         {status==='connected'&&<dl className="connection-facts">
           {connection.data.display_phone_number&&<div><dt>Número conectado</dt><dd>{connection.data.display_phone_number}</dd></div>}
           {mode&&<div><dt>Forma de operação</dt><dd>{connectionModeLabels[mode]}</dd></div>}
           <div><dt>Situação</dt><dd>Conexão ativa</dd></div>
         </dl>}
-        {metaReviewPending&&<div className="account-note">
-          <strong>Aguardando verificação da Meta</strong>
-          <span>A solicitação já foi enviada. Enquanto a Meta analisa a conta, não é necessário abrir uma nova conexão nem repetir as etapas.</span>
+        {status!=='connected'&&<div className="account-note">
+          <strong>{journey.title}</strong>
+          <span>{metaReviewPending
+            ? 'Sua ação agora: nenhuma. A solicitação já foi enviada. Não abra uma nova conexão nem repita as etapas enquanto a Meta analisa a conta.'
+            : journey.nextAction==='choose_mode'
+              ? 'Sua ação agora: escolha como quer usar este número. A Alovia conduz as etapas seguintes e abre a Meta no momento certo.'
+              : journey.nextAction==='resolve_connection'
+                ? 'Sua ação agora: toque em “Resolver conexão”. A Alovia levará você ao ponto certo para tentar novamente.'
+                : 'Sua ação agora: continue a autorização oficial da Meta. Ao retornar, a Alovia valida o resultado automaticamente.'}</span>
         </div>}
         {awaitingCoexistence&&<div className="account-note">
           <strong>{coexistenceReviewReady
@@ -183,15 +189,11 @@ export function WhatsAppPage() {
         {canConnect && <PrimaryButton
           fullWidth
           icon={<ArrowRight size={19} />}
-          onClick={() => continueConnection(status,mode)}
+          onClick={() => continueConnection(status,mode,journey.nextAction)}
         >
-          {status==='pending'
-            ? 'Retomar conexão'
-            : status==='error'
-              ? 'Tentar conectar novamente'
-              : savedBusinessPreparationStep
-                ? `Continuar preparação · passo ${savedBusinessPreparationStep} de 3`
-                : 'Conectar WhatsApp'}
+          {savedBusinessPreparationStep&&journey.nextAction==='choose_mode'
+            ? `Continuar preparação · passo ${savedBusinessPreparationStep} de 3`
+            : journey.ctaLabel??'Continuar'}
         </PrimaryButton>}
         {canDisconnect&&<PrimaryButton
           fullWidth
