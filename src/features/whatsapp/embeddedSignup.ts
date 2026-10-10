@@ -269,6 +269,7 @@ function openEmbeddedSignup(
 
     const loginOptions = {
         config_id: configuration.configuration_id,
+        auth_type: 'rerequest',
         response_type: 'code',
         override_default_response_type: true,
         extras: {
