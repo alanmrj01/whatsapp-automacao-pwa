@@ -34,9 +34,13 @@ export function WhatsAppPage() {
   const continueConnection = useCallback((
     status:string,
     mode:string|null,
-    nextAction:'choose_mode'|'continue_authorization'|'wait_for_meta_review'|'resolve_connection'|'none',
+    nextAction:'choose_mode'|'continue_authorization'|'wait_for_meta_review'|'review_meta_rejection'|'resolve_connection'|'none',
   ) => {
-    if (nextAction === 'wait_for_meta_review' || nextAction === 'none') return
+    if (
+      nextAction === 'wait_for_meta_review'
+      || nextAction === 'review_meta_rejection'
+      || nextAction === 'none'
+    ) return
     const directProviderStep = nextAction === 'continue_authorization' || nextAction === 'resolve_connection'
     if (directProviderStep && mode === 'coexistence') {
       navigate('/app/whatsapp/business?auto=1')
@@ -62,6 +66,7 @@ export function WhatsAppPage() {
   const mode=connection.data?.mode??null
   const journey=deriveConnectionJourney(connection.data)
   const metaReviewPending=journey.state==='meta_review_pending'
+  const metaReviewRejected=journey.state==='meta_review_rejected'
   const reviewStatus=connection.data?.review_status
   const preferredMode=connection.data?.preferred_mode??null
   const awaitingCoexistence=status==='connected'
@@ -70,7 +75,10 @@ export function WhatsAppPage() {
   // A business review approval is not proof that a number supports coexistence.
   const coexistenceReviewReady=false
   const canConfigure = canConfigureWhatsApp(membership?.role)
-  const canConnect = entitlement.isPaid && canConfigure && !!connection.data && journey.requiresUserAction && (
+  const canConnect = entitlement.isPaid && canConfigure && !!connection.data
+    && journey.requiresUserAction
+    && journey.nextAction!=='review_meta_rejection'
+    && (
     status === 'disconnected' || status === 'error' || status === 'pending'
   )
   const canDisconnect = entitlement.isPaid && canConfigure && status==='connected'
@@ -143,11 +151,13 @@ export function WhatsAppPage() {
           <strong>{journey.title}</strong>
           <span>{metaReviewPending
             ? 'Sua ação agora: nenhuma. A solicitação já foi enviada. Não abra uma nova conexão nem repita as etapas enquanto a Meta analisa a conta.'
-            : journey.nextAction==='choose_mode'
-              ? 'Sua ação agora: escolha como quer usar este número. A Alovia conduz as etapas seguintes e abre a Meta no momento certo.'
-              : journey.nextAction==='resolve_connection'
-                ? 'Sua ação agora: toque em “Resolver conexão”. A Alovia levará você ao ponto certo para tentar novamente.'
-                : 'Sua ação agora: continue a autorização oficial da Meta. Ao retornar, a Alovia valida o resultado automaticamente.'}</span>
+            : metaReviewRejected
+              ? 'Sua ação agora: não reconecte ainda. Revise os dados da empresa e da conta na Meta. Depois de corrigir a pendência indicada pela Meta, volte ao Alovia para uma nova tentativa.'
+              : journey.nextAction==='choose_mode'
+                ? 'Sua ação agora: escolha como quer usar este número. A Alovia conduz as etapas seguintes e abre a Meta no momento certo.'
+                : journey.nextAction==='resolve_connection'
+                  ? 'Sua ação agora: toque em “Resolver conexão”. A Alovia levará você ao ponto certo para tentar novamente.'
+                  : 'Sua ação agora: continue a autorização oficial da Meta. Ao retornar, a Alovia valida o resultado automaticamente.'}</span>
         </div>}
         {awaitingCoexistence&&<div className="account-note">
           <strong>{coexistenceReviewReady
