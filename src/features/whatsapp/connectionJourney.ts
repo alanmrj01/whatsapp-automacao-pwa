@@ -17,15 +17,23 @@ function fallbackState(connection?: WhatsAppConnection | null): WhatsAppConnecti
   if (!connection || connection.status === 'disconnected') return 'not_started'
   if (connection.status === 'connected') return 'connected'
   if (connection.status === 'error') return 'error'
+  if (
+    connection.status === 'pending'
+    && connection.mode === 'coexistence'
+    && connection.review_status === 'rejected'
+  ) return 'meta_review_rejected'
   return connection.pending_state === 'meta_review_pending'
     ? 'meta_review_pending'
-    : 'authorization_pending'
+    : connection.pending_state === 'meta_review_rejected'
+      ? 'meta_review_rejected'
+      : 'authorization_pending'
 }
 
 function fallbackAction(state: WhatsAppConnectionJourneyState): WhatsAppConnectionNextAction {
   if (state === 'not_started') return 'choose_mode'
   if (state === 'authorization_pending') return 'continue_authorization'
   if (state === 'meta_review_pending') return 'wait_for_meta_review'
+  if (state === 'meta_review_rejected') return 'review_meta_rejection'
   if (state === 'error') return 'resolve_connection'
   return 'none'
 }
@@ -44,6 +52,11 @@ const copy: Record<WhatsAppConnectionJourneyState, Pick<WhatsAppConnectionJourne
   meta_review_pending: {
     title: 'Aguardando verificação da Meta',
     message: 'Sua parte está concluída. A solicitação já foi enviada e a Meta está analisando a conta. Não refaça a conexão; a Alovia acompanha o status e atualizará esta etapa quando houver mudança.',
+  },
+  meta_review_rejected: {
+    title: 'A Meta não aprovou a verificação',
+    message: 'A análise foi encerrada sem aprovação. Não refaça a conexão agora. Revise os dados da empresa e da conta na Meta antes de uma nova tentativa; a Alovia mantém este estado visível para você não perder o ponto em que parou.',
+    ctaLabel: 'Ver orientação',
   },
   error: {
     title: 'Vamos resolver a conexão',
