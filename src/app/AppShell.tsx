@@ -62,6 +62,7 @@ export function AppShell() {
         <BottomNavigation />
       </div>
     </div>
+    <ReengagementPrompt />
     </UpgradePromptProvider>
   )
 }
