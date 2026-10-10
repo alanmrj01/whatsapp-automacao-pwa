@@ -26,6 +26,19 @@ test('pending banner continues the WhatsApp action instead of stopping at the st
   assert.match(embedded,/Conexão preparada\. Toque abaixo para abrir a autorização da Meta\./)
 })
 
+test('Meta review pending state does not ask the user to reconnect', () => {
+  const shell=read('src/app/AppShell.tsx')
+  const whatsapp=read('src/features/whatsapp/WhatsAppPage.tsx')
+  const types=read('src/features/whatsapp/types.ts')
+  assert.match(types,/meta_review_pending/)
+  assert.match(shell,/Aguardando verificação da Meta/)
+  assert.match(shell,/EmbeddedSignupButton/)
+  assert.match(shell,/metaReviewPending/)
+  assert.match(whatsapp,/Aguardando verificação da Meta/)
+  assert.match(whatsapp,/!metaReviewPending/)
+  assert.match(whatsapp,/não é necessário abrir uma nova conexão nem repetir as etapas/i)
+})
+
 test('connection choice starts with desired experience and only then asks about WhatsApp Business', () => {
   const sheet=read('src/features/whatsapp/ConnectWhatsAppSheet.tsx')
   assert.match(sheet,/Como você quer usar a Alovia com este número\?/)
