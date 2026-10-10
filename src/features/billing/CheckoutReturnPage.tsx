@@ -44,7 +44,7 @@ export function CheckoutReturnPage() {
             // entitlement transition. Fresh free accounts sync once so the new
             // commercial subscription is reflected before entering the app.
             if (membership?.access_mode !== 'paid') await syncSession()
-            if (!cancelled) navigate('/app',{replace:true})
+            if (!cancelled) navigate('/app/onboarding',{replace:true})
           } catch {
             finalizing.current = false
             if (!cancelled) timer = window.setTimeout(check,1200)

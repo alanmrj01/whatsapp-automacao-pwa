@@ -5,8 +5,11 @@ import { DesktopSidebar } from '../components/DesktopSidebar'
 import { BusinessSelector } from '../features/auth/BusinessSelector'
 import { UpgradePromptProvider } from '../features/access/UpgradePrompt'
 import { NotificationCenter } from '../features/notifications/NotificationCenter'
+import { ReengagementPrompt } from '../features/notifications/ReengagementPrompt'
 import { useSetupStatus } from '../features/operations/api'
 import { useConnection } from '../features/whatsapp/useConnection'
+import { EmbeddedSignupButton } from '../features/whatsapp/EmbeddedSignupButton'
+import { deriveConnectionJourney } from '../features/whatsapp/connectionJourney'
 
 const titles: Record<string, string> = {
   '/app': 'Início',
@@ -39,6 +42,7 @@ export function AppShell() {
           <NotificationCenter backgroundOnly />
           <WhatsAppPendingBanner />
           <Outlet />
+          <ReengagementPrompt />
         </div>
       </UpgradePromptProvider>
     )
@@ -58,6 +62,7 @@ export function AppShell() {
         <BottomNavigation />
       </div>
     </div>
+    <ReengagementPrompt />
     </UpgradePromptProvider>
   )
 }
@@ -66,14 +71,38 @@ export function AppShell() {
 function WhatsAppPendingBanner() {
   const setup=useSetupStatus()
   const connection=useConnection()
-  const connected=setup.data?.whatsapp===true||connection.data?.status==='connected'
+  const status=connection.data?.status
+  const mode=connection.data?.mode
+  const journey=deriveConnectionJourney(connection.data)
+  const connected=setup.data?.whatsapp===true||status==='connected'
   const pending=setup.data?.onboarding_completed===true&&!connected
   if(!pending)return null
+
+  if(journey.state==='meta_review_pending'){
+    return <section className="app-pending-banner" role="status">
+      <div>
+        <strong>{journey.title}</strong>
+        <span>{journey.message}</span>
+        <span><b>Sua ação agora:</b> nenhuma. Você pode continuar usando o Alovia enquanto a Meta conclui a análise.</span>
+      </div>
+    </section>
+  }
+
+  const directMetaAction=journey.nextAction==='continue_authorization'||journey.nextAction==='resolve_connection'
+
   return <section className="app-pending-banner" role="status">
     <div>
-      <strong>Conexão com WhatsApp pendente</strong>
-      <span>Você pode visualizar o ALOVIA, mas o atendimento automático pelo WhatsApp ficará indisponível até concluir a conexão.</span>
+      <strong>{journey.title}</strong>
+      <span>{journey.message}</span>
     </div>
-    <Link className="compact-button" to="/app/whatsapp?continuar=1">Conectar WhatsApp</Link>
+    {journey.nextAction==='review_meta_rejection'
+      ? <Link className="compact-button" to="/app/whatsapp">Ver orientação</Link>
+      : journey.requiresUserAction&&directMetaAction&&mode==='coexistence'
+        ? <EmbeddedSignupButton />
+        : journey.requiresUserAction&&directMetaAction&&mode==='api_only'
+          ? <Link className="compact-button" to="/app/whatsapp/exclusivo">Continuar conexão</Link>
+          : journey.requiresUserAction
+            ? <Link className="compact-button" to="/app/whatsapp?continuar=1">{journey.ctaLabel??'Continuar'}</Link>
+            : null}
   </section>
 }
