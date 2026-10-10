@@ -45,6 +45,21 @@ test('Meta review pending state is passive, explicit and never asks for reconnec
   assert.match(onboarding,/Não reconecte o número/)
 })
 
+test('rejected Meta review stays explicit and never restarts authorization automatically', () => {
+  const journey=read('src/features/whatsapp/connectionJourney.ts')
+  const shell=read('src/app/AppShell.tsx')
+  const whatsapp=read('src/features/whatsapp/WhatsAppPage.tsx')
+  const onboarding=read('src/features/onboarding/OnboardingPage.tsx')
+  assert.match(journey,/meta_review_rejected/)
+  assert.match(journey,/A Meta não aprovou a verificação/)
+  assert.match(journey,/review_meta_rejection/)
+  assert.match(shell,/to="\/app\/whatsapp">Ver orientação/)
+  assert.match(whatsapp,/não reconecte ainda/i)
+  assert.match(whatsapp,/journey\.nextAction!=='review_meta_rejection'/)
+  assert.match(onboarding,/A análise foi encerrada sem aprovação/)
+  assert.match(onboarding,/Entrar no ALOVIA e revisar depois/)
+})
+
 test('assisted journey always exposes whether the user must act, wait or is done', () => {
   const journey=read('src/features/whatsapp/connectionJourney.ts')
   const shell=read('src/app/AppShell.tsx')
