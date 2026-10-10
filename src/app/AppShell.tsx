@@ -92,12 +92,14 @@ function WhatsAppPendingBanner() {
       <strong>{journey.title}</strong>
       <span>{journey.message}</span>
     </div>
-    {journey.requiresUserAction&&directMetaAction&&mode==='coexistence'
-      ? <EmbeddedSignupButton />
-      : journey.requiresUserAction&&directMetaAction&&mode==='api_only'
-        ? <Link className="compact-button" to="/app/whatsapp/exclusivo">Continuar conexão</Link>
-        : journey.requiresUserAction
-          ? <Link className="compact-button" to="/app/whatsapp?continuar=1">{journey.ctaLabel??'Continuar'}</Link>
-          : null}
+    {journey.nextAction==='review_meta_rejection'
+      ? <Link className="compact-button" to="/app/whatsapp">Ver orientação</Link>
+      : journey.requiresUserAction&&directMetaAction&&mode==='coexistence'
+        ? <EmbeddedSignupButton />
+        : journey.requiresUserAction&&directMetaAction&&mode==='api_only'
+          ? <Link className="compact-button" to="/app/whatsapp/exclusivo">Continuar conexão</Link>
+          : journey.requiresUserAction
+            ? <Link className="compact-button" to="/app/whatsapp?continuar=1">{journey.ctaLabel??'Continuar'}</Link>
+            : null}
   </section>
 }
