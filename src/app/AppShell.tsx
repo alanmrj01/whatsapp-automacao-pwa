@@ -5,6 +5,7 @@ import { DesktopSidebar } from '../components/DesktopSidebar'
 import { BusinessSelector } from '../features/auth/BusinessSelector'
 import { UpgradePromptProvider } from '../features/access/UpgradePrompt'
 import { NotificationCenter } from '../features/notifications/NotificationCenter'
+import { ReengagementPrompt } from '../features/notifications/ReengagementPrompt'
 import { useSetupStatus } from '../features/operations/api'
 import { useConnection } from '../features/whatsapp/useConnection'
 import { EmbeddedSignupButton } from '../features/whatsapp/EmbeddedSignupButton'
@@ -41,6 +42,7 @@ export function AppShell() {
           <NotificationCenter backgroundOnly />
           <WhatsAppPendingBanner />
           <Outlet />
+          <ReengagementPrompt />
         </div>
       </UpgradePromptProvider>
     )
