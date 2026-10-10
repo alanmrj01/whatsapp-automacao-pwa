@@ -7,6 +7,7 @@ import { UpgradePromptProvider } from '../features/access/UpgradePrompt'
 import { NotificationCenter } from '../features/notifications/NotificationCenter'
 import { useSetupStatus } from '../features/operations/api'
 import { useConnection } from '../features/whatsapp/useConnection'
+import { EmbeddedSignupButton } from '../features/whatsapp/EmbeddedSignupButton'
 
 const titles: Record<string, string> = {
   '/app': 'Início',
@@ -66,14 +67,30 @@ export function AppShell() {
 function WhatsAppPendingBanner() {
   const setup=useSetupStatus()
   const connection=useConnection()
-  const connected=setup.data?.whatsapp===true||connection.data?.status==='connected'
+  const status=connection.data?.status
+  const mode=connection.data?.mode
+  const pendingState=connection.data?.pending_state
+  const metaReviewPending=status==='pending'&&pendingState==='meta_review_pending'
+  const connected=setup.data?.whatsapp===true||status==='connected'
   const pending=setup.data?.onboarding_completed===true&&!connected
   if(!pending)return null
+
+  if(metaReviewPending){
+    return <section className="app-pending-banner" role="status">
+      <div>
+        <strong>Aguardando verificação da Meta</strong>
+        <span>A conexão já foi enviada para análise. Você não precisa iniciar novamente enquanto a Meta conclui a verificação.</span>
+      </div>
+    </section>
+  }
+
   return <section className="app-pending-banner" role="status">
     <div>
       <strong>Conexão com WhatsApp pendente</strong>
       <span>Você pode visualizar o ALOVIA, mas o atendimento automático pelo WhatsApp ficará indisponível até concluir a conexão.</span>
     </div>
-    <Link className="compact-button" to="/app/whatsapp?continuar=1">Conectar WhatsApp</Link>
+    {status==='pending'&&mode==='coexistence'
+      ? <EmbeddedSignupButton />
+      : <Link className="compact-button" to="/app/whatsapp?continuar=1">Conectar WhatsApp</Link>}
   </section>
 }
