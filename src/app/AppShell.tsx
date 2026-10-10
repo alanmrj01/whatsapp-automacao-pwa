@@ -8,6 +8,7 @@ import { NotificationCenter } from '../features/notifications/NotificationCenter
 import { useSetupStatus } from '../features/operations/api'
 import { useConnection } from '../features/whatsapp/useConnection'
 import { EmbeddedSignupButton } from '../features/whatsapp/EmbeddedSignupButton'
+import { deriveConnectionJourney } from '../features/whatsapp/connectionJourney'
 
 const titles: Record<string, string> = {
   '/app': 'Início',
@@ -69,28 +70,34 @@ function WhatsAppPendingBanner() {
   const connection=useConnection()
   const status=connection.data?.status
   const mode=connection.data?.mode
-  const pendingState=connection.data?.pending_state
-  const metaReviewPending=status==='pending'&&pendingState==='meta_review_pending'
+  const journey=deriveConnectionJourney(connection.data)
   const connected=setup.data?.whatsapp===true||status==='connected'
   const pending=setup.data?.onboarding_completed===true&&!connected
   if(!pending)return null
 
-  if(metaReviewPending){
+  if(journey.state==='meta_review_pending'){
     return <section className="app-pending-banner" role="status">
       <div>
-        <strong>Aguardando verificação da Meta</strong>
-        <span>A conexão já foi enviada para análise. Você não precisa iniciar novamente enquanto a Meta conclui a verificação.</span>
+        <strong>{journey.title}</strong>
+        <span>{journey.message}</span>
+        <span><b>Sua ação agora:</b> nenhuma. Você pode continuar usando o Alovia enquanto a Meta conclui a análise.</span>
       </div>
     </section>
   }
 
+  const directMetaAction=journey.nextAction==='continue_authorization'||journey.nextAction==='resolve_connection'
+
   return <section className="app-pending-banner" role="status">
     <div>
-      <strong>Conexão com WhatsApp pendente</strong>
-      <span>Você pode visualizar o ALOVIA, mas o atendimento automático pelo WhatsApp ficará indisponível até concluir a conexão.</span>
+      <strong>{journey.title}</strong>
+      <span>{journey.message}</span>
     </div>
-    {status==='pending'&&mode==='coexistence'
+    {journey.requiresUserAction&&directMetaAction&&mode==='coexistence'
       ? <EmbeddedSignupButton />
-      : <Link className="compact-button" to="/app/whatsapp?continuar=1">Conectar WhatsApp</Link>}
+      : journey.requiresUserAction&&directMetaAction&&mode==='api_only'
+        ? <Link className="compact-button" to="/app/whatsapp/exclusivo">Continuar conexão</Link>
+        : journey.requiresUserAction
+          ? <Link className="compact-button" to="/app/whatsapp?continuar=1">{journey.ctaLabel??'Continuar'}</Link>
+          : null}
   </section>
 }
