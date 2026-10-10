@@ -667,6 +667,7 @@ function WhatsAppStep({onBack,onFinished}:{onBack:()=>void;onFinished:(deferred:
   const displayedStatus=connected?'connected':connection.data?.status??'disconnected'
   const journey=deriveConnectionJourney(connection.data)
   const metaReviewPending=journey.state==='meta_review_pending'
+  const metaReviewRejected=journey.state==='meta_review_rejected'
 
   const finalize=async(deferred:boolean)=>{
     const result=await complete.mutateAsync()
@@ -685,7 +686,7 @@ function WhatsAppStep({onBack,onFinished}:{onBack:()=>void;onFinished:(deferred:
       navigate('/app/whatsapp/exclusivo?from=onboarding')
       return
     }
-    if(journey.requiresUserAction)setOpen(true)
+    if(journey.requiresUserAction&&journey.nextAction!=='review_meta_rejection')setOpen(true)
   }
 
   return <StepCard number={7} title="Conectar WhatsApp" description="Última etapa. A Alovia acompanha a conexão do início ao fim e sempre mostra se você precisa agir, aguardar a Meta ou se o número já está pronto.">
@@ -703,18 +704,24 @@ function WhatsAppStep({onBack,onFinished}:{onBack:()=>void;onFinished:(deferred:
         <span>{journey.message}</span>
         <span><b>Sua ação agora:</b> {metaReviewPending
           ? 'nenhuma. Você pode seguir usando o Alovia enquanto a Meta conclui a análise.'
-          : journey.nextAction==='choose_mode'
-            ? 'escolher como este número será usado.'
-            : journey.nextAction==='resolve_connection'
-              ? 'resolver a pendência pelo caminho indicado abaixo.'
-              : 'concluir a autorização oficial da Meta.'}</span>
+          : metaReviewRejected
+            ? 'não reconectar ainda. Revise os dados da empresa e da conta na Meta; depois de corrigir a pendência indicada por ela, volte ao Alovia.'
+            : journey.nextAction==='choose_mode'
+              ? 'escolher como este número será usado.'
+              : journey.nextAction==='resolve_connection'
+                ? 'resolver a pendência pelo caminho indicado abaixo.'
+                : 'concluir a autorização oficial da Meta.'}</span>
       </div>}
-      {!connected&&journey.requiresUserAction&&<PrimaryButton fullWidth icon={<ArrowRight size={18}/>} onClick={continueWhatsApp}>{journey.ctaLabel??'Continuar'}</PrimaryButton>}
+      {!connected&&journey.requiresUserAction&&journey.nextAction!=='review_meta_rejection'&&<PrimaryButton fullWidth icon={<ArrowRight size={18}/>} onClick={continueWhatsApp}>{journey.ctaLabel??'Continuar'}</PrimaryButton>}
       {connected&&<p className="form-success">WhatsApp conectado. Sua configuração inicial está pronta para ser finalizada.</p>}
     </div>}
-    {!connected&&!metaReviewPending&&<div className="onboarding-whatsapp-defer">
+    {!connected&&!metaReviewPending&&!metaReviewRejected&&<div className="onboarding-whatsapp-defer">
       <strong>Não tem um número disponível agora?</strong>
       <span>Você pode entrar no ALOVIA e conectar o WhatsApp depois. A pendência continuará destacada no app e sempre indicará o próximo passo.</span>
+    </div>}
+    {metaReviewRejected&&<div className="onboarding-whatsapp-defer">
+      <strong>A análise foi encerrada sem aprovação</strong>
+      <span>Não repita a conexão agora. Revise primeiro a pendência indicada pela Meta. O Alovia manterá este aviso visível e você poderá voltar à conexão depois da correção.</span>
     </div>}
     {metaReviewPending&&<div className="onboarding-whatsapp-defer">
       <strong>Sua parte já foi concluída</strong>
@@ -727,7 +734,9 @@ function WhatsAppStep({onBack,onFinished}:{onBack:()=>void;onFinished:(deferred:
         ? <button className="primary-button" type="button" disabled={complete.isPending} onClick={()=>void finalize(false)}>{complete.isPending?'Finalizando…':'Finalizar configuração'}<ArrowRight size={17}/></button>
         : metaReviewPending
           ? <button className="primary-button" type="button" disabled={complete.isPending} onClick={()=>void finalize(true)}>{complete.isPending?'Finalizando…':'Entrar no ALOVIA enquanto a Meta analisa'}<ArrowRight size={17}/></button>
-          : <button className="defer-whatsapp-button" type="button" disabled={complete.isPending} onClick={()=>void finalize(true)}>{complete.isPending?'Finalizando…':'Conectar WhatsApp depois'}<ArrowRight size={17}/></button>}
+          : metaReviewRejected
+            ? <button className="primary-button" type="button" disabled={complete.isPending} onClick={()=>void finalize(true)}>{complete.isPending?'Finalizando…':'Entrar no ALOVIA e revisar depois'}<ArrowRight size={17}/></button>
+            : <button className="defer-whatsapp-button" type="button" disabled={complete.isPending} onClick={()=>void finalize(true)}>{complete.isPending?'Finalizando…':'Conectar WhatsApp depois'}<ArrowRight size={17}/></button>}
     </div>
     <ConnectWhatsAppSheet open={open} onClose={()=>{setOpen(false);void connection.refetch()}}/>
   </StepCard>
