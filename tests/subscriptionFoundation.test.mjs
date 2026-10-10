@@ -103,6 +103,7 @@ test('checkout confirmation does not auto-reload or bounce through auth loading'
   const main = read('src/main.tsx')
 
   assert.match(checkoutReturn,/syncSession/)
+  assert.match(checkoutReturn,/navigate\('\/app\/onboarding',\{replace:true\}\)/)
   assert.doesNotMatch(checkoutReturn,/await reconnect\(\)/)
   assert.match(authProvider,/const syncSession = useCallback/)
   assert.match(authProvider,/api\.request<SessionUser>\('\/me'\)/)
