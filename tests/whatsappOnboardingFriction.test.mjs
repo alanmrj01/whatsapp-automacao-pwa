@@ -67,21 +67,18 @@ test('redirect authorization remains correlated to one server attempt', () => {
   assert.doesNotMatch(button,/embedded-signup\/incomplete/)
 })
 
-test('Meta login stays inside the original user gesture on every browser', () => {
+test('Meta coexistence uses one full-page redirect on mobile and web', () => {
   const button=read('src/features/whatsapp/EmbeddedSignupButton.tsx')
-  assert.match(button,/start:\s*\(\)\s*=>/)
-  assert.doesNotMatch(button,/start:\s*async/)
-  assert.match(button,/const attemptPromise=api\.request/)
-  assert.match(button,/const providerPromise=launchMetaEmbeddedSignup/)
-  const launchStart=button.indexOf('launch: (signupConfiguration) => {')
-  const providerCall=button.indexOf('const providerPromise=launchMetaEmbeddedSignup', launchStart)
-  assert.notEqual(launchStart, -1)
-  assert.notEqual(providerCall, -1)
-  assert.equal(button.slice(launchStart, providerCall).includes('await '), false)
-  assert.match(button,/Promise\.all\(\[attemptPromise, providerPromise\]\)/)
-  assert.match(button,/pendingObservationsRef/)
-  assert.match(button,/pendingAssetsRef/)
-  assert.match(button,/keepalive:true/)
+  assert.match(button,/window\.location\.origin/)
+  assert.match(button,/\/app\/whatsapp\/business/)
+  assert.match(button,/embedded-signup\/redirect\/start/)
+  assert.match(button,/window\.location\.assign\(redirect\.authorization_url\)/)
+  assert.match(button,/searchParams\.get\('code'\)/)
+  assert.match(button,/searchParams\.get\('state'\)/)
+  assert.match(button,/cleanMetaCallbackUrl/)
+  assert.doesNotMatch(button,/navigator\.userAgent/)
+  assert.doesNotMatch(button,/matchMedia/)
+  assert.doesNotMatch(button,/launchMetaEmbeddedSignup/)
 })
 
 test('server validation is passive and does not ask the user to reopen Meta', () => {
