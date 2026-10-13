@@ -2,6 +2,7 @@ export type WhatsAppConnectionStatus = 'disconnected' | 'pending' | 'connected' 
 export type WhatsAppConnectionMode = 'coexistence' | 'api_only'
 export type WhatsAppConnectionPendingState = 'authorization_pending' | 'meta_review_pending' | 'meta_review_rejected'
 export type WhatsAppMetaReviewStatus = 'approved' | 'rejected'
+export type WhatsAppConnectionErrorReason = 'authorization_incomplete' | 'onboarding_expired' | 'provider_rejected' | 'provider_unavailable' | 'onboarding_failed'
 export type WhatsAppConnectionJourneyState = 'not_started' | 'authorization_pending' | 'meta_review_pending' | 'meta_review_rejected' | 'validating_connection' | 'connected' | 'error'
 export type WhatsAppConnectionNextAction = 'choose_mode' | 'continue_authorization' | 'wait_for_meta_review' | 'review_meta_rejection' | 'wait_for_completion' | 'resolve_connection' | 'none'
 
@@ -9,7 +10,7 @@ export type WhatsAppConnection = {
   status: WhatsAppConnectionStatus
   mode: WhatsAppConnectionMode | null
   display_phone_number?: string
-  error_reason?: 'authorization_incomplete' | 'onboarding_expired' | 'provider_rejected' | 'provider_unavailable' | 'onboarding_failed'
+  error_reason?: WhatsAppConnectionErrorReason
   onboarding_attempt_id?: string
   onboarding_attempt_state?: 'created' | 'provider_opened' | 'awaiting_provider' | 'code_received' | 'assets_received' | 'completing' | 'connected' | 'authorization_incomplete' | 'cancelled' | 'failed' | 'expired' | 'superseded'
   onboarding_last_stage?: string
