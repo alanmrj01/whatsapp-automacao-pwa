@@ -13,12 +13,18 @@ export function useConnection() {
     queryFn:({signal})=>api.request<WhatsAppConnection>('/whatsapp/connection',{signal}),
     enabled:!!membership && canRead,
     retry:false,
-    staleTime:30_000,
+    staleTime:10_000,
     gcTime:5*60_000,
-    refetchOnWindowFocus:true,
+    // Returning from Meta must consult the server even when the cached
+    // pending state is still fresh. Pending onboarding is short-lived and
+    // deserves tighter reconciliation than normal operational reads.
+    refetchOnMount:'always',
+    refetchOnWindowFocus:'always',
+    refetchOnReconnect:'always',
     refetchInterval: query => (
-      query.state.data?.status === 'pending' ? 15_000 : false
+      query.state.data?.status === 'pending' ? 3_000 : false
     ),
+    refetchIntervalInBackground:true,
   })
 }
 

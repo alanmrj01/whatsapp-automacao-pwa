@@ -26,6 +26,19 @@ test('pending banner continues the WhatsApp action instead of stopping at the st
   assert.match(embedded,/Conexão preparada\. Toque abaixo para abrir a autorização da Meta\./)
 })
 
+test('backend connected state immediately overrides stale local signup state', () => {
+  const embedded=read('src/features/whatsapp/EmbeddedSignupButton.tsx')
+  const connection=read('src/features/whatsapp/useConnection.ts')
+  assert.match(embedded,/const liveConnection=useConnection\(\)/)
+  assert.match(embedded,/liveConnection\.data\?\.status === 'connected'/)
+  assert.match(embedded,/promoteConnected\(liveConnection\.data\)/)
+  assert.match(embedded,/serverConnectedRef\.current=true/)
+  assert.match(embedded,/serverConnectedRef\.current && nextPhase !== 'success'/)
+  assert.match(connection,/refetchOnWindowFocus:'always'/)
+  assert.match(connection,/refetchOnReconnect:'always'/)
+  assert.match(connection,/status === 'pending' \? 3_000 : false/)
+})
+
 test('Meta review pending state is passive, explicit and never asks for reconnection', () => {
   const shell=read('src/app/AppShell.tsx')
   const whatsapp=read('src/features/whatsapp/WhatsAppPage.tsx')

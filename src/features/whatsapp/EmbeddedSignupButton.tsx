@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ExternalLink, RotateCw, ShieldCheck } from 'lucide-react'
@@ -19,6 +19,7 @@ import {
   type EmbeddedSignupPhase,
 } from './embeddedSignup'
 import type { WhatsAppConnection } from './types'
+import { useConnection } from './useConnection'
 
 export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}) {
   const {user, membership} = useAuth()
@@ -32,6 +33,8 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
   const [resumeAvailable, setResumeAvailable] = useState(false)
   const [failedAttempts,setFailedAttempts]=useState(0)
   const [autoReady,setAutoReady] = useState(false)
+  const serverConnectedRef=useRef(false)
+  const liveConnection=useConnection()
   const queryKey = useMemo(
     () => ['whatsapp-connection', user?.id, membership?.business_id],
     [user?.id, membership?.business_id],
@@ -84,6 +87,17 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
     }).catch(() => {})
   }, [])
 
+  const promoteConnected = useCallback((connection: WhatsAppConnection) => {
+    if (connection.status !== 'connected') return
+    serverConnectedRef.current=true
+    setConnected(connection)
+    setResumeAvailable(false)
+    setMessage(null)
+    setFailedAttempts(0)
+    setPhase('success')
+    queryClient.setQueryData(queryKey, connection)
+  }, [queryClient, queryKey])
+
   const reconcileConnection = useCallback(async () => {
     try {
       const connection = await queryClient.fetchQuery({
@@ -91,16 +105,20 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
         queryFn: () => api.request<WhatsAppConnection>('/whatsapp/connection'),
         staleTime: 0,
       })
-      if (connection.status === 'connected') {
-        setConnected(connection)
-        setResumeAvailable(false)
-        setMessage(null)
-        setPhase('success')
-      }
+      promoteConnected(connection)
     } catch {
       // Resume remains available; connection checks must not abort onboarding.
     }
-  }, [queryClient, queryKey])
+  }, [promoteConnected, queryClient, queryKey])
+
+  // The server is authoritative. Meta can finish successfully while the
+  // browser is still unwinding popup/session callbacks; as soon as the
+  // shared connection query observes CONNECTED, the local signup UI follows.
+  useEffect(() => {
+    if (liveConnection.data?.status === 'connected') {
+      promoteConnected(liveConnection.data)
+    }
+  }, [liveConnection.data, promoteConnected])
 
   useEffect(() => {
     if (!allowed || !configuration.data || !configurationKey) return
@@ -167,6 +185,7 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
       {method:'POST', body:JSON.stringify(result)},
     ),
     onPhase: (nextPhase, error) => {
+      if (serverConnectedRef.current && nextPhase !== 'success') return
       setPhase(nextPhase)
       setMessage(error?.message ?? null)
       if (nextPhase === 'error' || nextPhase === 'success') setResumeAvailable(false)
@@ -176,6 +195,7 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
       if (nextPhase === 'success') setFailedAttempts(0)
     },
     onConnected: async (connection: WhatsAppConnection) => {
+      serverConnectedRef.current=true
       setConnected(connection)
       setResumeAvailable(false)
       queryClient.setQueryData(queryKey, connection)
@@ -202,21 +222,21 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
   const busy = phase === 'opening' || phase === 'processing'
   const preparing = configuration.isPending
     || (!!configuration.data && !sdkReady && !sdkFailed)
-  const buttonLabel = preparing
-    ? 'Preparando conexão…'
-    : configuration.isError || sdkFailed
-      ? 'Tentar preparar novamente'
-      : phase === 'waiting'
-        ? 'Retomar validação'
-      : phase === 'opening'
-    ? 'Abrindo a Meta…'
-    : phase === 'processing'
-      ? 'Validando conexão…'
-      : phase === 'error'
-        ? 'Tentar novamente'
-        : phase === 'success'
-          ? 'WhatsApp conectado'
-          : 'Continuar com a Meta'
+  const buttonLabel = phase === 'success'
+    ? 'WhatsApp conectado'
+    : preparing
+      ? 'Preparando conexão…'
+      : configuration.isError || sdkFailed
+        ? 'Tentar preparar novamente'
+        : phase === 'waiting'
+          ? 'Retomar validação'
+        : phase === 'opening'
+          ? 'Abrindo a Meta…'
+          : phase === 'processing'
+            ? 'Validando conexão…'
+            : phase === 'error'
+              ? 'Tentar novamente'
+              : 'Continuar com a Meta'
 
   return (
     <div className="embedded-signup-action">
