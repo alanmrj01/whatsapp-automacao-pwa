@@ -140,7 +140,7 @@ export function WhatsAppPage() {
         <h1>WhatsApp</h1>
         {metaReviewPending
           ? <StatusBadge tone="warning">Aguardando verificação da Meta</StatusBadge>
-          : <ConnectionStatusBadge status={status} />}
+          : <ConnectionStatusBadge status={status} errorReason={connection.data.error_reason} />}
         <p>{journey.message}</p>
         {status==='connected'&&<dl className="connection-facts">
           {connection.data.display_phone_number&&<div><dt>Número conectado</dt><dd>{connection.data.display_phone_number}</dd></div>}
