@@ -19,6 +19,7 @@ type EmbeddedSignupHooks = {
   attemptKey?: string
   onObservation?: (observation: EmbeddedSignupObservation) => void
   onResumeRequired?: () => void
+  onAuthorizationIncomplete?: () => void
   onAssetsObserved?: (assets: {waba_id:string; phone_number_id?:string}) => void
 }
 
@@ -78,6 +79,13 @@ export class EmbeddedSignupCancelledError extends Error {
   }
 }
 
+export class EmbeddedSignupAuthorizationIncompleteError extends Error {
+  constructor() {
+    super('A autorização da Meta não foi concluída. Tente novamente.')
+    this.name = 'EmbeddedSignupAuthorizationIncompleteError'
+  }
+}
+
 export class EmbeddedSignupError extends Error {
   constructor() {
     super('Não foi possível concluir a conexão. Tente novamente.')
@@ -126,6 +134,7 @@ function openEmbeddedSignup(
     let popupWindow: Window | null = null
     let popupPoll: number | null = null
     let codeOnlyFallbackTimer: number | null = null
+    let incompleteAuthorizationTimer: number | null = null
 
     const observe = (
       stage: EmbeddedSignupObservation['stage'],
@@ -143,6 +152,12 @@ function openEmbeddedSignup(
         codeOnlyFallbackTimer = null
       }
     }
+    const stopIncompleteAuthorization = () => {
+      if (incompleteAuthorizationTimer !== null) {
+        runtime.clearTimeout(incompleteAuthorizationTimer)
+        incompleteAuthorizationTimer = null
+      }
+    }
     const stopPopupWatch = () => {
       if (popupPoll !== null) {
         runtime.clearInterval(popupPoll)
@@ -158,6 +173,7 @@ function openEmbeddedSignup(
       runtime.document.removeEventListener?.('visibilitychange', visibilityListener)
       stopPopupWatch()
       stopCodeFallback()
+      stopIncompleteAuthorization()
       if (activeAttempt?.resume === resumeLogin) activeAttempt = null
     }
     const finish = (error?: Error) => {
@@ -197,8 +213,29 @@ function openEmbeddedSignup(
         }, 1_500)
       }
     }
+    const scheduleIncompleteAuthorization = () => {
+      if (
+        settled
+        || loginInProgress
+        || !returnedToApp
+        || !emptyCallbackReceived
+        || authorizationCode
+        || incompleteAuthorizationTimer !== null
+      ) return
+      incompleteAuthorizationTimer = runtime.setTimeout(() => {
+        incompleteAuthorizationTimer = null
+        if (settled || authorizationCode || !emptyCallbackReceived) return
+        try {
+          hooks.onAuthorizationIncomplete?.()
+        } catch {
+          // Persisting the recoverable failure state must not mask the UX error.
+        }
+        finish(new EmbeddedSignupAuthorizationIncompleteError())
+      }, 2_000)
+    }
     const notifyResume = () => {
       if (settled || loginInProgress || resumeNotified || !returnedToApp) return
+      scheduleIncompleteAuthorization()
       resumeNotified = true
       hooks.onResumeRequired?.()
     }
@@ -307,6 +344,8 @@ function openEmbeddedSignup(
     const requestLogin = (resume: boolean) => {
       if (settled || loginInProgress) return false
       loginInProgress = true
+      emptyCallbackReceived = false
+      stopIncompleteAuthorization()
       const generation = ++loginGeneration
       resumeNotified = false
       returnedToApp = false
@@ -448,6 +487,7 @@ export function createEmbeddedSignupRunner(dependencies: {
     }
     inFlight = execute().catch((error: unknown) => {
       const safeError = error instanceof EmbeddedSignupCancelledError
+        || error instanceof EmbeddedSignupAuthorizationIncompleteError
         ? error
         : new EmbeddedSignupError()
       dependencies.onPhase('error', safeError)
