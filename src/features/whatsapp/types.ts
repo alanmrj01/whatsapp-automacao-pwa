@@ -9,7 +9,12 @@ export type WhatsAppConnection = {
   status: WhatsAppConnectionStatus
   mode: WhatsAppConnectionMode | null
   display_phone_number?: string
-  error_reason?: 'authorization_incomplete'
+  error_reason?: 'authorization_incomplete' | 'onboarding_expired' | 'provider_rejected' | 'provider_unavailable' | 'onboarding_failed'
+  onboarding_attempt_id?: string
+  onboarding_attempt_state?: 'created' | 'provider_opened' | 'awaiting_provider' | 'code_received' | 'assets_received' | 'completing' | 'connected' | 'authorization_incomplete' | 'cancelled' | 'failed' | 'expired' | 'superseded'
+  onboarding_last_stage?: string
+  onboarding_last_event_at?: string
+  onboarding_expires_at?: string
   pending_state?: WhatsAppConnectionPendingState
   review_status?: WhatsAppMetaReviewStatus
   preferred_mode?: WhatsAppConnectionMode
