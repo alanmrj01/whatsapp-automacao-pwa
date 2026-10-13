@@ -34,6 +34,7 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
   const [failedAttempts,setFailedAttempts]=useState(0)
   const [autoReady,setAutoReady] = useState(false)
   const serverConnectedRef=useRef(false)
+  const serverAttemptIdRef=useRef<string | null>(null)
   const liveConnection=useConnection()
   const queryKey = useMemo(
     () => ['whatsapp-connection', user?.id, membership?.business_id],
@@ -68,6 +69,7 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
 
   const reportObservation = useCallback((observation: EmbeddedSignupObservation) => {
     const payload = {
+      ...(serverAttemptIdRef.current ? {attempt_id:serverAttemptIdRef.current} : {}),
       stage: observation.stage,
       ...(observation.authorization_code_received === undefined ? {} : {
         authorization_code_received: observation.authorization_code_received,
@@ -83,19 +85,47 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
       }),
     }
     void api.request<void>('/whatsapp/onboarding/embedded-signup/telemetry', {
-      method:'POST', body:JSON.stringify(payload),
+      method:'POST', body:JSON.stringify(payload), keepalive:true,
     }).catch(() => {})
   }, [])
 
-  const promoteConnected = useCallback((connection: WhatsAppConnection) => {
-    if (connection.status !== 'connected') return
-    serverConnectedRef.current=true
-    setConnected(connection)
-    setResumeAvailable(false)
-    setMessage(null)
-    setFailedAttempts(0)
-    setPhase('success')
+  const applyServerConnection = useCallback((connection: WhatsAppConnection) => {
+    if (connection.onboarding_attempt_id) {
+      serverAttemptIdRef.current=connection.onboarding_attempt_id
+    }
     queryClient.setQueryData(queryKey, connection)
+    if (connection.status === 'connected') {
+      serverConnectedRef.current=true
+      if (connection.onboarding_attempt_id) {
+        serverAttemptIdRef.current=connection.onboarding_attempt_id
+      }
+      setConnected(connection)
+      setResumeAvailable(false)
+      setMessage(null)
+      setFailedAttempts(0)
+      setPhase('success')
+      return
+    }
+    if (connection.status === 'error') {
+      setResumeAvailable(false)
+      setPhase('error')
+      setMessage(
+        connection.error_reason === 'authorization_incomplete'
+          ? 'A autorização da Meta não foi concluída. Tente novamente.'
+          : connection.error_reason === 'onboarding_expired'
+            ? 'A tentativa expirou antes da conclusão. Inicie uma nova conexão.'
+            : 'A conexão não foi concluída. Tente novamente.',
+      )
+      return
+    }
+    if (
+      connection.status === 'pending'
+      && connection.next_action === 'wait_for_completion'
+    ) {
+      setResumeAvailable(false)
+      setMessage(null)
+      setPhase('processing')
+    }
   }, [queryClient, queryKey])
 
   const reconcileConnection = useCallback(async () => {
@@ -105,20 +135,20 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
         queryFn: () => api.request<WhatsAppConnection>('/whatsapp/connection'),
         staleTime: 0,
       })
-      promoteConnected(connection)
+      applyServerConnection(connection)
     } catch {
       // Resume remains available; connection checks must not abort onboarding.
     }
-  }, [promoteConnected, queryClient, queryKey])
+  }, [applyServerConnection, queryClient, queryKey])
 
   // The server is authoritative. Meta can finish successfully while the
   // browser is still unwinding popup/session callbacks; as soon as the
   // shared connection query observes CONNECTED, the local signup UI follows.
   useEffect(() => {
-    if (liveConnection.data?.status === 'connected') {
-      promoteConnected(liveConnection.data)
+    if (liveConnection.data) {
+      applyServerConnection(liveConnection.data)
     }
-  }, [liveConnection.data, promoteConnected])
+  }, [applyServerConnection, liveConnection.data])
 
   useEffect(() => {
     if (!allowed || !configuration.data || !configurationKey) return
@@ -155,9 +185,17 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
       if (!configuration.data || !sdkReady) throw new Error('Meta unavailable')
       const pending = await api.request<WhatsAppConnection>(
         '/whatsapp/onboarding/embedded-signup/attempt',
-        {method:'POST', body:'{}'},
+        {
+          method:'POST',
+          body:'{}',
+          headers:{'Idempotency-Key':crypto.randomUUID()},
+        },
       )
-      queryClient.setQueryData(queryKey, pending)
+      if (!pending.onboarding_attempt_id) {
+        throw new Error('Onboarding attempt unavailable')
+      }
+      serverAttemptIdRef.current=pending.onboarding_attempt_id
+      applyServerConnection(pending)
       return configuration.data
     },
     launch: (signupConfiguration) => launchMetaEmbeddedSignup(
@@ -173,29 +211,50 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
           void reconcileConnection()
         },
         onAuthorizationIncomplete: () => {
+          const attemptId=serverAttemptIdRef.current
+          if (!attemptId) {
+            void reconcileConnection()
+            return
+          }
           void api.request<WhatsAppConnection>(
             '/whatsapp/onboarding/embedded-signup/incomplete',
-            {method:'POST', body:'{}'},
+            {
+              method:'POST',
+              body:JSON.stringify({attempt_id:attemptId}),
+              keepalive:true,
+            },
           ).then((connection) => {
-            queryClient.setQueryData(queryKey, connection)
-            setResumeAvailable(false)
+            applyServerConnection(connection)
           }).catch(() => {
             // The local flow still surfaces the incomplete authorization.
             // A later connection refetch can reconcile the server state.
           })
         },
         onAssetsObserved: (assets) => {
+          const attemptId=serverAttemptIdRef.current
+          if (!attemptId) return
           void api.request<void>(
             '/whatsapp/onboarding/embedded-signup/assets',
-            {method:'POST', body:JSON.stringify(assets)},
+            {
+              method:'POST',
+              body:JSON.stringify({attempt_id:attemptId,...assets}),
+              keepalive:true,
+            },
           ).catch(() => {})
         },
       },
     ),
-    complete: (result: EmbeddedSignupResult) => api.request<WhatsAppConnection>(
-      '/whatsapp/onboarding/embedded-signup/complete',
-      {method:'POST', body:JSON.stringify(result)},
-    ),
+    complete: (result: EmbeddedSignupResult) => {
+      const attemptId=serverAttemptIdRef.current
+      if (!attemptId) return Promise.reject(new Error('Onboarding attempt unavailable'))
+      return api.request<WhatsAppConnection>(
+        '/whatsapp/onboarding/embedded-signup/complete',
+        {
+          method:'POST',
+          body:JSON.stringify({attempt_id:attemptId,...result}),
+        },
+      )
+    },
     onPhase: (nextPhase, error) => {
       if (serverConnectedRef.current && nextPhase !== 'success') return
       setPhase(nextPhase)
@@ -214,7 +273,7 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
       await queryClient.invalidateQueries({queryKey, refetchType:'none'})
     },
     onObservation: reportObservation,
-  }), [attemptKey, configuration.data, queryClient, queryKey, reconcileConnection, reportObservation, sdkReady])
+  }), [applyServerConnection, attemptKey, configuration.data, queryClient, queryKey, reconcileConnection, reportObservation, sdkReady])
 
   // Meta's login dialog requires a user gesture on many browsers.
   // Preparing automatically is safe; opening the popup is explicitly confirmed.
