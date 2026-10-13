@@ -4,6 +4,7 @@ import {
   cancelMetaEmbeddedSignup,
   canStartEmbeddedSignup,
   createEmbeddedSignupRunner,
+  EmbeddedSignupAuthorizationIncompleteError,
   EmbeddedSignupCancelledError,
   EmbeddedSignupError,
   launchMetaEmbeddedSignup,
@@ -290,6 +291,38 @@ test('callback vazio no mobile/PWA não cancela enquanto o fluxo Meta continua',
     authorization_code:'mobile-code',
     waba_id:'333333333333333',
   })
+})
+
+test('callback final vazio encerra a tentativa como autorização incompleta', async () => {
+  let incompleteTimer
+  let incompleteCalls = 0
+  let timerId = 0
+  const clock = {
+    setTimeout(fn, delay) {
+      timerId += 1
+      if (delay === 2_000) incompleteTimer = fn
+      return timerId
+    },
+    clearTimeout() {},
+    setInterval() { return 1 },
+    clearInterval() {},
+  }
+  const runtime = runtimeFor(({runtime, callback}) => {
+    runtime.setVisibility('hidden')
+    callback({})
+    runtime.setVisibility('visible')
+  }, {clock})
+
+  const pending = launchMetaEmbeddedSignup(configuration, runtime, {
+    onAuthorizationIncomplete: () => { incompleteCalls += 1 },
+  })
+  await new Promise(resolve => setImmediate(resolve))
+
+  assert.equal(typeof incompleteTimer, 'function')
+  incompleteTimer()
+
+  await assert.rejects(pending, EmbeddedSignupAuthorizationIncompleteError)
+  assert.equal(incompleteCalls, 1)
 })
 
 test('visibility hidden -> visible preserva e retoma a mesma tentativa', async () => {
