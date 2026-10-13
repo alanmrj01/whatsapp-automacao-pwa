@@ -27,8 +27,16 @@ const META_CALLBACK_QUERY_KEYS = [
   'error_description',
 ] as const
 
-function redirectReturnKey(businessId: string | undefined) {
-  return `alovia-meta-coexistence-return:${businessId ?? 'unknown'}`
+function returnToOnboardingFromValidatedState(state: string) {
+  try {
+    const encoded=state.split('.', 1)[0]
+    const normalized=encoded.replace(/-/g, '+').replace(/_/g, '/')
+    const padded=normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=')
+    const payload=JSON.parse(window.atob(padded)) as {return_to_onboarding?:unknown}
+    return payload.return_to_onboarding === true
+  } catch {
+    return false
+  }
 }
 
 function cleanMetaCallbackUrl(returnToOnboarding: boolean) {
@@ -140,14 +148,9 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
     if (!hasMetaCallback) return
 
     callbackHandledRef.current=true
-    const storageKey=redirectReturnKey(membership.business_id)
-    const storedReturn=sessionStorage.getItem(storageKey)==='onboarding'
-    const shouldReturnToOnboarding=fromOnboarding || storedReturn
-    setReturnToOnboarding(shouldReturnToOnboarding)
-    cleanMetaCallbackUrl(shouldReturnToOnboarding)
+    cleanMetaCallbackUrl(false)
 
     if (providerError || !authorizationCode || !state) {
-      sessionStorage.removeItem(storageKey)
       setPhase('error')
       setMessage('A autorização da Meta não foi concluída. Tente novamente.')
       setFailedAttempts(value=>value+1)
@@ -166,13 +169,12 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
         }),
       },
     ).then((connection) => {
+      setReturnToOnboarding(returnToOnboardingFromValidatedState(state))
       applyServerConnection(connection)
     }).catch(() => {
       setPhase('error')
       setMessage('Não foi possível validar a autorização da Meta. Tente novamente.')
       setFailedAttempts(value=>value+1)
-    }).finally(() => {
-      sessionStorage.removeItem(storageKey)
     })
   }, [
     applyServerConnection,
@@ -187,10 +189,6 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
     setAutoReady(false)
     setPhase('opening')
     setMessage(null)
-
-    const storageKey=redirectReturnKey(membership?.business_id)
-    if (fromOnboarding) sessionStorage.setItem(storageKey, 'onboarding')
-    else sessionStorage.removeItem(storageKey)
 
     try {
       const pending=await api.request<WhatsAppConnection>(
@@ -216,6 +214,7 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
           body:JSON.stringify({
             attempt_id:pending.onboarding_attempt_id,
             redirect_uri:redirectUri,
+            return_to_onboarding:fromOnboarding,
           }),
         },
       )
