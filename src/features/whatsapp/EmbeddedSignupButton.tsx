@@ -172,6 +172,18 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
           setResumeAvailable(true)
           void reconcileConnection()
         },
+        onAuthorizationIncomplete: () => {
+          void api.request<WhatsAppConnection>(
+            '/whatsapp/onboarding/embedded-signup/incomplete',
+            {method:'POST', body:'{}'},
+          ).then((connection) => {
+            queryClient.setQueryData(queryKey, connection)
+            setResumeAvailable(false)
+          }).catch(() => {
+            // The local flow still surfaces the incomplete authorization.
+            // A later connection refetch can reconcile the server state.
+          })
+        },
         onAssetsObserved: (assets) => {
           void api.request<void>(
             '/whatsapp/onboarding/embedded-signup/assets',
