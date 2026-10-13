@@ -34,11 +34,12 @@ export function WhatsAppPage() {
   const continueConnection = useCallback((
     status:string,
     mode:string|null,
-    nextAction:'choose_mode'|'continue_authorization'|'wait_for_meta_review'|'review_meta_rejection'|'resolve_connection'|'none',
+    nextAction:'choose_mode'|'continue_authorization'|'wait_for_meta_review'|'review_meta_rejection'|'wait_for_completion'|'resolve_connection'|'none',
   ) => {
     if (
       nextAction === 'wait_for_meta_review'
       || nextAction === 'review_meta_rejection'
+      || nextAction === 'wait_for_completion'
       || nextAction === 'none'
     ) return
     const directProviderStep = nextAction === 'continue_authorization' || nextAction === 'resolve_connection'
@@ -67,6 +68,7 @@ export function WhatsAppPage() {
   const journey=deriveConnectionJourney(connection.data)
   const metaReviewPending=journey.state==='meta_review_pending'
   const metaReviewRejected=journey.state==='meta_review_rejected'
+  const validatingConnection=journey.state==='validating_connection'
   const reviewStatus=connection.data?.review_status
   const preferredMode=connection.data?.preferred_mode??null
   const awaitingCoexistence=status==='connected'
@@ -140,7 +142,9 @@ export function WhatsAppPage() {
         <h1>WhatsApp</h1>
         {metaReviewPending
           ? <StatusBadge tone="warning">Aguardando verificação da Meta</StatusBadge>
-          : <ConnectionStatusBadge status={status} errorReason={connection.data.error_reason} />}
+          : validatingConnection
+            ? <StatusBadge tone="info">Validando conexão</StatusBadge>
+            : <ConnectionStatusBadge status={status} errorReason={connection.data.error_reason} />}
         <p>{journey.message}</p>
         {status==='connected'&&<dl className="connection-facts">
           {connection.data.display_phone_number&&<div><dt>Número conectado</dt><dd>{connection.data.display_phone_number}</dd></div>}
@@ -157,7 +161,9 @@ export function WhatsAppPage() {
                 ? 'Sua ação agora: escolha como quer usar este número. A Alovia conduz as etapas seguintes e abre a Meta no momento certo.'
                 : journey.nextAction==='resolve_connection'
                   ? 'Sua ação agora: toque em “Resolver conexão”. A Alovia levará você ao ponto certo para tentar novamente.'
-                  : 'Sua ação agora: continue a autorização oficial da Meta. Ao retornar, a Alovia valida o resultado automaticamente.'}</span>
+                  : journey.nextAction==='wait_for_completion'
+                    ? 'Sua ação agora: nenhuma. A Alovia está validando a conexão no servidor e atualizará esta tela automaticamente.'
+                    : 'Sua ação agora: continue a autorização oficial da Meta. Ao retornar, a Alovia valida o resultado automaticamente.'}</span>
         </div>}
         {awaitingCoexistence&&<div className="account-note">
           <strong>{coexistenceReviewReady

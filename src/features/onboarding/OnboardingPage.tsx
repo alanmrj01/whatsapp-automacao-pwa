@@ -668,6 +668,7 @@ function WhatsAppStep({onBack,onFinished}:{onBack:()=>void;onFinished:(deferred:
   const journey=deriveConnectionJourney(connection.data)
   const metaReviewPending=journey.state==='meta_review_pending'
   const metaReviewRejected=journey.state==='meta_review_rejected'
+  const validatingConnection=journey.state==='validating_connection'
 
   const finalize=async(deferred:boolean)=>{
     const result=await complete.mutateAsync()
@@ -697,7 +698,9 @@ function WhatsAppStep({onBack,onFinished}:{onBack:()=>void;onFinished:(deferred:
       <MessageCircleMore size={34}/>
       {metaReviewPending
         ? <StatusBadge tone="warning">Aguardando verificação da Meta</StatusBadge>
-        : <ConnectionStatusBadge status={displayedStatus}/>}
+        : validatingConnection
+          ? <StatusBadge tone="info">Validando conexão</StatusBadge>
+          : <ConnectionStatusBadge status={displayedStatus} errorReason={connection.data?.error_reason}/>}
       {connection.data?.display_phone_number&&<strong>{connection.data.display_phone_number}</strong>}
       {!connected&&<div className="onboarding-info onboarding-info--important">
         <strong>{journey.title}</strong>
@@ -710,7 +713,9 @@ function WhatsAppStep({onBack,onFinished}:{onBack:()=>void;onFinished:(deferred:
               ? 'escolher como este número será usado.'
               : journey.nextAction==='resolve_connection'
                 ? 'resolver a pendência pelo caminho indicado abaixo.'
-                : 'concluir a autorização oficial da Meta.'}</span>
+                : journey.nextAction==='wait_for_completion'
+                  ? 'nenhuma. A Alovia está validando a conexão no servidor.'
+                  : 'concluir a autorização oficial da Meta.'}</span>
       </div>}
       {!connected&&journey.requiresUserAction&&journey.nextAction!=='review_meta_rejection'&&<PrimaryButton fullWidth icon={<ArrowRight size={18}/>} onClick={continueWhatsApp}>{journey.ctaLabel??'Continuar'}</PrimaryButton>}
       {connected&&<p className="form-success">WhatsApp conectado. Sua configuração inicial está pronta para ser finalizada.</p>}
