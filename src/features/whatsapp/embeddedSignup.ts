@@ -32,7 +32,7 @@ export type EmbeddedSignupConfiguration = {
 
 export type EmbeddedSignupResult = {
   authorization_code: string
-  waba_id: string
+  waba_id?: string
   phone_number_id?: string
 }
 
@@ -125,6 +125,7 @@ function openEmbeddedSignup(
     let resumeNotified = false
     let popupWindow: Window | null = null
     let popupPoll: number | null = null
+    let codeOnlyFallbackTimer: number | null = null
 
     const observe = (
       stage: EmbeddedSignupObservation['stage'],
@@ -136,6 +137,12 @@ function openEmbeddedSignup(
       finish(new EmbeddedSignupError())
     }, 120_000)
 
+    const stopCodeFallback = () => {
+      if (codeOnlyFallbackTimer !== null) {
+        runtime.clearTimeout(codeOnlyFallbackTimer)
+        codeOnlyFallbackTimer = null
+      }
+    }
     const stopPopupWatch = () => {
       if (popupPoll !== null) {
         runtime.clearInterval(popupPoll)
@@ -150,6 +157,7 @@ function openEmbeddedSignup(
       runtime.removeEventListener('focus', focusListener)
       runtime.document.removeEventListener?.('visibilitychange', visibilityListener)
       stopPopupWatch()
+      stopCodeFallback()
       if (activeAttempt?.resume === resumeLogin) activeAttempt = null
     }
     const finish = (error?: Error) => {
@@ -157,8 +165,12 @@ function openEmbeddedSignup(
       settled = true
       cleanup()
       if (error) reject(error)
-      else if (authorizationCode && assets) resolve({authorization_code:authorizationCode, ...assets})
-      else reject(new EmbeddedSignupError())
+      else if (authorizationCode) {
+        resolve({
+          authorization_code:authorizationCode,
+          ...(assets ?? {}),
+        })
+      } else reject(new EmbeddedSignupError())
     }
     const maybeFinish = () => {
       if (authorizationCode && assets) {
@@ -168,6 +180,21 @@ function openEmbeddedSignup(
           phone_number_id_received: assets.phone_number_id !== undefined,
         })
         finish()
+        return
+      }
+      if (authorizationCode && codeOnlyFallbackTimer === null) {
+        // Give SessionInfo a short grace period. If the browser loses the
+        // postMessage, complete with the OAuth code and let the server
+        // discover the single WABA granted to the token.
+        codeOnlyFallbackTimer = runtime.setTimeout(() => {
+          codeOnlyFallbackTimer = null
+          observe('embedded_signup_ready_to_complete', {
+            authorization_code_received: true,
+            waba_id_received: false,
+            phone_number_id_received: false,
+          })
+          finish()
+        }, 1_500)
       }
     }
     const notifyResume = () => {
@@ -272,8 +299,8 @@ function openEmbeddedSignup(
         response_type: 'code',
         override_default_response_type: true,
         extras: {
+          setup: {},
           sessionInfoVersion: '3',
-          version: configuration.embedded_signup_version,
           featureType: 'whatsapp_business_app_onboarding',
         },
       }
