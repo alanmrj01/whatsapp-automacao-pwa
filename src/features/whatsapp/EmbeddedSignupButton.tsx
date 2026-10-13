@@ -35,6 +35,8 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
   const [autoReady,setAutoReady] = useState(false)
   const serverConnectedRef=useRef(false)
   const serverAttemptIdRef=useRef<string | null>(null)
+  const pendingObservationsRef=useRef<EmbeddedSignupObservation[]>([])
+  const pendingAssetsRef=useRef<Array<{waba_id:string; phone_number_id?:string}>>([])
   const liveConnection=useConnection()
   const queryKey = useMemo(
     () => ['whatsapp-connection', user?.id, membership?.business_id],
@@ -67,9 +69,12 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
   const sdkFailed = configurationKey !== null
     && failedConfiguration === configurationKey
 
-  const reportObservation = useCallback((observation: EmbeddedSignupObservation) => {
+  const postObservation = useCallback((
+    attemptId:string,
+    observation:EmbeddedSignupObservation,
+  ) => {
     const payload = {
-      ...(serverAttemptIdRef.current ? {attempt_id:serverAttemptIdRef.current} : {}),
+      attempt_id:attemptId,
       stage: observation.stage,
       ...(observation.authorization_code_received === undefined ? {} : {
         authorization_code_received: observation.authorization_code_received,
@@ -88,6 +93,36 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
       method:'POST', body:JSON.stringify(payload), keepalive:true,
     }).catch(() => {})
   }, [])
+
+  const reportObservation = useCallback((observation:EmbeddedSignupObservation) => {
+    const attemptId=serverAttemptIdRef.current
+    if (!attemptId) {
+      pendingObservationsRef.current.push(observation)
+      return
+    }
+    postObservation(attemptId, observation)
+  }, [postObservation])
+
+  const persistAssets = useCallback((
+    attemptId:string,
+    assets:{waba_id:string; phone_number_id?:string},
+  ) => {
+    void api.request<void>(
+      '/whatsapp/onboarding/embedded-signup/assets',
+      {
+        method:'POST',
+        body:JSON.stringify({attempt_id:attemptId,...assets}),
+        keepalive:true,
+      },
+    ).catch(() => {})
+  }, [])
+
+  const flushPendingProviderSignals = useCallback((attemptId:string) => {
+    const observations=pendingObservationsRef.current.splice(0)
+    for (const observation of observations) postObservation(attemptId, observation)
+    const assets=pendingAssetsRef.current.splice(0)
+    for (const observedAssets of assets) persistAssets(attemptId, observedAssets)
+  }, [persistAssets, postObservation])
 
   const applyServerConnection = useCallback((connection: WhatsAppConnection) => {
     if (connection.onboarding_attempt_id) {
@@ -181,49 +216,64 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
   }, [fromOnboarding, navigate, phase])
 
   const run = useMemo(() => createEmbeddedSignupRunner({
-    start: async () => {
+    start: () => {
       if (!configuration.data || !sdkReady) throw new Error('Meta unavailable')
-      const pending = await api.request<WhatsAppConnection>(
+      return configuration.data
+    },
+    launch: (signupConfiguration) => {
+      // FB.login must stay in the original click task. Starting async work is
+      // safe here, but awaiting the server attempt before opening Meta breaks
+      // user activation on mobile browsers and can detach popup callbacks.
+      serverAttemptIdRef.current=null
+      pendingObservationsRef.current=[]
+      pendingAssetsRef.current=[]
+      const idempotencyKey=crypto.randomUUID()
+      const attemptPromise=api.request<WhatsAppConnection>(
         '/whatsapp/onboarding/embedded-signup/attempt',
         {
           method:'POST',
           body:'{}',
-          headers:{'Idempotency-Key':crypto.randomUUID()},
+          headers:{'Idempotency-Key':idempotencyKey},
+          keepalive:true,
+        },
+      ).then((pending) => {
+        if (!pending.onboarding_attempt_id) {
+          throw new Error('Onboarding attempt unavailable')
+        }
+        serverAttemptIdRef.current=pending.onboarding_attempt_id
+        applyServerConnection(pending)
+        flushPendingProviderSignals(pending.onboarding_attempt_id)
+        return pending
+      })
+
+      const providerPromise=launchMetaEmbeddedSignup(
+        signupConfiguration,
+        window,
+        {
+          attemptKey,
+          onObservation: reportObservation,
+          onResumeRequired: () => {
+            setPhase('waiting')
+            setMessage(null)
+            setResumeAvailable(true)
+            void reconcileConnection()
+          },
+          onAssetsObserved: (assets) => {
+            const attemptId=serverAttemptIdRef.current
+            if (!attemptId) {
+              pendingAssetsRef.current.push(assets)
+              return
+            }
+            persistAssets(attemptId, assets)
+          },
         },
       )
-      if (!pending.onboarding_attempt_id) {
-        throw new Error('Onboarding attempt unavailable')
-      }
-      serverAttemptIdRef.current=pending.onboarding_attempt_id
-      applyServerConnection(pending)
-      return configuration.data
+
+      // Completion cannot reach the backend until the correlated server
+      // attempt exists, but opening Meta itself never waits on the network.
+      return Promise.all([attemptPromise, providerPromise])
+        .then(([, result]) => result)
     },
-    launch: (signupConfiguration) => launchMetaEmbeddedSignup(
-      signupConfiguration,
-      window,
-      {
-        attemptKey,
-        onObservation: reportObservation,
-        onResumeRequired: () => {
-          setPhase('waiting')
-          setMessage(null)
-          setResumeAvailable(true)
-          void reconcileConnection()
-        },
-        onAssetsObserved: (assets) => {
-          const attemptId=serverAttemptIdRef.current
-          if (!attemptId) return
-          void api.request<void>(
-            '/whatsapp/onboarding/embedded-signup/assets',
-            {
-              method:'POST',
-              body:JSON.stringify({attempt_id:attemptId,...assets}),
-              keepalive:true,
-            },
-          ).catch(() => {})
-        },
-      },
-    ),
     complete: (result: EmbeddedSignupResult) => {
       const attemptId=serverAttemptIdRef.current
       if (!attemptId) return Promise.reject(new Error('Onboarding attempt unavailable'))
@@ -253,7 +303,18 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
       await queryClient.invalidateQueries({queryKey, refetchType:'none'})
     },
     onObservation: reportObservation,
-  }), [applyServerConnection, attemptKey, configuration.data, queryClient, queryKey, reconcileConnection, reportObservation, sdkReady])
+  }), [
+    applyServerConnection,
+    attemptKey,
+    configuration.data,
+    flushPendingProviderSignals,
+    persistAssets,
+    queryClient,
+    queryKey,
+    reconcileConnection,
+    reportObservation,
+    sdkReady,
+  ])
 
   // Meta's login dialog requires a user gesture on many browsers.
   // Preparing automatically is safe; opening the popup is explicitly confirmed.
