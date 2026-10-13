@@ -34,7 +34,7 @@ test('backend connected state immediately overrides stale local signup state', (
   assert.match(embedded,/applyServerConnection\(liveConnection\.data\)/)
   assert.match(embedded,/connection\.status === 'connected'/)
   assert.match(embedded,/serverConnectedRef\.current=true/)
-  assert.match(embedded,/serverConnectedRef\.current && nextPhase !== 'success'/)
+  assert.match(embedded,/startingRef\.current \|\| serverConnectedRef\.current/)
   assert.match(connection,/refetchOnWindowFocus:'always'/)
   assert.match(connection,/refetchOnReconnect:'always'/)
   assert.match(connection,/status === 'pending' \? 3_000 : false/)
