@@ -9,6 +9,7 @@ export type WhatsAppConnection = {
   status: WhatsAppConnectionStatus
   mode: WhatsAppConnectionMode | null
   display_phone_number?: string
+  error_reason?: 'authorization_incomplete'
   pending_state?: WhatsAppConnectionPendingState
   review_status?: WhatsAppMetaReviewStatus
   preferred_mode?: WhatsAppConnectionMode
