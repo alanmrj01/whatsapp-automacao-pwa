@@ -234,8 +234,12 @@ function openEmbeddedSignup(
       }, 2_000)
     }
     const notifyResume = () => {
-      if (settled || loginInProgress || resumeNotified || !returnedToApp) return
+      if (settled || loginInProgress || !returnedToApp) return
+      // The browser can report page_visible/window_focus before Facebook's
+      // empty login callback arrives. Always evaluate terminal empty-callback
+      // handling first; resumeNotified must only suppress duplicate UX prompts.
       scheduleIncompleteAuthorization()
+      if (resumeNotified) return
       resumeNotified = true
       hooks.onResumeRequired?.()
     }
