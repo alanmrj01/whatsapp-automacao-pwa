@@ -533,9 +533,12 @@ test('popup fechado antes dos retornos tardios não encerra o fluxo', async () =
   assert.match(JSON.stringify(runtime.logs), /popup_closed/)
 })
 
-test('timeout encerra com erro sanitizado', async () => {
+test('timeout local oferece retomada sem encerrar a tentativa', async () => {
   let expire
   let timerId = 0
+  let resumeRequests = 0
+  let messageListeners
+  let settled = false
   const clock = {
     setTimeout(fn, delay) {
       timerId += 1
@@ -546,11 +549,26 @@ test('timeout encerra com erro sanitizado', async () => {
     setInterval() { return 1 },
     clearInterval() {},
   }
-  const runtime = runtimeFor(({callback}) => callback({}), {clock})
-  const pending = launchMetaEmbeddedSignup(configuration, runtime)
+  const runtime = runtimeFor(({listeners, callback}) => {
+    messageListeners = listeners
+    callback({})
+  }, {clock})
+  const pending = launchMetaEmbeddedSignup(configuration, runtime, {
+    onResumeRequired: () => { resumeRequests++ },
+  })
+  pending.then(
+    () => { settled = true },
+    () => { settled = true },
+  )
   await new Promise(resolve => setImmediate(resolve))
   expire()
-  await assert.rejects(pending, EmbeddedSignupError)
+  await new Promise(resolve => setImmediate(resolve))
+
+  assert.equal(resumeRequests, 1)
+  assert.equal(settled, false)
+
+  send(messageListeners, {type:'WA_EMBEDDED_SIGNUP', event:'CANCEL', data:{}})
+  await assert.rejects(pending, EmbeddedSignupCancelledError)
 })
 
 test('CANCEL explícito da Meta continua sendo cancelamento seguro', async () => {
