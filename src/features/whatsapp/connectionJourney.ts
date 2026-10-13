@@ -76,6 +76,16 @@ export function deriveConnectionJourney(
   const nextAction = connection?.next_action ?? fallbackAction(state)
   const requiresUserAction = connection?.requires_user_action
     ?? (nextAction !== 'wait_for_meta_review' && nextAction !== 'none')
+  if (state === 'error' && connection?.error_reason === 'authorization_incomplete') {
+    return {
+      state,
+      nextAction,
+      requiresUserAction,
+      title: 'A autorização da Meta não foi concluída',
+      message: 'A Meta fechou a etapa sem devolver a autorização necessária para concluir a conexão. Tente novamente; o Alovia não vai tratar esta tentativa como uma conexão em andamento.',
+      ctaLabel: 'Tentar novamente com a Meta',
+    }
+  }
   return {
     state,
     nextAction,
