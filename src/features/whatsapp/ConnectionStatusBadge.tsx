@@ -8,7 +8,15 @@ const statusPresentation: Record<WhatsAppConnectionStatus, { label: string; tone
   error: { label: 'Atenção necessária', tone: 'danger' },
 }
 
-export function ConnectionStatusBadge({ status }: { status: WhatsAppConnectionStatus }) {
-  const presentation = statusPresentation[status]
+export function ConnectionStatusBadge({
+  status,
+  errorReason,
+}: {
+  status: WhatsAppConnectionStatus
+  errorReason?: 'authorization_incomplete'
+}) {
+  const presentation = status === 'error' && errorReason === 'authorization_incomplete'
+    ? {label:'Autorização incompleta', tone:'danger' as StatusTone}
+    : statusPresentation[status]
   return <StatusBadge tone={presentation.tone}>{presentation.label}</StatusBadge>
 }
