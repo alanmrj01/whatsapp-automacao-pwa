@@ -247,10 +247,13 @@ test('WhatsApp status keeps pending Meta onboarding visible and refreshes it saf
   assert.match(whatsapp,/reviewStatus==='rejected'/)
   assert.match(whatsapp,/Revisão da Meta não aprovada/)
   assert.match(whatsapp,/Tentar ativar WhatsApp Business \+ Alovia/)
-  assert.match(connection,/staleTime:30_000/)
+  assert.match(connection,/staleTime:10_000/)
   assert.match(connection,/gcTime:5\s*\*\s*60_000/)
-  assert.match(connection,/refetchOnWindowFocus:true/)
-  assert.match(connection,/status === 'pending' \? 15_000 : false/)
+  assert.match(connection,/refetchOnMount:'always'/)
+  assert.match(connection,/refetchOnWindowFocus:'always'/)
+  assert.match(connection,/refetchOnReconnect:'always'/)
+  assert.match(connection,/status === 'pending' \? 3_000 : false/)
+  assert.match(connection,/refetchIntervalInBackground:true/)
 })
 
 test('paid agenda reads the hydrated membership without loading unused product setup data', () => {
