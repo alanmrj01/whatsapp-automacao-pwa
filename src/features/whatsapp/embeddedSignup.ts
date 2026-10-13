@@ -324,7 +324,6 @@ function openEmbeddedSignup(
       if (settled || loginInProgress) return false
       loginInProgress = true
       emptyCallbackReceived = false
-      stopIncompleteAuthorization()
       const generation = ++loginGeneration
       resumeNotified = false
       returnedToApp = false
