@@ -51,7 +51,7 @@ test('coexistence no longer depends on popup callbacks or postMessage recovery',
   assert.match(button,/window\.location\.assign\(redirect\.authorization_url\)/)
 })
 
-test('every Embedded Signup mutation is correlated to one server attempt', () => {
+test('redirect authorization remains correlated to one server attempt', () => {
   const button=read('src/features/whatsapp/EmbeddedSignupButton.tsx')
   const types=read('src/features/whatsapp/types.ts')
   assert.match(types,/onboarding_attempt_id/)
@@ -60,9 +60,9 @@ test('every Embedded Signup mutation is correlated to one server attempt', () =>
   assert.match(button,/serverAttemptIdRef/)
   assert.match(button,/Idempotency-Key/)
   assert.match(button,/crypto\.randomUUID\(\)/)
-  assert.match(button,/attempt_id:attemptId/)
-  assert.match(button,/JSON\.stringify\(\{attempt_id:attemptId,\.\.\.assets\}\)/)
-  assert.match(button,/JSON\.stringify\(\{attempt_id:attemptId,\.\.\.result\}\)/)
+  assert.match(button,/attempt_id:pending\.onboarding_attempt_id/)
+  assert.match(button,/authorization_code:authorizationCode/)
+  assert.match(button,/state,/)
   assert.match(button,/keepalive:true/)
   assert.doesNotMatch(button,/embedded-signup\/incomplete/)
 })
