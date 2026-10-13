@@ -88,6 +88,16 @@ function WhatsAppPendingBanner() {
     </section>
   }
 
+  if(journey.state==='validating_connection'){
+    return <section className="app-pending-banner" role="status">
+      <div>
+        <strong>{journey.title}</strong>
+        <span>{journey.message}</span>
+        <span><b>Sua ação agora:</b> nenhuma. A validação continua no servidor e esta tela será atualizada automaticamente.</span>
+      </div>
+    </section>
+  }
+
   const directMetaAction=journey.nextAction==='continue_authorization'||journey.nextAction==='resolve_connection'
 
   return <section className="app-pending-banner" role="status">
