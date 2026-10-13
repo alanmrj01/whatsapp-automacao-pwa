@@ -40,20 +40,15 @@ test('backend connected state immediately overrides stale local signup state', (
   assert.match(connection,/status === 'pending' \? 3_000 : false/)
 })
 
-test('empty Meta authorization callback becomes a recoverable explicit error', () => {
+test('empty Meta authorization callback stays resumable on mobile', () => {
   const embedded=read('src/features/whatsapp/embeddedSignup.ts')
   const button=read('src/features/whatsapp/EmbeddedSignupButton.tsx')
-  const journey=read('src/features/whatsapp/connectionJourney.ts')
-  const badge=read('src/features/whatsapp/ConnectionStatusBadge.tsx')
-  const page=read('src/features/whatsapp/WhatsAppPage.tsx')
-  assert.match(embedded,/EmbeddedSignupAuthorizationIncompleteError/)
-  assert.match(embedded,/delay === 2_000|2_000/)
-  assert.match(embedded,/onAuthorizationIncomplete/)
-  assert.match(button,/embedded-signup\/incomplete/)
-  assert.match(journey,/A autorização da Meta não foi concluída/)
-  assert.match(journey,/não vai tratar esta tentativa como uma conexão em andamento/)
-  assert.match(badge,/Autorização incompleta/)
-  assert.match(page,/errorReason=\{connection\.data\.error_reason\}/)
+  assert.match(embedded,/transient empty callback is not terminal on mobile/i)
+  assert.match(embedded,/server-side attempt remains the[\s\S]{0,80}authoritative lifecycle/i)
+  assert.doesNotMatch(embedded,/2_000/)
+  assert.doesNotMatch(embedded,/onAuthorizationIncomplete/)
+  assert.doesNotMatch(button,/embedded-signup\/incomplete/)
+  assert.match(button,/Retomar validação/)
 })
 
 test('every Embedded Signup mutation is correlated to one server attempt', () => {
@@ -68,8 +63,8 @@ test('every Embedded Signup mutation is correlated to one server attempt', () =>
   assert.match(button,/attempt_id:serverAttemptIdRef\.current/)
   assert.match(button,/JSON\.stringify\(\{attempt_id:attemptId,\.\.\.assets\}\)/)
   assert.match(button,/JSON\.stringify\(\{attempt_id:attemptId,\.\.\.result\}\)/)
-  assert.match(button,/embedded-signup\/incomplete/)
   assert.match(button,/keepalive:true/)
+  assert.doesNotMatch(button,/embedded-signup\/incomplete/)
 })
 
 test('server validation is passive and does not ask the user to reopen Meta', () => {

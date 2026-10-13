@@ -19,7 +19,6 @@ type EmbeddedSignupHooks = {
   attemptKey?: string
   onObservation?: (observation: EmbeddedSignupObservation) => void
   onResumeRequired?: () => void
-  onAuthorizationIncomplete?: () => void
   onAssetsObserved?: (assets: {waba_id:string; phone_number_id?:string}) => void
 }
 
@@ -134,7 +133,6 @@ function openEmbeddedSignup(
     let popupWindow: Window | null = null
     let popupPoll: number | null = null
     let codeOnlyFallbackTimer: number | null = null
-    let incompleteAuthorizationTimer: number | null = null
 
     const observe = (
       stage: EmbeddedSignupObservation['stage'],
@@ -142,20 +140,19 @@ function openEmbeddedSignup(
     ) => traceMetaSignup(runtime, stage, fields, hooks.onObservation)
 
     const timeout = runtime.setTimeout(() => {
+      if (settled) return
+      // Browser timers are only a UX hint. Mobile custom tabs can suspend or
+      // reorder callbacks, so a local timer must never decide server state.
       observe('timeout')
-      finish(new EmbeddedSignupError())
+      returnedToApp = true
+      loginInProgress = false
+      notifyResume()
     }, 120_000)
 
     const stopCodeFallback = () => {
       if (codeOnlyFallbackTimer !== null) {
         runtime.clearTimeout(codeOnlyFallbackTimer)
         codeOnlyFallbackTimer = null
-      }
-    }
-    const stopIncompleteAuthorization = () => {
-      if (incompleteAuthorizationTimer !== null) {
-        runtime.clearTimeout(incompleteAuthorizationTimer)
-        incompleteAuthorizationTimer = null
       }
     }
     const stopPopupWatch = () => {
@@ -173,7 +170,6 @@ function openEmbeddedSignup(
       runtime.document.removeEventListener?.('visibilitychange', visibilityListener)
       stopPopupWatch()
       stopCodeFallback()
-      stopIncompleteAuthorization()
       if (activeAttempt?.resume === resumeLogin) activeAttempt = null
     }
     const finish = (error?: Error) => {
@@ -213,32 +209,11 @@ function openEmbeddedSignup(
         }, 1_500)
       }
     }
-    const scheduleIncompleteAuthorization = () => {
-      if (
-        settled
-        || loginInProgress
-        || !returnedToApp
-        || !emptyCallbackReceived
-        || authorizationCode
-        || incompleteAuthorizationTimer !== null
-      ) return
-      incompleteAuthorizationTimer = runtime.setTimeout(() => {
-        incompleteAuthorizationTimer = null
-        if (settled || authorizationCode || !emptyCallbackReceived) return
-        try {
-          hooks.onAuthorizationIncomplete?.()
-        } catch {
-          // Persisting the recoverable failure state must not mask the UX error.
-        }
-        finish(new EmbeddedSignupAuthorizationIncompleteError())
-      }, 2_000)
-    }
     const notifyResume = () => {
       if (settled || loginInProgress || !returnedToApp) return
-      // The browser can report page_visible/window_focus before Facebook's
-      // empty login callback arrives. Always evaluate terminal empty-callback
-      // handling first; resumeNotified must only suppress duplicate UX prompts.
-      scheduleIncompleteAuthorization()
+      // A transient empty callback is not terminal on mobile. Resume prompts
+      // may be deduplicated locally, while the server-side attempt remains the
+      // authoritative lifecycle and expires only by its real TTL.
       if (resumeNotified) return
       resumeNotified = true
       hooks.onResumeRequired?.()
@@ -349,7 +324,6 @@ function openEmbeddedSignup(
       if (settled || loginInProgress) return false
       loginInProgress = true
       emptyCallbackReceived = false
-      stopIncompleteAuthorization()
       const generation = ++loginGeneration
       resumeNotified = false
       returnedToApp = false
