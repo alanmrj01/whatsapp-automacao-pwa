@@ -1,5 +1,8 @@
 import { StatusBadge, type StatusTone } from '../../components/StatusBadge'
-import type { WhatsAppConnectionStatus } from './types'
+import type {
+  WhatsAppConnectionErrorReason,
+  WhatsAppConnectionStatus,
+} from './types'
 
 const statusPresentation: Record<WhatsAppConnectionStatus, { label: string; tone: StatusTone }> = {
   disconnected: { label: 'Não conectado', tone: 'neutral' },
@@ -8,15 +11,23 @@ const statusPresentation: Record<WhatsAppConnectionStatus, { label: string; tone
   error: { label: 'Atenção necessária', tone: 'danger' },
 }
 
+const errorPresentation: Record<WhatsAppConnectionErrorReason, string> = {
+  authorization_incomplete: 'Autorização incompleta',
+  onboarding_expired: 'Tentativa expirada',
+  provider_rejected: 'Autorização recusada',
+  provider_unavailable: 'Meta indisponível',
+  onboarding_failed: 'Conexão não concluída',
+}
+
 export function ConnectionStatusBadge({
   status,
   errorReason,
 }: {
   status: WhatsAppConnectionStatus
-  errorReason?: 'authorization_incomplete'
+  errorReason?: WhatsAppConnectionErrorReason
 }) {
-  const presentation = status === 'error' && errorReason === 'authorization_incomplete'
-    ? {label:'Autorização incompleta', tone:'danger' as StatusTone}
+  const presentation = status === 'error' && errorReason
+    ? {label:errorPresentation[errorReason], tone:'danger' as StatusTone}
     : statusPresentation[status]
   return <StatusBadge tone={presentation.tone}>{presentation.label}</StatusBadge>
 }
