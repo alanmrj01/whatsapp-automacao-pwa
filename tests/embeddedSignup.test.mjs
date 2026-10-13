@@ -138,10 +138,35 @@ test('coexistence usa os parâmetros oficiais e combina code com sessão Meta', 
     response_type:'code',
     override_default_response_type:true,
     extras:{
+      setup:{},
       sessionInfoVersion:'3',
-      version:'v4',
       featureType:'whatsapp_business_app_onboarding',
     },
+  })
+})
+
+test('authorization code sozinho conclui após grace period e delega descoberta ao servidor', async () => {
+  let fallback
+  let timerId = 0
+  const clock = {
+    setTimeout(fn, delay) {
+      timerId += 1
+      if (delay === 1_500) fallback = fn
+      return timerId
+    },
+    clearTimeout() {},
+    setInterval() { return 1 },
+    clearInterval() {},
+  }
+  const runtime = runtimeFor(({callback}) => {
+    callback({authResponse:{code:'code-without-session-info'}})
+  }, {clock})
+  const pending = launchMetaEmbeddedSignup(configuration, runtime)
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(typeof fallback, 'function')
+  fallback()
+  assert.deepEqual(await pending, {
+    authorization_code:'code-without-session-info',
   })
 })
 
