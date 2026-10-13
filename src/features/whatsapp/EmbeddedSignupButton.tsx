@@ -100,7 +100,7 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
     }
   }, [queryClient, queryKey])
 
-  const reconcileConnection = useCallback(async () => {
+  const reconcileConnection = useCallback(async (): Promise<WhatsAppConnection | null> => {
     try {
       const connection = await queryClient.fetchQuery({
         queryKey,
@@ -108,8 +108,10 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
         staleTime: 0,
       })
       applyServerConnection(connection)
+      return connection
     } catch {
       // A leitura do estado do servidor nunca reinicia a autorização da Meta.
+      return null
     }
   }, [applyServerConnection, queryClient, queryKey])
 
@@ -267,8 +269,15 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
         icon={phase === 'error' ? <RotateCw size={18} /> : <ExternalLink size={18} />}
         onClick={() => {
           if (phase === 'error') {
-            void reconcileConnection().finally(() => {
-              if (!serverConnectedRef.current) void startRedirectFlow()
+            void reconcileConnection().then((connection) => {
+              if (
+                !connection
+                || connection.status === 'error'
+                || connection.next_action === 'continue_authorization'
+                || connection.next_action === 'choose_mode'
+              ) {
+                void startRedirectFlow()
+              }
             })
             return
           }
