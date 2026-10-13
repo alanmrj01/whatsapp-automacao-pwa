@@ -40,7 +40,7 @@ export function AppShell() {
       <UpgradePromptProvider>
         <div className="conversation-route-shell" id="main-content">
           <NotificationCenter backgroundOnly />
-          <WhatsAppPendingBanner />
+          {!pathname.startsWith('/app/whatsapp') && <WhatsAppPendingBanner />}
           <Outlet />
           <ReengagementPrompt />
         </div>
