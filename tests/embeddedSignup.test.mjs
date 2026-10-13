@@ -4,7 +4,6 @@ import {
   cancelMetaEmbeddedSignup,
   canStartEmbeddedSignup,
   createEmbeddedSignupRunner,
-  EmbeddedSignupAuthorizationIncompleteError,
   EmbeddedSignupCancelledError,
   EmbeddedSignupError,
   launchMetaEmbeddedSignup,
@@ -293,68 +292,65 @@ test('callback vazio no mobile/PWA não cancela enquanto o fluxo Meta continua',
   })
 })
 
-test('callback final vazio encerra a tentativa como autorização incompleta', async () => {
-  let incompleteTimer
-  let incompleteCalls = 0
-  let timerId = 0
+test('callback vazio precoce no Android permanece resumível e nunca vira erro local', async () => {
+  let loginCalls = 0
+  let popupPoll
+  let resumeRequests = 0
+  let settled = false
+  const delays = []
+  const popup = {closed:false}
   const clock = {
     setTimeout(fn, delay) {
-      timerId += 1
-      if (delay === 2_000) incompleteTimer = fn
-      return timerId
+      delays.push(delay)
+      return delays.length
     },
     clearTimeout() {},
-    setInterval() { return 1 },
-    clearInterval() {},
-  }
-  const runtime = runtimeFor(({runtime, callback}) => {
-    runtime.setVisibility('hidden')
-    callback({})
-    runtime.setVisibility('visible')
-  }, {clock})
-
-  const pending = launchMetaEmbeddedSignup(configuration, runtime, {
-    onAuthorizationIncomplete: () => { incompleteCalls += 1 },
-  })
-  await new Promise(resolve => setImmediate(resolve))
-
-  assert.equal(typeof incompleteTimer, 'function')
-  incompleteTimer()
-
-  await assert.rejects(pending, EmbeddedSignupAuthorizationIncompleteError)
-  assert.equal(incompleteCalls, 1)
-})
-
-test('callback vazio depois de page_visible também encerra a tentativa', async () => {
-  let incompleteTimer
-  let incompleteCalls = 0
-  let timerId = 0
-  const clock = {
-    setTimeout(fn, delay) {
-      timerId += 1
-      if (delay === 2_000) incompleteTimer = fn
-      return timerId
+    setInterval(fn) {
+      popupPoll = fn
+      return 91
     },
-    clearTimeout() {},
-    setInterval() { return 1 },
     clearInterval() {},
   }
-  const runtime = runtimeFor(({runtime, callback}) => {
-    runtime.setVisibility('hidden')
-    runtime.setVisibility('visible')
-    callback({})
-  }, {clock})
+  const runtime = runtimeFor(({runtime, listeners, callback}) => {
+    loginCalls++
+    runtime.open('https://www.facebook.com/dialog')
+    if (loginCalls === 1) {
+      runtime.setVisibility('hidden')
+      runtime.setVisibility('visible')
+      runtime.dispatch('focus')
+      callback({})
+      return
+    }
+    callback({authResponse:{code:'resumed-after-empty-callback'}})
+    send(listeners, {
+      type:'WA_EMBEDDED_SIGNUP',
+      event:'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING',
+      data:{waba_id:'333333333333333'},
+    })
+  }, {popup, clock})
 
   const pending = launchMetaEmbeddedSignup(configuration, runtime, {
-    onAuthorizationIncomplete: () => { incompleteCalls += 1 },
+    onResumeRequired: () => { resumeRequests++ },
   })
+  pending.then(
+    () => { settled = true },
+    () => { settled = true },
+  )
   await new Promise(resolve => setImmediate(resolve))
 
-  assert.equal(typeof incompleteTimer, 'function')
-  incompleteTimer()
+  popup.closed = true
+  popupPoll?.()
+  await new Promise(resolve => setImmediate(resolve))
 
-  await assert.rejects(pending, EmbeddedSignupAuthorizationIncompleteError)
-  assert.equal(incompleteCalls, 1)
+  assert.equal(settled, false)
+  assert.equal(resumeRequests, 1)
+  assert.equal(delays.includes(2_000), false)
+  assert.equal(resumeMetaEmbeddedSignup(), true)
+  assert.deepEqual(await pending, {
+    authorization_code:'resumed-after-empty-callback',
+    waba_id:'333333333333333',
+  })
+  assert.equal(loginCalls, 2)
 })
 
 test('visibility hidden -> visible preserva e retoma a mesma tentativa', async () => {
