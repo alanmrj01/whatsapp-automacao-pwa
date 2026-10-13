@@ -325,6 +325,38 @@ test('callback final vazio encerra a tentativa como autorização incompleta', a
   assert.equal(incompleteCalls, 1)
 })
 
+test('callback vazio depois de page_visible também encerra a tentativa', async () => {
+  let incompleteTimer
+  let incompleteCalls = 0
+  let timerId = 0
+  const clock = {
+    setTimeout(fn, delay) {
+      timerId += 1
+      if (delay === 2_000) incompleteTimer = fn
+      return timerId
+    },
+    clearTimeout() {},
+    setInterval() { return 1 },
+    clearInterval() {},
+  }
+  const runtime = runtimeFor(({runtime, callback}) => {
+    runtime.setVisibility('hidden')
+    runtime.setVisibility('visible')
+    callback({})
+  }, {clock})
+
+  const pending = launchMetaEmbeddedSignup(configuration, runtime, {
+    onAuthorizationIncomplete: () => { incompleteCalls += 1 },
+  })
+  await new Promise(resolve => setImmediate(resolve))
+
+  assert.equal(typeof incompleteTimer, 'function')
+  incompleteTimer()
+
+  await assert.rejects(pending, EmbeddedSignupAuthorizationIncompleteError)
+  assert.equal(incompleteCalls, 1)
+})
+
 test('visibility hidden -> visible preserva e retoma a mesma tentativa', async () => {
   let loginCalls = 0
   let resumeRequests = 0
