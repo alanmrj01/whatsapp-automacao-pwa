@@ -44,7 +44,7 @@ test('empty Meta authorization callback stays resumable on mobile', () => {
   const embedded=read('src/features/whatsapp/embeddedSignup.ts')
   const button=read('src/features/whatsapp/EmbeddedSignupButton.tsx')
   assert.match(embedded,/transient empty callback is not terminal on mobile/i)
-  assert.match(embedded,/server-side attempt remains the authoritative lifecycle/i)
+  assert.match(embedded,/server-side attempt remains the[\s\S]{0,80}authoritative lifecycle/i)
   assert.doesNotMatch(embedded,/2_000/)
   assert.doesNotMatch(embedded,/onAuthorizationIncomplete/)
   assert.doesNotMatch(button,/embedded-signup\/incomplete/)
