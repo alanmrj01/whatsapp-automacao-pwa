@@ -55,6 +55,32 @@ test('empty Meta authorization callback becomes a recoverable explicit error', (
   assert.match(page,/errorReason=\{connection\.data\.error_reason\}/)
 })
 
+test('every Embedded Signup mutation is correlated to one server attempt', () => {
+  const button=read('src/features/whatsapp/EmbeddedSignupButton.tsx')
+  const types=read('src/features/whatsapp/types.ts')
+  assert.match(types,/onboarding_attempt_id/)
+  assert.match(types,/validating_connection/)
+  assert.match(types,/wait_for_completion/)
+  assert.match(button,/serverAttemptIdRef/)
+  assert.match(button,/Idempotency-Key/)
+  assert.match(button,/crypto\.randomUUID\(\)/)
+  assert.match(button,/attempt_id:serverAttemptIdRef\.current/)
+  assert.match(button,/JSON\.stringify\(\{attempt_id:attemptId,\.\.\.assets\}\)/)
+  assert.match(button,/JSON\.stringify\(\{attempt_id:attemptId,\.\.\.result\}\)/)
+  assert.match(button,/embedded-signup\/incomplete/)
+  assert.match(button,/keepalive:true/)
+})
+
+test('server validation is passive and does not ask the user to reopen Meta', () => {
+  const journey=read('src/features/whatsapp/connectionJourney.ts')
+  const page=read('src/features/whatsapp/WhatsAppPage.tsx')
+  assert.match(journey,/validating_connection/)
+  assert.match(journey,/wait_for_completion/)
+  assert.match(journey,/Nenhuma ação é necessária/)
+  assert.match(page,/Validando conexão/)
+  assert.match(page,/A Alovia está validando a conexão no servidor/)
+})
+
 test('Meta review pending state is passive, explicit and never asks for reconnection', () => {
   const shell=read('src/app/AppShell.tsx')
   const whatsapp=read('src/features/whatsapp/WhatsAppPage.tsx')
