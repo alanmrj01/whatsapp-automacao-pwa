@@ -19,6 +19,13 @@ function fallbackState(connection?: WhatsAppConnection | null): WhatsAppConnecti
   if (connection.status === 'error') return 'error'
   if (
     connection.status === 'pending'
+    && (
+      connection.onboarding_attempt_state === 'code_received'
+      || connection.onboarding_attempt_state === 'completing'
+    )
+  ) return 'validating_connection'
+  if (
+    connection.status === 'pending'
     && connection.mode === 'coexistence'
     && connection.review_status === 'rejected'
   ) return 'meta_review_rejected'
@@ -34,6 +41,7 @@ function fallbackAction(state: WhatsAppConnectionJourneyState): WhatsAppConnecti
   if (state === 'authorization_pending') return 'continue_authorization'
   if (state === 'meta_review_pending') return 'wait_for_meta_review'
   if (state === 'meta_review_rejected') return 'review_meta_rejection'
+  if (state === 'validating_connection') return 'wait_for_completion'
   if (state === 'error') return 'resolve_connection'
   return 'none'
 }
@@ -58,6 +66,10 @@ const copy: Record<WhatsAppConnectionJourneyState, Pick<WhatsAppConnectionJourne
     message: 'A análise foi encerrada sem aprovação. Não refaça a conexão agora. Revise os dados da empresa e da conta na Meta antes de uma nova tentativa; a Alovia mantém este estado visível para você não perder o ponto em que parou.',
     ctaLabel: 'Ver orientação',
   },
+  validating_connection: {
+    title: 'Finalizando sua conexão',
+    message: 'A autorização já voltou da Meta. A Alovia está validando a conta, o número e a integração. Você não precisa repetir nenhuma etapa.',
+  },
   error: {
     title: 'Vamos resolver a conexão',
     message: 'A conexão não foi concluída. A Alovia vai levar você ao ponto correto para tentar novamente, sem pedir que repita etapas desnecessárias.',
@@ -75,15 +87,42 @@ export function deriveConnectionJourney(
   const state = connection?.journey_state ?? fallbackState(connection)
   const nextAction = connection?.next_action ?? fallbackAction(state)
   const requiresUserAction = connection?.requires_user_action
-    ?? (nextAction !== 'wait_for_meta_review' && nextAction !== 'none')
-  if (state === 'error' && connection?.error_reason === 'authorization_incomplete') {
-    return {
-      state,
-      nextAction,
-      requiresUserAction,
-      title: 'A autorização da Meta não foi concluída',
-      message: 'A Meta fechou a etapa sem devolver a autorização necessária para concluir a conexão. Tente novamente; o Alovia não vai tratar esta tentativa como uma conexão em andamento.',
-      ctaLabel: 'Tentar novamente com a Meta',
+    ?? (
+      nextAction !== 'wait_for_meta_review'
+      && nextAction !== 'wait_for_completion'
+      && nextAction !== 'none'
+    )
+  if (state === 'error' && connection?.error_reason) {
+    const errors = {
+      authorization_incomplete: {
+        title:'A autorização da Meta não foi concluída',
+        message:'A Meta fechou a etapa sem devolver a autorização necessária. A tentativa foi encerrada com segurança e você pode iniciar outra.',
+        ctaLabel:'Tentar novamente com a Meta',
+      },
+      onboarding_expired: {
+        title:'A tentativa expirou',
+        message:'A conexão anterior ficou sem progresso e foi encerrada automaticamente. Você pode começar uma nova tentativa sem carregar o estado antigo.',
+        ctaLabel:'Iniciar nova tentativa',
+      },
+      provider_rejected: {
+        title:'A Meta não validou esta autorização',
+        message:'A autorização foi recusada ou não pôde ser validada pela Meta. Revise a conta usada no fluxo e tente novamente.',
+        ctaLabel:'Tentar novamente',
+      },
+      provider_unavailable: {
+        title:'A Meta está temporariamente indisponível',
+        message:'O Alovia preservou o estado e encerrou esta tentativa sem deixar a conexão presa. Tente novamente em alguns instantes.',
+        ctaLabel:'Tentar novamente',
+      },
+      onboarding_failed: {
+        title:'A conexão não foi concluída',
+        message:'A tentativa foi encerrada de forma segura. Você pode iniciar novamente sem herdar o estado anterior.',
+        ctaLabel:'Tentar novamente',
+      },
+    } as const
+    const presentation=errors[connection.error_reason]
+    if (presentation) {
+      return {state,nextAction,requiresUserAction,...presentation}
     }
   }
   return {
