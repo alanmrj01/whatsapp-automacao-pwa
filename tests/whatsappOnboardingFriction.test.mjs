@@ -40,15 +40,15 @@ test('backend connected state immediately overrides stale local signup state', (
   assert.match(connection,/status === 'pending' \? 3_000 : false/)
 })
 
-test('empty Meta authorization callback stays resumable on mobile', () => {
+test('coexistence no longer depends on popup callbacks or postMessage recovery', () => {
   const embedded=read('src/features/whatsapp/embeddedSignup.ts')
   const button=read('src/features/whatsapp/EmbeddedSignupButton.tsx')
   assert.match(embedded,/transient empty callback is not terminal on mobile/i)
-  assert.match(embedded,/server-side attempt remains the[\s\S]{0,80}authoritative lifecycle/i)
-  assert.doesNotMatch(embedded,/2_000/)
-  assert.doesNotMatch(embedded,/onAuthorizationIncomplete/)
-  assert.doesNotMatch(button,/embedded-signup\/incomplete/)
-  assert.match(button,/Retomar validação/)
+  assert.doesNotMatch(button,/launchMetaEmbeddedSignup/)
+  assert.doesNotMatch(button,/resumeMetaEmbeddedSignup/)
+  assert.doesNotMatch(button,/Retomar validação/)
+  assert.match(button,/embedded-signup\/redirect\/start/)
+  assert.match(button,/window\.location\.assign\(redirect\.authorization_url\)/)
 })
 
 test('every Embedded Signup mutation is correlated to one server attempt', () => {
