@@ -115,7 +115,7 @@ test('paid owner/admin inicia Meta; free e perfis de leitura nunca iniciam', () 
   assert.equal(canStartEmbeddedSignup('paid', 'viewer'), false)
 })
 
-test('coexistence usa os parâmetros oficiais e combina code com sessão Meta', async () => {
+test('coexistence v4 usa apenas os parâmetros atuais e combina code com sessão Meta', async () => {
   const runtime = runtimeFor(({listeners, callback}) => {
     callback({authResponse:{code:'short-lived-code'}})
     send(listeners, {
@@ -139,7 +139,6 @@ test('coexistence usa os parâmetros oficiais e combina code com sessão Meta', 
     override_default_response_type:true,
     extras:{
       setup:{},
-      sessionInfoVersion:'3',
       featureType:'whatsapp_business_app_onboarding',
     },
   })
