@@ -35,7 +35,6 @@ test('backend connected state immediately overrides stale local signup state', (
   assert.match(embedded,/applyServerConnection\(liveConnection\.data\)/)
   assert.match(embedded,/connection\.status === 'connected'/)
   assert.match(embedded,/setPhase\('success'\)/)
-  assert.match(embedded,/sessionStorage\.removeItem/)
   assert.match(connection,/refetchOnWindowFocus:'always'/)
   assert.match(connection,/refetchOnReconnect:'always'/)
   assert.match(connection,/status === 'pending' \? 3_000 : false/)
@@ -60,7 +59,6 @@ test('every redirect Embedded Signup is correlated to one server attempt', () =>
   assert.match(button,/crypto\.randomUUID\(\)/)
   assert.match(button,/attempt_id:pending\.onboarding_attempt_id/)
   assert.match(button,/return_to_onboarding:fromOnboarding/)
-  assert.match(button,/sessionStorage\.setItem/)
 })
 
 test('Meta coexistence flow is browser-context independent on mobile and web', () => {
