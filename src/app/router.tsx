@@ -30,7 +30,6 @@ const OnboardingPage = lazy(async () => ({default:(await import('../features/onb
 const ApiOnlyInfoPage = lazy(async () => ({default:(await import('../features/whatsapp/ApiOnlyInfoPage')).ApiOnlyInfoPage}))
 const CoexistenceInfoPage = lazy(async () => ({default:(await import('../features/whatsapp/CoexistenceInfoPage')).CoexistenceInfoPage}))
 const WhatsAppPage = lazy(async () => ({default:(await import('../features/whatsapp/WhatsAppPage')).WhatsAppPage}))
-const MetaEmbeddedSignupReturnPage = lazy(async () => ({default:(await import('../features/whatsapp/MetaEmbeddedSignupReturnPage')).MetaEmbeddedSignupReturnPage}))
 const AppShell = lazy(async () => ({default:(await import('./AppShell')).AppShell}))
 const LoginPage = lazy(async () => ({default:(await import('../features/auth/LoginPage')).LoginPage}))
 const PasswordRecoveryPages = () => import('../features/auth/PasswordRecoveryPages')
@@ -60,7 +59,6 @@ function OnboardingGuard({children}:{children:ReactNode}) {
   if(setup.isError)return <div className="route-loading"><ErrorState onRetry={()=>void setup.refetch()}/></div>
   const whatsappOnboardingRoute = pathname === '/app/whatsapp/business'
     || pathname === '/app/whatsapp/exclusivo'
-    || pathname === '/app/whatsapp/meta-return'
   return setup.data?.onboarding_completed || whatsappOnboardingRoute
     ? children
     : <Navigate to="/app/onboarding" replace/>
@@ -90,7 +88,6 @@ export function AppRouter() {
             <Route path="conversas/:conversationId" element={<PaidOperationalGuard><ConversationDetailPage /></PaidOperationalGuard>} />
             <Route path="whatsapp" element={<WhatsAppPage />} />
             <Route path="whatsapp/business" element={<RoleGuard><CoexistenceInfoPage /></RoleGuard>} />
-            <Route path="whatsapp/meta-return" element={<RoleGuard><MetaEmbeddedSignupReturnPage /></RoleGuard>} />
             <Route path="whatsapp/exclusivo" element={<RoleGuard><ApiOnlyInfoPage /></RoleGuard>} />
             <Route path="mais" element={<MorePage />} />
             <Route path="mais/plano" element={<PlanPage />} />
