@@ -235,7 +235,6 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
     allowed,
     applyServerConnection,
     fromOnboarding,
-    membership?.business_id,
   ])
 
   if (!allowed) {
