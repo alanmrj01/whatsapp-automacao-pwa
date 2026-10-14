@@ -128,7 +128,10 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
       '/whatsapp/onboarding/embedded-signup/redirect/start',
       {
         method:'POST',
-        body:JSON.stringify({attempt_id:pending.onboarding_attempt_id}),
+        body:JSON.stringify({
+          attempt_id:pending.onboarding_attempt_id,
+          return_to_onboarding:fromOnboarding,
+        }),
       },
     )
     if (
@@ -147,7 +150,7 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
       // The signed OAuth state remains authoritative if storage is unavailable.
     }
     window.location.assign(redirect.authorization_url)
-  }, [applyServerConnection, configuration.data])
+  }, [applyServerConnection, configuration.data, fromOnboarding])
 
   if (!allowed) {
     return (
