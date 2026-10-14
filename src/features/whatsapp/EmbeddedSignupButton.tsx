@@ -186,7 +186,6 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
     })
   }, [
     applyServerConnection,
-    fromOnboarding,
     membership?.business_id,
     navigate,
     searchParams,
