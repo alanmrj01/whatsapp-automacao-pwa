@@ -18,7 +18,6 @@ type MetaRedirectStartResponse = {
   authorization_url: string
 }
 
-const META_ATTEMPT_SESSION_KEY = 'alovia.meta.onboarding.attempt'
 
 export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}) {
   const {user, membership} = useAuth()
@@ -58,11 +57,6 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
       setMessage(null)
       setFailedAttempts(0)
       setPhase('success')
-      try {
-        window.sessionStorage.removeItem(META_ATTEMPT_SESSION_KEY)
-      } catch {
-        // Storage availability must never block a confirmed connection.
-      }
       return
     }
     if (connection.status === 'error') {
@@ -141,14 +135,6 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
       throw new Error('Meta redirect unavailable')
     }
 
-    try {
-      window.sessionStorage.setItem(
-        META_ATTEMPT_SESSION_KEY,
-        pending.onboarding_attempt_id,
-      )
-    } catch {
-      // The signed OAuth state remains authoritative if storage is unavailable.
-    }
     window.location.assign(redirect.authorization_url)
   }, [applyServerConnection, configuration.data, fromOnboarding])
 
