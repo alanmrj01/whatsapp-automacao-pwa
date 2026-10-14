@@ -169,8 +169,16 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
         }),
       },
     ).then((connection) => {
-      setReturnToOnboarding(returnToOnboardingFromValidatedState(state))
+      const shouldReturnToOnboarding=returnToOnboardingFromValidatedState(state)
+      setReturnToOnboarding(shouldReturnToOnboarding)
       applyServerConnection(connection)
+      if (
+        shouldReturnToOnboarding
+        && connection.status === 'pending'
+        && connection.next_action === 'wait_for_meta_review'
+      ) {
+        navigate('/app/onboarding', {replace:true})
+      }
     }).catch(() => {
       setPhase('error')
       setMessage('Não foi possível validar a autorização da Meta. Tente novamente.')
@@ -180,6 +188,7 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
     applyServerConnection,
     fromOnboarding,
     membership?.business_id,
+    navigate,
     searchParams,
   ])
 
@@ -286,7 +295,9 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
       </PrimaryButton>
       {phase === 'opening' && <p role="status">Redirecionando para a Meta…</p>}
       {phase === 'processing' && <p role="status">
-        A Alovia está validando a autorização no servidor. Nenhuma ação é necessária.
+        {liveConnection.data?.next_action === 'wait_for_meta_review'
+          ? 'Sua autorização foi concluída. Aguardando verificação da Meta; nenhuma ação é necessária agora.'
+          : 'A Alovia está validando a autorização no servidor. Nenhuma ação é necessária.'}
       </p>}
       {phase === 'success' && <p className="embedded-signup-action__success" role="status">
         Conexão oficial confirmada{connected?.display_phone_number
