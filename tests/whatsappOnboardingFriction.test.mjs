@@ -30,7 +30,7 @@ test('pending banner continues the WhatsApp action instead of stopping at the st
 test('backend connected state immediately overrides stale local signup state', () => {
   const embedded=read('src/features/whatsapp/EmbeddedSignupButton.tsx')
   const connection=read('src/features/whatsapp/useConnection.ts')
-  assert.match(embedded,/const liveConnection=useConnection\(\)/)
+  assert.match(embedded,/const liveConnection\s*=\s*useConnection\(\)/)
   assert.match(embedded,/if \(liveConnection\.data\)/)
   assert.match(embedded,/applyServerConnection\(liveConnection\.data\)/)
   assert.match(embedded,/connection\.status === 'connected'/)
