@@ -43,18 +43,15 @@ test('backend connected state immediately overrides stale local signup state', (
 
 test('coexistence authorization uses full-page redirect instead of popup resume', () => {
   const embedded=read('src/features/whatsapp/EmbeddedSignupButton.tsx')
-  const returnPage=read('src/features/whatsapp/MetaEmbeddedSignupReturnPage.tsx')
   assert.match(embedded,/embedded-signup\/redirect\/start/)
   assert.match(embedded,/window\.location\.assign\(redirect\.authorization_url\)/)
+  assert.match(embedded,/return_to_onboarding:fromOnboarding/)
   assert.doesNotMatch(embedded,/launchMetaEmbeddedSignup/)
   assert.doesNotMatch(embedded,/Retomar validação/)
-  assert.match(returnPage,/redirect_state:state/)
-  assert.match(returnPage,/history\.replaceState/)
 })
 
 test('every redirect Embedded Signup is correlated to one server attempt', () => {
   const button=read('src/features/whatsapp/EmbeddedSignupButton.tsx')
-  const returnPage=read('src/features/whatsapp/MetaEmbeddedSignupReturnPage.tsx')
   const types=read('src/features/whatsapp/types.ts')
   assert.match(types,/onboarding_attempt_id/)
   assert.match(types,/validating_connection/)
@@ -62,14 +59,12 @@ test('every redirect Embedded Signup is correlated to one server attempt', () =>
   assert.match(button,/Idempotency-Key/)
   assert.match(button,/crypto\.randomUUID\(\)/)
   assert.match(button,/attempt_id:pending\.onboarding_attempt_id/)
+  assert.match(button,/return_to_onboarding:fromOnboarding/)
   assert.match(button,/sessionStorage\.setItem/)
-  assert.match(returnPage,/redirect_state:state/)
-  assert.match(returnPage,/embedded-signup\/redirect\/cancel/)
 })
 
 test('Meta coexistence flow is browser-context independent on mobile and web', () => {
   const button=read('src/features/whatsapp/EmbeddedSignupButton.tsx')
-  const returnPage=read('src/features/whatsapp/MetaEmbeddedSignupReturnPage.tsx')
   const router=read('src/app/router.tsx')
   assert.match(button,/const beginRedirectSignup = useCallback\(async/)
   assert.match(button,/embedded-signup\/attempt/)
@@ -77,9 +72,7 @@ test('Meta coexistence flow is browser-context independent on mobile and web', (
   assert.match(button,/window\.location\.assign/)
   assert.doesNotMatch(button,/window\.open/)
   assert.doesNotMatch(button,/FB\.login/)
-  assert.match(router,/whatsapp\/meta-return/)
-  assert.match(returnPage,/authorization_code:code/)
-  assert.match(returnPage,/redirect_state:state/)
+  assert.doesNotMatch(router,/whatsapp\/meta-return/)
 })
 
 test('server validation is passive and does not ask the user to reopen Meta', () => {
