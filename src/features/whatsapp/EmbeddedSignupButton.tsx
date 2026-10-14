@@ -18,34 +18,6 @@ type MetaRedirectStartResponse = {
   authorization_url: string
 }
 
-const META_CALLBACK_QUERY_KEYS = [
-  'code',
-  'state',
-  'error',
-  'error_code',
-  'error_reason',
-  'error_description',
-] as const
-
-function returnToOnboardingFromValidatedState(state: string) {
-  try {
-    const encoded=state.split('.', 1)[0]
-    const normalized=encoded.replace(/-/g, '+').replace(/_/g, '/')
-    const padded=normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=')
-    const payload=JSON.parse(window.atob(padded)) as {return_to_onboarding?:unknown}
-    return payload.return_to_onboarding === true
-  } catch {
-    return false
-  }
-}
-
-function cleanMetaCallbackUrl(returnToOnboarding: boolean) {
-  const url = new URL(window.location.href)
-  for (const key of META_CALLBACK_QUERY_KEYS) url.searchParams.delete(key)
-  if (returnToOnboarding) url.searchParams.set('from', 'onboarding')
-  window.history.replaceState(window.history.state, '', url.toString())
-}
-
 export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}) {
   const {user, membership} = useAuth()
   const queryClient = useQueryClient()
@@ -57,11 +29,9 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
   const [connected, setConnected] = useState<WhatsAppConnection | null>(null)
   const [failedAttempts,setFailedAttempts]=useState(0)
   const [autoReady,setAutoReady] = useState(false)
-  const [returnToOnboarding,setReturnToOnboarding] = useState(fromOnboarding)
   const serverConnectedRef=useRef(false)
   const serverAttemptIdRef=useRef<string | null>(null)
   const startingRef=useRef(false)
-  const callbackHandledRef=useRef(false)
   const liveConnection=useConnection()
   const queryKey = useMemo(
     () => ['whatsapp-connection', user?.id, membership?.business_id],
@@ -92,7 +62,9 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
           ? 'A autorização da Meta não foi concluída. Tente novamente.'
           : connection.error_reason === 'onboarding_expired'
             ? 'A tentativa expirou antes da conclusão. Inicie uma nova conexão.'
-            : 'A conexão não foi concluída. Tente novamente.',
+            : connection.error_reason === 'provider_unavailable'
+              ? 'A Meta está temporariamente indisponível. Tente novamente em instantes.'
+              : 'A conexão não foi concluída. Tente novamente.',
       )
       return
     }
@@ -123,7 +95,8 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
     }
   }, [applyServerConnection, queryClient, queryKey])
 
-  // The server remains authoritative after redirects, reloads and tab switches.
+  // A troca do authorization code acontece no backend. Ao voltar da Meta, um
+  // reload, troca de aba ou PWA instalada apenas reconcilia o estado oficial.
   useEffect(() => {
     if (liveConnection.data) applyServerConnection(liveConnection.data)
   }, [applyServerConnection, liveConnection.data])
@@ -133,62 +106,24 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
   }, [allowed, autoStart])
 
   useEffect(() => {
-    if (phase === 'success' && returnToOnboarding) {
+    if (
+      fromOnboarding
+      && (
+        phase === 'success'
+        || (
+          liveConnection.data?.status === 'pending'
+          && liveConnection.data.next_action === 'wait_for_meta_review'
+        )
+      )
+    ) {
       navigate('/app/onboarding', {replace:true})
     }
-  }, [navigate, phase, returnToOnboarding])
-
-  useEffect(() => {
-    if (callbackHandledRef.current || !membership?.business_id) return
-
-    const authorizationCode=searchParams.get('code')
-    const state=searchParams.get('state')
-    const providerError=searchParams.get('error')
-    const hasMetaCallback=Boolean(authorizationCode || state || providerError)
-    if (!hasMetaCallback) return
-
-    callbackHandledRef.current=true
-    cleanMetaCallbackUrl(false)
-
-    if (providerError || !authorizationCode || !state) {
-      setPhase('error')
-      setMessage('A autorização da Meta não foi concluída. Tente novamente.')
-      setFailedAttempts(value=>value+1)
-      return
-    }
-
-    setPhase('processing')
-    setMessage(null)
-    void api.request<WhatsAppConnection>(
-      '/whatsapp/onboarding/embedded-signup/complete',
-      {
-        method:'POST',
-        body:JSON.stringify({
-          authorization_code:authorizationCode,
-          state,
-        }),
-      },
-    ).then((connection) => {
-      const shouldReturnToOnboarding=returnToOnboardingFromValidatedState(state)
-      setReturnToOnboarding(shouldReturnToOnboarding)
-      applyServerConnection(connection)
-      if (
-        shouldReturnToOnboarding
-        && connection.status === 'pending'
-        && connection.next_action === 'wait_for_meta_review'
-      ) {
-        navigate('/app/onboarding', {replace:true})
-      }
-    }).catch(() => {
-      setPhase('error')
-      setMessage('Não foi possível validar a autorização da Meta. Tente novamente.')
-      setFailedAttempts(value=>value+1)
-    })
   }, [
-    applyServerConnection,
-    membership?.business_id,
+    fromOnboarding,
+    liveConnection.data?.next_action,
+    liveConnection.data?.status,
     navigate,
-    searchParams,
+    phase,
   ])
 
   const startRedirectFlow = useCallback(async () => {
@@ -214,14 +149,14 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
       serverAttemptIdRef.current=pending.onboarding_attempt_id
       applyServerConnection(pending)
 
-      const redirectUri=`${window.location.origin}/app/whatsapp/business`
+      const returnUri=`${window.location.origin}/app/whatsapp/business`
       const redirect=await api.request<MetaRedirectStartResponse>(
         '/whatsapp/onboarding/embedded-signup/redirect/start',
         {
           method:'POST',
           body:JSON.stringify({
             attempt_id:pending.onboarding_attempt_id,
-            redirect_uri:redirectUri,
+            return_uri:returnUri,
             return_to_onboarding:fromOnboarding,
           }),
         },
@@ -310,7 +245,7 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
         <strong>Quer começar pela Alovia sem esperar por esta conexão?</strong>
         <p>A Meta ainda não concluiu o uso conjunto deste número. Você pode tentar novamente depois ou escolher o uso exclusivo pela Alovia. No modo exclusivo, este número deixa de funcionar simultaneamente no aplicativo WhatsApp Business.</p>
         <button className="compact-button" type="button" onClick={()=>{
-          navigate('/app/whatsapp/exclusivo?origem=coexistence&fallback=1'+(returnToOnboarding?'&from=onboarding':''))
+          navigate('/app/whatsapp/exclusivo?origem=coexistence&fallback=1'+(fromOnboarding?'&from=onboarding':''))
         }}>Ver opção de uso exclusivo</button>
       </div>}
     </div>
