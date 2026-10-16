@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { demoAppointments, demoConversations, demoOverview, demoToday, demoTomorrow, shiftDemoDate } from '../src/demo/operationalDemo.ts'
+import { demoAppointments, demoBookingDate1, demoBookingDate2, demoConversations, demoDateLabel, demoOverview, demoRescheduleDate, demoToday, demoTomorrow, shiftDemoDate } from '../src/demo/operationalDemo.ts'
 import { DEMO_DATA_NOTICE, entitlementsFor, requirePaidAccess, UpgradeRequiredError } from '../src/features/access/entitlements.ts'
 import { deriveProductState } from '../src/features/product/deriveProductState.ts'
 import { zonedDateTimeToIso } from '../src/features/operations/timezone.ts'
@@ -183,7 +183,12 @@ test('demo dates roll with the current day instead of expiring on a fixed calend
   const preview = read('src/features/preview/PlatformPreviewPage.tsx')
   assert.match(demoToday,/^\d{4}-\d{2}-\d{2}$/)
   assert.equal(demoTomorrow,shiftDemoDate(demoToday,1))
-  assert.equal(demoAppointments.at(-1).date,demoTomorrow)
+  assert.equal(demoBookingDate1,shiftDemoDate(demoToday,4))
+  assert.equal(demoBookingDate2,shiftDemoDate(demoToday,5))
+  assert.equal(demoRescheduleDate,shiftDemoDate(demoToday,6))
+  assert.deepEqual(demoAppointments.map(item=>item.date),[demoBookingDate1,demoBookingDate2,demoRescheduleDate])
+  assert.ok(demoAppointments.every(item=>item.date>demoToday))
+  assert.match(demoDateLabel(demoBookingDate1),/^.+, \d{2}\/\d{2}$/)
   assert.doesNotMatch(source,/demoToday\s*=\s*['"]\d{4}-\d{2}-\d{2}['"]/)
   assert.doesNotMatch(preview,/Setembro 2026|8 de setembro de 2026/)
   assert.match(preview,/demoMonthLabel/)
@@ -203,12 +208,18 @@ test('demo agenda is static, opens details and routes every mutation to upgrade'
 test('demo conversations cover the service journey and route reply actions to upgrade', () => {
   const page = read('src/features/conversations/ConversationsPage.tsx')
   const detail = read('src/features/conversations/DemoConversationDetailPage.tsx')
+  const agendaPreview = read('src/features/more/DemoSettingsPreviewPage.tsx')
+  const conversationText = JSON.stringify(demoConversations)
   assert.ok(demoConversations.every(item=>item.messages.length>=5))
   assert.ok(demoConversations.some(item=>item.messages.some(message=>message.direction==='assistant'&&/agendamento|disponibilidade/i.test(message.body))))
   for (const scenario of ['não está gelando','instalar','higienização','visita técnica','Agendamento','Reagendamento']) {
     assert.match(JSON.stringify(demoConversations),new RegExp(scenario,'i'))
   }
   assert.ok(demoConversations.some(item=>item.messages.some(message=>message.direction==='system')))
+  assert.doesNotMatch(conversationText,/disponibilidade hoje/i)
+  assert.doesNotMatch(conversationText,/amanhã há disponibilidade/i)
+  assert.doesNotMatch(agendaPreview,/Antecedência mínima<input readOnly value="2 horas"/)
+  assert.match(agendaPreview,/Antecedência mínima<input readOnly value="Automático pelo Alovia"/)
   assert.match(page,/navigate\(`\/app\/conversas\/\$\{item\.id\}`\)/)
   assert.doesNotMatch(page,/>Anterior</)
   assert.doesNotMatch(page,/>Próxima</)
