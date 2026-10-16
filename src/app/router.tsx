@@ -9,6 +9,7 @@ import { useSetupStatus } from '../features/operations/api'
 const AgendaPage = lazy(async () => ({default:(await import('../features/appointments/AgendaPage')).AgendaPage}))
 const ConversationsPage = lazy(async () => ({default:(await import('../features/conversations/ConversationsPage')).ConversationsPage}))
 const ConversationDetailPage = lazy(async () => ({default:(await import('../features/conversations/ConversationDetailPage')).ConversationDetailPage}))
+const DemoConversationDetailPage = lazy(async () => ({default:(await import('../features/conversations/DemoConversationDetailPage')).DemoConversationDetailPage}))
 const DashboardPage = lazy(async () => ({default:(await import('../features/dashboard/DashboardPage')).DashboardPage}))
 const MorePage = lazy(async () => ({default:(await import('../features/more/MorePage')).MorePage}))
 const PlanPage = lazy(async () => ({default:(await import('../features/billing/PlanPage')).PlanPage}))
@@ -39,6 +40,7 @@ const SignupPage = lazy(async () => ({default:(await import('../features/auth/Si
 const AdminPage = lazy(async () => ({default:(await import('../features/auth/AdminPage')).AdminPage}))
 const PlatformPreviewPage = lazy(async () => ({default:(await import('../features/preview/PlatformPreviewPage')).PlatformPreviewPage}))
 const PublicLandingPage = lazy(async () => ({default:(await import('../features/public/PublicLandingPage')).PublicLandingPage}))
+const DemoSettingsPreviewPage = lazy(async () => ({default:(await import('../features/more/DemoSettingsPreviewPage')).DemoSettingsPreviewPage}))
 
 function Deferred({children}:{children:ReactNode}) {
   return <Suspense fallback={<div className="route-loading"><LoadingState /></div>}>{children}</Suspense>
@@ -47,6 +49,13 @@ function Deferred({children}:{children:ReactNode}) {
 function PaidOperationalGuard({children}:{children:ReactNode}) {
   const entitlement = useEntitlements()
   return entitlement.isPaid ? children : <Navigate to="/app/mais" replace/>
+}
+
+function DemoOrPaidRoute({demo,paid}:{demo:ReactNode;paid:ReactNode}) {
+  const entitlement = useEntitlements()
+  if(entitlement.usesDemoData)return demo
+  if(entitlement.isPaid)return paid
+  return <Navigate to="/app/mais" replace/>
 }
 
 
@@ -85,7 +94,7 @@ export function AppRouter() {
             <Route index element={<DashboardPage />} />
             <Route path="agenda" element={<AgendaPage />} />
             <Route path="conversas" element={<ConversationsPage />} />
-            <Route path="conversas/:conversationId" element={<PaidOperationalGuard><ConversationDetailPage /></PaidOperationalGuard>} />
+            <Route path="conversas/:conversationId" element={<DemoOrPaidRoute demo={<DemoConversationDetailPage/>} paid={<ConversationDetailPage/>}/>} />
             <Route path="whatsapp" element={<WhatsAppPage />} />
             <Route path="whatsapp/business" element={<RoleGuard><CoexistenceInfoPage /></RoleGuard>} />
             <Route path="whatsapp/exclusivo" element={<RoleGuard><ApiOnlyInfoPage /></RoleGuard>} />
@@ -94,14 +103,14 @@ export function AppRouter() {
             <Route path="mais/usuario" element={<UserSettingsPage />} />
             <Route path="mais/seguranca" element={<SecuritySettingsPage />} />
             <Route path="mais/privacidade" element={<PrivacySettingsPage />} />
-            <Route path="mais/empresa" element={<PaidOperationalGuard><CompanySettingsPage /></PaidOperationalGuard>} />
-            <Route path="mais/servicos" element={<PaidOperationalGuard><ServiceCatalogPage /></PaidOperationalGuard>} />
-            <Route path="mais/catalogo" element={<PaidOperationalGuard><MaterialsCatalogPage /></PaidOperationalGuard>} />
-            <Route path="mais/horarios" element={<PaidOperationalGuard><WorkingHoursSettingsPage /></PaidOperationalGuard>} />
-            <Route path="mais/automacao" element={<PaidOperationalGuard><AutomationSettingsPage /></PaidOperationalGuard>} />
-            <Route path="mais/relacionamento" element={<PaidOperationalGuard><CustomerOutreachPage /></PaidOperationalGuard>} />
-            <Route path="mais/equipe" element={<PaidOperationalGuard><TeamSettingsPage /></PaidOperationalGuard>} />
-            <Route path="mais/agenda" element={<PaidOperationalGuard><AgendaSettingsPage /></PaidOperationalGuard>} />
+            <Route path="mais/empresa" element={<DemoOrPaidRoute demo={<DemoSettingsPreviewPage kind="company"/>} paid={<CompanySettingsPage/>}/>} />
+            <Route path="mais/servicos" element={<DemoOrPaidRoute demo={<DemoSettingsPreviewPage kind="services"/>} paid={<ServiceCatalogPage/>}/>} />
+            <Route path="mais/catalogo" element={<DemoOrPaidRoute demo={<DemoSettingsPreviewPage kind="materials"/>} paid={<MaterialsCatalogPage/>}/>} />
+            <Route path="mais/horarios" element={<DemoOrPaidRoute demo={<DemoSettingsPreviewPage kind="hours"/>} paid={<WorkingHoursSettingsPage/>}/>} />
+            <Route path="mais/automacao" element={<DemoOrPaidRoute demo={<DemoSettingsPreviewPage kind="assistant"/>} paid={<AutomationSettingsPage/>}/>} />
+            <Route path="mais/relacionamento" element={<DemoOrPaidRoute demo={<DemoSettingsPreviewPage kind="preventives"/>} paid={<CustomerOutreachPage/>}/>} />
+            <Route path="mais/equipe" element={<DemoOrPaidRoute demo={<DemoSettingsPreviewPage kind="team"/>} paid={<TeamSettingsPage/>}/>} />
+            <Route path="mais/agenda" element={<DemoOrPaidRoute demo={<DemoSettingsPreviewPage kind="agenda"/>} paid={<AgendaSettingsPage/>}/>} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/app" replace />} />

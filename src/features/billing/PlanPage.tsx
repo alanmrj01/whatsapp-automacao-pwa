@@ -16,7 +16,7 @@ function isBillingCycle(value: string | null): value is BillingCycle {
 }
 
 function planCta(plan: PlanId) {
-  return plan === 'basic' ? 'Escolher Basic' : 'Escolher Plus'
+  return plan === 'basic' ? 'Escolher Basic' : 'Disponível em breve'
 }
 
 export function PlanPage() {
@@ -24,13 +24,11 @@ export function PlanPage() {
   const [params,setParams] = useSearchParams()
   const cycleParam = params.get('cycle')
   const cycle: BillingCycle = isBillingCycle(cycleParam) ? cycleParam : defaultBillingCycle
-  const plusUnavailable = params.get('unavailable') === 'plus'
 
   function changeCycle(next: BillingCycle) {
     const nextParams = new URLSearchParams(params)
     nextParams.set('cycle',next)
     nextParams.delete('plan')
-    nextParams.delete('unavailable')
     setParams(nextParams,{replace:true})
   }
 
@@ -51,7 +49,7 @@ export function PlanPage() {
         <Link className="account-back" to="/app/mais"><ChevronLeft size={18}/>Configurações</Link>
         <span className="eyebrow">Assinatura</span>
         <h1>Escolha seu plano</h1>
-        <p>Comece com o Basic ou escolha o Plus para uma operação com mais equipe e volume.</p>
+        <p>Comece com o Basic. O Plus, pensado para operações em equipe, chega em breve.</p>
       </div>
     </section>
 
@@ -82,7 +80,7 @@ export function PlanPage() {
       {plans.map(plan=>{
         const price = cyclePrice(plan,cycle)
         const cycleLabel = billingCycles.find(item=>item.id===cycle)?.label
-        const comingSoon = plan.id === 'plus' && plusUnavailable
+        const comingSoon = plan.id === 'plus'
         return <article className={`plan-card plan-card--${plan.id}${comingSoon?' is-coming-soon':''}`} key={plan.id}>
           <div className="plan-card__heading">
             <div>
@@ -90,6 +88,7 @@ export function PlanPage() {
               <h2>{plan.name}</h2>
               <p>{plan.positioning}</p>
             </div>
+            {comingSoon&&<span className="plan-coming-soon-badge">Em breve</span>}
           </div>
 
           <div className="plan-price" aria-label={`Preço do plano ${plan.name} no período ${cycleLabel}`}>
@@ -103,14 +102,14 @@ export function PlanPage() {
             {plan.features.map(feature=><li key={feature}><Check size={17}/>{feature}</li>)}
           </ul>
 
-          <button className="primary-button plan-card__cta" type="button" onClick={()=>choosePlan(plan.id)}>
-            {comingSoon?'Disponível em breve':planCta(plan.id)}
+          <button className="primary-button plan-card__cta" type="button" disabled={comingSoon} onClick={()=>choosePlan(plan.id)}>
+            {planCta(plan.id)}
           </button>
           {comingSoon&&<p className="plan-coming-soon" role="status">O plano Plus estará disponível em breve. Para começar agora, escolha o plano Basic.</p>}
         </article>
       })}
     </section>
 
-    <p className="plan-footnote">Você confere plano, período e valor novamente antes de pagar.</p>
+    <p className="plan-footnote">Você confere plano, período e valor novamente antes de pagar. Basic inclui 7 dias de garantia.</p>
   </div>
 }

@@ -6,7 +6,6 @@ import { StatusBadge } from '../../components/StatusBadge'
 import { ErrorState } from '../../components/ErrorState'
 import { LoadingState } from '../../components/LoadingState'
 import { demoAppointments, demoOverview, demoToday } from '../../demo/operationalDemo'
-import { DemoDataNotice } from '../access/DemoDataNotice'
 import { useEntitlements } from '../access/useEntitlements'
 import { useUpgradePrompt } from '../access/upgradePromptContext'
 import { useBusiness, useDashboardToday } from '../operations/api'
@@ -57,8 +56,6 @@ export function DashboardPage() {
       <div><span className="eyebrow dashboard-business-name">{membership?.business_name??'Sua empresa'}</span><h1>Dashboard</h1><p>{date}</p></div>
       <StatusBadge tone={active?'success':state==='ERROR'?'danger':'info'}>{stateLabels[state]}</StatusBadge>
     </section>
-
-    {demo && <DemoDataNotice />}
 
     <section className={`whatsapp-summary whatsapp-summary--${whatsappStatus}`} aria-labelledby="whatsapp-summary-title">
       <span className="whatsapp-summary__icon"><MessageCircleMore size={22}/></span>

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { demoAppointments, demoConversations, demoOverview, demoToday, demoTomorrow, shiftDemoDate } from '../src/demo/operationalDemo.ts'
+import { demoAppointments, demoBookingDate2, demoConversations, demoDateLabel, demoOverview, demoRescheduleDate, demoToday, demoTomorrow, shiftDemoDate } from '../src/demo/operationalDemo.ts'
 import { DEMO_DATA_NOTICE, entitlementsFor, requirePaidAccess, UpgradeRequiredError } from '../src/features/access/entitlements.ts'
 import { deriveProductState } from '../src/features/product/deriveProductState.ts'
 import { zonedDateTimeToIso } from '../src/features/operations/timezone.ts'
@@ -171,12 +171,11 @@ test('one entitlement policy separates free demo from paid operational access', 
 
 test('every free operational screen shows the exact fictitious-data warning', () => {
   const notice = read('src/features/access/DemoDataNotice.tsx')
-  assert.equal(DEMO_DATA_NOTICE,'Modo demonstração — dados ilustrativos para você visualizar como o ALOVIA funciona.')
+  const shell = read('src/app/AppShell.tsx')
+  assert.equal(DEMO_DATA_NOTICE,'Modo demonstração — dados ilustrativos para você visualizar como a Alovia funciona.')
   assert.match(notice,/DEMO_DATA_NOTICE/)
-  for (const page of ['DashboardPage.tsx','appointments/AgendaPage.tsx','conversations/ConversationsPage.tsx']) {
-    const path = page.includes('/') ? `src/features/${page}` : `src/features/dashboard/${page}`
-    assert.match(read(path),/DemoDataNotice/)
-  }
+  assert.match(shell,/demo&&<DemoDataNotice \/>/)
+  for (const page of ['src/features/dashboard/DashboardPage.tsx','src/features/appointments/AgendaPage.tsx','src/features/conversations/ConversationsPage.tsx']) assert.doesNotMatch(read(page),/DemoDataNotice/)
 })
 
 test('demo dates roll with the current day instead of expiring on a fixed calendar date', () => {
@@ -184,7 +183,11 @@ test('demo dates roll with the current day instead of expiring on a fixed calend
   const preview = read('src/features/preview/PlatformPreviewPage.tsx')
   assert.match(demoToday,/^\d{4}-\d{2}-\d{2}$/)
   assert.equal(demoTomorrow,shiftDemoDate(demoToday,1))
-  assert.equal(demoAppointments.at(-1).date,demoTomorrow)
+  assert.equal(demoBookingDate2,shiftDemoDate(demoToday,5))
+  assert.equal(demoRescheduleDate,shiftDemoDate(demoToday,6))
+  assert.deepEqual(demoAppointments.map(item=>item.date),[demoToday,demoBookingDate2,demoRescheduleDate])
+  assert.ok(demoAppointments.slice(1).every(item=>item.date>demoToday))
+  assert.match(demoDateLabel(demoToday),/^.+, \d{2}\/\d{2}$/)
   assert.doesNotMatch(source,/demoToday\s*=\s*['"]\d{4}-\d{2}-\d{2}['"]/)
   assert.doesNotMatch(preview,/Setembro 2026|8 de setembro de 2026/)
   assert.match(preview,/demoMonthLabel/)
@@ -203,18 +206,31 @@ test('demo agenda is static, opens details and routes every mutation to upgrade'
 
 test('demo conversations cover the service journey and route reply actions to upgrade', () => {
   const page = read('src/features/conversations/ConversationsPage.tsx')
+  const detail = read('src/features/conversations/DemoConversationDetailPage.tsx')
+  const dashboard = read('src/features/dashboard/DashboardPage.tsx')
+  const agendaPreview = read('src/features/more/DemoSettingsPreviewPage.tsx')
+  const conversationText = JSON.stringify(demoConversations)
+  const scheduledEarlier = demoConversations.find(item=>item.id==='conversation-5')
   assert.ok(demoConversations.every(item=>item.messages.length>=5))
   assert.ok(demoConversations.some(item=>item.messages.some(message=>message.direction==='assistant'&&/agendamento|disponibilidade/i.test(message.body))))
-  for (const scenario of ['valor correto','disponibilidade','endereço','Agendamento','Reagendamento','Dúvida frequente resolvida']) {
+  for (const scenario of ['não está gelando','instalar','higienização','visita técnica','Agendamento','Reagendamento']) {
     assert.match(JSON.stringify(demoConversations),new RegExp(scenario,'i'))
   }
   assert.ok(demoConversations.some(item=>item.messages.some(message=>message.direction==='system')))
-  assert.match(page,/selectDemo\(item\.id\)/)
-  assert.match(page,/Assistente ALOVIA/)
-  assert.match(page,/Atualização do atendimento/)
-  assert.match(page,/>Anterior</)
-  assert.match(page,/>Próxima</)
-  assert.match(page,/openUpgrade\('Responder ou assumir uma conversa'\)/)
+  assert.doesNotMatch(conversationText,/disponibilidade hoje/i)
+  assert.doesNotMatch(conversationText,/amanhã há disponibilidade/i)
+  assert.equal(scheduledEarlier?.time,'5 dias atrás')
+  assert.ok(scheduledEarlier?.messages.every(message=>message.time.startsWith('5 dias atrás')))
+  assert.ok(demoOverview.appointmentsToday>=1)
+  assert.ok(demoAppointments.some(item=>item.date===demoToday))
+  assert.ok(demoAppointments.filter(item=>item.date>demoToday).length>=2)
+  assert.match(dashboard,/demoAppointments\.filter\(item=>item\.date===demoToday\)/)
+  assert.doesNotMatch(agendaPreview,/Antecedência mínima<input readOnly value="2 horas"/)
+  assert.match(agendaPreview,/Antecedência mínima<input readOnly value="Automático pelo Alovia"/)
+  assert.match(page,/navigate\(`\/app\/conversas\/\$\{item\.id\}`\)/)
+  assert.doesNotMatch(page,/>Anterior</)
+  assert.doesNotMatch(page,/>Próxima</)
+  assert.match(detail,/openUpgrade\('Responder uma conversa'\)/)
   assert.equal(demoOverview.waiting,demoConversations.filter(item=>item.status==='waiting').length)
   assert.equal(demoOverview.inProgress,demoConversations.filter(item=>item.status==='in_progress').length)
   assert.equal(demoOverview.appointmentsToday,demoAppointments.filter(item=>item.date===demoToday).length)
@@ -225,11 +241,13 @@ test('blocked free actions open the compact subscription prompt instead of becom
   const agenda = read('src/features/appointments/AgendaPage.tsx')
   const more = read('src/features/more/MorePage.tsx')
   const conversations = read('src/features/conversations/ConversationsPage.tsx')
+  const demoDetail = read('src/features/conversations/DemoConversationDetailPage.tsx')
   const whatsapp = read('src/features/whatsapp/WhatsAppPage.tsx')
   const prompt = read('src/features/access/UpgradePrompt.tsx')
-  for (const source of [dashboard,agenda,more,conversations,whatsapp]) assert.match(source,/openUpgrade/)
+  for (const source of [dashboard,agenda,more,demoDetail,whatsapp]) assert.match(source,/openUpgrade/)
+  assert.doesNotMatch(conversations,/BottomSheet open=\{!!demoDetail\}/)
   assert.match(prompt,/Disponível com assinatura/)
-  assert.match(prompt,/Assine para usar esta função com os dados reais da sua empresa\./)
+  assert.match(prompt,/Use esta função com os dados reais da sua empresa\./)
   assert.match(prompt,/Ver planos/)
 })
 

@@ -19,11 +19,15 @@ export function UpgradePromptProvider({ children }: { children: ReactNode }) {
       <BottomSheet
         open={feature !== null}
         title="Disponível com assinatura"
-        description={`${feature ?? 'Este recurso'} é liberado nos planos Basic e Plus.`}
+        description={`${feature ?? 'Este recurso'} pode ser usado com os dados reais da sua empresa.`}
         onClose={() => setFeature(null)}
       >
         <div className="upgrade-prompt upgrade-prompt--compact">
-          <p>Assine para usar esta função com os dados reais da sua empresa.</p>
+          <p>Use esta função com os dados reais da sua empresa.</p>
+          <div className="upgrade-prompt__offer">
+            <strong>Basic: R$ 197/mês no plano mensal · 7 dias de garantia.</strong>
+            <span>Trimestral e anual têm condições de economia.</span>
+          </div>
           <div className="upgrade-prompt__actions">
             <button className="primary-button" type="button" onClick={viewPlans}>Ver planos</button>
             <button className="compact-button" type="button" onClick={() => setFeature(null)}>Agora não</button>

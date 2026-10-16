@@ -10,6 +10,8 @@ import { useSetupStatus } from '../features/operations/api'
 import { useConnection } from '../features/whatsapp/useConnection'
 import { EmbeddedSignupButton } from '../features/whatsapp/EmbeddedSignupButton'
 import { deriveConnectionJourney } from '../features/whatsapp/connectionJourney'
+import { useEntitlements } from '../features/access/useEntitlements'
+import { DemoDataNotice } from '../features/access/DemoDataNotice'
 
 const titles: Record<string, string> = {
   '/app': 'Início',
@@ -29,6 +31,8 @@ const titles: Record<string, string> = {
 
 export function AppShell() {
   const { pathname } = useLocation()
+  const entitlement = useEntitlements()
+  const demo = entitlement.usesDemoData
   const isConversationDetail = /^\/app\/conversas\/[^/]+$/.test(pathname)
   const isWhatsAppDetail = pathname.startsWith('/app/whatsapp/')
   const isSettingsDetail = pathname.startsWith('/app/mais/')
@@ -40,7 +44,8 @@ export function AppShell() {
       <UpgradePromptProvider>
         <div className="conversation-route-shell" id="main-content">
           <NotificationCenter backgroundOnly />
-          <WhatsAppPendingBanner />
+          {demo&&<DemoDataNotice />}
+          {!demo&&<WhatsAppPendingBanner />}
           <Outlet />
           <ReengagementPrompt />
         </div>
@@ -56,7 +61,8 @@ export function AppShell() {
         <AppHeader title={title} showBack={isDetail} backTo={isSettingsDetail?'/app/mais':'/app/whatsapp'} actions={<NotificationCenter/>} />
         <main className="app-content" id="main-content">
           <div className="page-stack"><BusinessSelector /></div>
-          <WhatsAppPendingBanner />
+          {demo&&<DemoDataNotice />}
+          {!demo&&<WhatsAppPendingBanner />}
           <Outlet />
         </main>
         <BottomNavigation />

@@ -12,6 +12,7 @@ export function MorePage(){
   const entitlement=useEntitlements()
   const {openUpgrade}=useUpgradePrompt()
   const paid=entitlement.isPaid
+  const canExplore=paid||entitlement.usesDemoData
   const whatsappReady=connection.data?.status==='connected'||setup.data?.whatsapp||state==='ACTIVE'
   const whatsappPending=paid&&setup.data?.onboarding_completed===true&&!whatsappReady
   const nonWhatsAppBlockingReasons=setup.data?.blocking_reasons.filter(reason=>!/WhatsApp/i.test(reason))??[]
@@ -31,23 +32,23 @@ export function MorePage(){
 
     <Section title="Atendimento">
       <div className="list-surface">
-        <ListRow icon={Bot} title="Assistente Virtual" subtitle="Mensagens e contatos sem resposta automática" to={paid?'/app/mais/automacao':undefined} onClick={!paid?gated('Configurar o Assistente Virtual'):undefined}/>
-        <ListRow icon={HeartHandshake} title="Preventivas" subtitle="Próximos contatos automáticos e histórico de resultados" to={paid?'/app/mais/relacionamento':undefined} onClick={!paid?gated('Acompanhar preventivas com clientes'):undefined}/>
+        <ListRow icon={Bot} title="Assistente Virtual" subtitle="Mensagens e contatos sem resposta automática" to={canExplore?'/app/mais/automacao':undefined} onClick={!canExplore?gated('Configurar o Assistente Virtual'):undefined}/>
+        <ListRow icon={HeartHandshake} title="Preventivas" subtitle="Próximos contatos automáticos e histórico de resultados" to={canExplore?'/app/mais/relacionamento':undefined} onClick={!canExplore?gated('Acompanhar preventivas com clientes'):undefined}/>
       </div>
     </Section>
 
     <Section title="Empresa">
       <div className="list-surface">
-        <ListRow icon={Building2} title="Dados da empresa" subtitle="Nome, responsável, endereço e fuso horário" to={paid?'/app/mais/empresa':undefined} onClick={!paid?gated('Configurar os dados da empresa'):undefined}/>
-        <ListRow icon={UsersRound} title="Técnicos" to={paid?'/app/mais/equipe':undefined} onClick={!paid?gated('Gerenciar técnicos'):undefined}/>
-        <ListRow icon={Clock3} title="Horários de funcionamento" to={paid?'/app/mais/horarios':undefined} onClick={!paid?gated('Configurar horários de funcionamento'):undefined}/>
-        <ListRow icon={Boxes} title="Catálogo de serviços" subtitle="Serviços, duração e preço" to={paid?'/app/mais/servicos':undefined} onClick={!paid?gated('Configurar catálogo de serviços'):undefined}/>
-        <ListRow icon={PackageOpen} title="Catálogo de equipamentos e materiais" subtitle="Materiais e equipamentos cobrados à parte" to={paid?'/app/mais/catalogo':undefined} onClick={!paid?gated('Configurar catálogo da empresa'):undefined}/>
+        <ListRow icon={Building2} title="Dados da empresa" subtitle="Nome, responsável, endereço e fuso horário" to={canExplore?'/app/mais/empresa':undefined} onClick={!canExplore?gated('Configurar os dados da empresa'):undefined}/>
+        <ListRow icon={UsersRound} title="Técnicos" to={canExplore?'/app/mais/equipe':undefined} onClick={!canExplore?gated('Gerenciar técnicos'):undefined}/>
+        <ListRow icon={Clock3} title="Horários de funcionamento" to={canExplore?'/app/mais/horarios':undefined} onClick={!canExplore?gated('Configurar horários de funcionamento'):undefined}/>
+        <ListRow icon={Boxes} title="Catálogo de serviços" subtitle="Serviços, duração e preço" to={canExplore?'/app/mais/servicos':undefined} onClick={!canExplore?gated('Configurar catálogo de serviços'):undefined}/>
+        <ListRow icon={PackageOpen} title="Catálogo de equipamentos e materiais" subtitle="Materiais e equipamentos cobrados à parte" to={canExplore?'/app/mais/catalogo':undefined} onClick={!canExplore?gated('Configurar catálogo da empresa'):undefined}/>
       </div>
     </Section>
 
     <Section title="Agenda">
-      <div className="list-surface"><ListRow icon={CalendarCog} title="Agenda e disponibilidade" subtitle="Tempos automáticos ou definidos por você" to={paid?'/app/mais/agenda':undefined} onClick={!paid?gated('Configurar agenda e disponibilidade'):undefined}/></div>
+      <div className="list-surface"><ListRow icon={CalendarCog} title="Agenda e disponibilidade" subtitle="Tempos automáticos ou definidos por você" to={canExplore?'/app/mais/agenda':undefined} onClick={!canExplore?gated('Configurar agenda e disponibilidade'):undefined}/></div>
     </Section>
 
     <Section title="Conta">

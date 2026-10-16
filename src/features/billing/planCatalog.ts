@@ -18,7 +18,7 @@ export const billingCycles: Array<{
   badge?: string
 }> = [
   {id:'monthly',label:'Mensal',discount:0},
-  {id:'quarterly',label:'Trimestral',discount:0.10,badge:'Mais popular'},
+  {id:'quarterly',label:'Trimestral',discount:0.10,badge:'Recomendado'},
   {id:'annual',label:'Anual',discount:0.15,badge:'Maior economia'},
 ]
 

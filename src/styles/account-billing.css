@@ -25,6 +25,18 @@
   gap: 10px;
 }
 
+.upgrade-prompt__offer {
+  padding: 11px 12px;
+  display: grid;
+  gap: 3px;
+  border-radius: 12px;
+  color: var(--color-text);
+  background: var(--color-surface-subtle);
+  font-size: .78rem;
+}
+
+.upgrade-prompt__offer span { color:var(--color-text-soft); }
+
 .account-heading {
   gap: 8px;
 }
@@ -313,6 +325,18 @@
   font-size: .72rem;
   font-weight: 800;
 }
+
+.plan-coming-soon-badge {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border-radius: 999px;
+  color: #174a87;
+  background: #edf5ff;
+  font-size: .72rem;
+  font-weight: 800;
+}
+
+.plan-card__cta:disabled { opacity:.65; cursor:not-allowed; }
 
 .plan-price {
   display: flex;

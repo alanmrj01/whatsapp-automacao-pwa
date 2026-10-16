@@ -1,6 +1,6 @@
 import type { Membership, MembershipRole } from '../auth/types'
 
-export const DEMO_DATA_NOTICE = 'Modo demonstração — dados ilustrativos para você visualizar como o ALOVIA funciona.'
+export const DEMO_DATA_NOTICE = 'Modo demonstração — dados ilustrativos para você visualizar como a Alovia funciona.'
 
 export class UpgradeRequiredError extends Error {
   constructor() {
