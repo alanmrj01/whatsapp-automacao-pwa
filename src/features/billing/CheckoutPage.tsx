@@ -62,6 +62,7 @@ type CheckoutResponse = {
   plan:PlanId
   cycle:BillingCycle
   amount_cents:number
+  initial_payment_received?:boolean
 }
 
 type CheckoutStatusResponse = {
@@ -71,6 +72,7 @@ type CheckoutStatusResponse = {
   plan:PlanId
   cycle:BillingCycle
   expires_at?:string|null
+  initial_payment_received:boolean
 }
 
 type CheckoutProfile = {
@@ -191,6 +193,8 @@ export function CheckoutPage() {
   const [pixQrCode,setPixQrCode]=useState<string|null>(null)
   const [pixQrLoading,setPixQrLoading]=useState(false)
   const [copyState,setCopyState]=useState<'idle'|'copied'|'failed'>('idle')
+  const [initialPaymentReceived,setInitialPaymentReceived]=useState(false)
+  const [cancelingPix,setCancelingPix]=useState(false)
   const payerDocumentRef=useRef<HTMLInputElement|null>(null)
   const payerPhoneRef=useRef<HTMLInputElement|null>(null)
   const postalCodeRef=useRef<HTMLInputElement|null>(null)
@@ -286,6 +290,7 @@ export function CheckoutPage() {
       ))throw new Error('Invalid Pix Automatic checkout')
       setCheckout(nextCheckout)
       setPixStatus(method==='pix_automatic'?'active':null)
+      setInitialPaymentReceived(nextCheckout.initial_payment_received===true)
       setCopyState('idle')
       return nextCheckout
     } catch (caught) {
@@ -335,7 +340,7 @@ export function CheckoutPage() {
     return()=>{active=false}
   },[checkout?.payment_method,checkout?.pix_payload])
 
-  const expired=remaining===0
+  const expired=remaining===0&&!initialPaymentReceived
 
   useEffect(()=>{
     const checkoutId=checkout?.payment_method==='pix_automatic'?checkout.checkout_id:null
@@ -356,6 +361,7 @@ export function CheckoutPage() {
         const current=await api.request<CheckoutStatusResponse>(`/billing/checkouts/${checkoutId}`)
         if(cancelled||current.payment_method!=='pix_automatic')return
         setPixStatus(current.status)
+        setInitialPaymentReceived(current.initial_payment_received)
         if(current.status==='paid') {
           if(finalizing.current)return
           finalizing.current=true
@@ -426,12 +432,12 @@ export function CheckoutPage() {
     setPixQrCode(null)
     setPixQrLoading(false)
     setCopyState('idle')
+    setInitialPaymentReceived(false)
   }
 
   const prepareCardCheckout=(key:string)=>prepareCheckout({method:'credit_card',key})
 
-  const changePaymentMethod=(method:PaymentMethod)=>{
-    if(method===paymentMethod)return
+  const selectPaymentMethod=(method:PaymentMethod)=>{
     clearPaymentState()
     setPaymentMethod(method)
     setOpenStep(1)
@@ -444,6 +450,36 @@ export function CheckoutPage() {
       return
     }
     void prepareCardCheckout(key)
+  }
+
+  const changePaymentMethod=async(method:PaymentMethod)=>{
+    if(method===paymentMethod||cancelingPix||checkoutLoading)return
+    if(method==='credit_card'&&checkout?.payment_method==='pix_automatic') {
+      if(initialPaymentReceived) {
+        setError('O primeiro pagamento já foi recebido. Não faça outro pagamento enquanto regularizamos a autorização.')
+        return
+      }
+      setCancelingPix(true)
+      setError(null)
+      try {
+        const canceled=await api.request<CheckoutStatusResponse>(
+          `/billing/checkouts/${checkout.checkout_id}/cancel`,
+          {method:'POST'},
+        )
+        if(!['canceled','expired','failed'].includes(canceled.status)) {
+          throw new Error('Unexpected Pix cancellation status')
+        }
+        selectPaymentMethod('credit_card')
+      } catch (caught) {
+        setError(caught instanceof ApiError&&caught.status===409
+          ?'Este Pix não pode ser abandonado agora. Não faça outro pagamento enquanto verificamos a situação.'
+          :'Não foi possível cancelar o Pix Automático. Continue com o Pix ou tente novamente em alguns instantes.')
+      } finally {
+        setCancelingPix(false)
+      }
+      return
+    }
+    selectPaymentMethod(method)
   }
 
   const generatePix=async(key=checkoutAttempt.current.key)=>{
@@ -612,12 +648,12 @@ export function CheckoutPage() {
           <div className="checkout-method-heading"><span className="eyebrow">Forma de pagamento</span><h2 id="checkout-payment-method-title">Como você prefere pagar?</h2></div>
           <div className="checkout-method-options">
             <label className={`checkout-method-option${paymentMethod==='pix_automatic'?' is-selected':''}`}>
-              <input type="radio" name="payment-method" value="pix_automatic" checked={paymentMethod==='pix_automatic'} onChange={()=>changePaymentMethod('pix_automatic')}/>
+              <input type="radio" name="payment-method" value="pix_automatic" checked={paymentMethod==='pix_automatic'} disabled={checkoutLoading||cancelingPix} onChange={()=>void changePaymentMethod('pix_automatic')}/>
               <span className="checkout-method-icon"><Landmark size={22}/></span>
               <span className="checkout-method-copy"><span className="checkout-method-title"><strong>Pix Automático</strong><small>Recomendado</small></span><span>Pague o primeiro Pix e autorize as próximas renovações automaticamente.</span></span>
             </label>
             <label className={`checkout-method-option${paymentMethod==='credit_card'?' is-selected':''}`}>
-              <input type="radio" name="payment-method" value="credit_card" checked={paymentMethod==='credit_card'} onChange={()=>changePaymentMethod('credit_card')}/>
+              <input type="radio" name="payment-method" value="credit_card" checked={paymentMethod==='credit_card'} disabled={checkoutLoading||cancelingPix||initialPaymentReceived} onChange={()=>void changePaymentMethod('credit_card')}/>
               <span className="checkout-method-icon"><CreditCard size={22}/></span>
               <span className="checkout-method-copy"><strong>Cartão de crédito</strong><span>Cobrança recorrente no cartão.</span></span>
             </label>
@@ -666,6 +702,8 @@ export function CheckoutPage() {
                 ?<PixPaymentContent
                   checkout={checkout}
                   status={pixStatus}
+                  initialPaymentReceived={initialPaymentReceived}
+                  canceling={cancelingPix}
                   qrCode={pixQrCode}
                   qrLoading={pixQrLoading}
                   copyState={copyState}
@@ -678,7 +716,7 @@ export function CheckoutPage() {
                   cycleLabel={cycle?.label??''}
                   onCopy={()=>void copyPix()}
                   onRetry={restart}
-                  onCard={()=>changePaymentMethod('credit_card')}
+                  onCard={()=>void changePaymentMethod('credit_card')}
                   onBack={()=>navigate('/app',{replace:true})}
                 />
                 :<CardPaymentContent
@@ -700,7 +738,7 @@ export function CheckoutPage() {
         {!profileLoading&&!checkoutLoading&&paymentMethod==='credit_card'&&!checkout&&!expired&&<section className="native-checkout-card checkout-expired-card">
           <div><strong>Não conseguimos abrir o checkout.</strong><span>{error??'Tente novamente em alguns instantes.'}</span></div>
           <button className="secondary-button" type="button" onClick={restart}><RefreshCcw size={17}/>Tentar novamente</button>
-          <button className="secondary-button" type="button" onClick={()=>changePaymentMethod('pix_automatic')}>Usar Pix Automático</button>
+          <button className="secondary-button" type="button" onClick={()=>void changePaymentMethod('pix_automatic')}>Usar Pix Automático</button>
         </section>}
       </section>
 
@@ -771,6 +809,8 @@ function IdentificationStep({open,complete,profile,values,refs,setters,onOpen,on
 type PixPaymentProps = {
   checkout:CheckoutResponse|null
   status:CheckoutStatus|null
+  initialPaymentReceived:boolean
+  canceling:boolean
   qrCode:string|null
   qrLoading:boolean
   copyState:'idle'|'copied'|'failed'
@@ -789,14 +829,15 @@ type PixPaymentProps = {
 
 function PixPaymentContent(props:PixPaymentProps) {
   const terminal=props.status==='failed'||props.status==='expired'||props.status==='canceled'
+  const paymentNeedsReconciliation=terminal&&props.initialPaymentReceived
   return <div className="checkout-pix-content">
     {!props.checkout&&!terminal&&<>
       <div className="checkout-pix-intro"><QrCode size={24}/><div><strong>Gerar autorização segura</strong><span>O QR Code será criado dentro do ALOVIA e não será enviado a serviços externos.</span></div></div>
       {props.error&&<p className="form-error checkout-native-error" role="alert">{props.error}</p>}
       {props.adminAccessNotice?<AdminAccessNotice onBack={props.onBack}/>:<button className="primary-button checkout-native-submit" type="submit" disabled={!props.identificationComplete||props.submitting}>{props.submitting?'Gerando Pix Automático…':'Gerar Pix Automático'}</button>}
-      {props.error?.includes('não está disponível')&&<button className="secondary-button checkout-alternative-button" type="button" onClick={props.onCard}>Pagar com cartão de crédito</button>}
+      {props.error?.includes('não está disponível')&&<button className="secondary-button checkout-alternative-button" type="button" disabled={props.canceling} onClick={props.onCard}>Pagar com cartão de crédito</button>}
     </>}
-    {props.checkout&&!terminal&&<>
+    {props.checkout&&!terminal&&!props.initialPaymentReceived&&<>
       <div className="checkout-pix-heading"><span className="checkout-pix-icon"><QrCode size={24}/></span><div><strong>Pague e autorize o Pix Automático</strong><span>Abra o app do seu banco, escaneie o QR Code e confirme o pagamento e a autorização das próximas renovações.</span></div></div>
       <div className="checkout-pix-grid">
         <div className="checkout-pix-qr" aria-live="polite">{props.qrLoading&&<div className="checkout-loading-spinner" aria-label="Gerando QR Code"/>}{props.qrCode&&<img src={props.qrCode} alt="QR Code do Pix Automático"/>}{!props.qrLoading&&!props.qrCode&&<span>QR Code indisponível.</span>}</div>
@@ -805,7 +846,9 @@ function PixPaymentContent(props:PixPaymentProps) {
       <div className="checkout-pix-waiting" role="status"><div className="checkout-loading-spinner"/><div><strong>Aguardando pagamento e autorização</strong><span>Assim que o banco confirmar o pagamento e a autorização, liberamos sua assinatura automaticamente.</span></div></div>
       {props.error&&<p className="form-error checkout-native-error" role="alert">{props.error}</p>}
     </>}
-    {terminal&&<div className="checkout-pix-terminal" role="alert"><strong>{props.status==='expired'?'O código Pix expirou.':'Não foi possível ativar o Pix Automático.'}</strong><span>Nenhuma assinatura foi liberada. Você pode tentar novamente ou escolher cartão.</span><button className="primary-button" type="button" onClick={props.onRetry}><RefreshCcw size={17}/>{props.status==='expired'?'Gerar novo Pix':'Tentar novamente'}</button><button className="secondary-button" type="button" onClick={props.onCard}>Pagar com cartão de crédito</button></div>}
+    {props.checkout&&!terminal&&props.initialPaymentReceived&&<div className="checkout-pix-waiting" role="status"><div className="checkout-loading-spinner"/><div><strong>Pagamento recebido</strong><span>O primeiro pagamento foi confirmado. Estamos aguardando a confirmação da autorização das próximas renovações.</span></div></div>}
+    {paymentNeedsReconciliation&&<div className="checkout-pix-terminal" role="alert"><strong>Pagamento recebido</strong><span>O primeiro pagamento foi confirmado, mas a autorização das próximas renovações não foi concluída.</span><span>Não faça outro pagamento. Estamos aguardando a regularização da recorrência.</span><button className="secondary-button" type="button" onClick={props.onBack}>Voltar para a Alovia</button></div>}
+    {terminal&&!paymentNeedsReconciliation&&<div className="checkout-pix-terminal" role="alert"><strong>{props.status==='expired'?'O código Pix expirou.':'Não foi possível ativar o Pix Automático.'}</strong><span>Nenhuma assinatura foi liberada. Você pode tentar novamente ou escolher cartão.</span><button className="primary-button" type="button" onClick={props.onRetry}><RefreshCcw size={17}/>{props.status==='expired'?'Gerar novo Pix':'Tentar novamente'}</button><button className="secondary-button" type="button" disabled={props.canceling} onClick={props.onCard}>{props.canceling?'Cancelando Pix…':'Pagar com cartão de crédito'}</button></div>}
   </div>
 }
 

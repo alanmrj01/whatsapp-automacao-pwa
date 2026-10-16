@@ -88,3 +88,38 @@ test('card flow and commercial guarantees remain intact',()=>{
   assert.doesNotMatch(checkout,/7 dias grátis|teste grátis/i)
   assert.match(checkout,/Pagamento: <strong>\{paymentMethod==='pix_automatic'\?'Pix Automático':'Cartão de crédito'\}/)
 })
+
+test('card selection cancels an existing Pix before creating a card checkout',()=>{
+  const checkout=read('src/features/billing/CheckoutPage.tsx')
+  const switchFlow=checkout.match(/const changePaymentMethod=async[\s\S]*?\n  const generatePix=/)?.[0]??''
+  const cancelPosition=switchFlow.indexOf('/cancel`')
+  const cardPosition=switchFlow.indexOf("selectPaymentMethod('credit_card')")
+
+  assert.ok(cancelPosition>=0)
+  assert.ok(cardPosition>cancelPosition)
+  assert.match(switchFlow,/await api\.request<CheckoutStatusResponse>/)
+  assert.match(switchFlow,/catch \(caught\)[\s\S]*Não foi possível cancelar o Pix Automático/)
+  assert.equal((switchFlow.match(/selectPaymentMethod\('credit_card'\)/g)??[]).length,1)
+})
+
+test('a received initial payment blocks another payment and exposes reconciliation copy',()=>{
+  const checkout=read('src/features/billing/CheckoutPage.tsx')
+  const protectedState=checkout.match(/\{paymentNeedsReconciliation&&[\s\S]*?\}\n    \{terminal&&!paymentNeedsReconciliation/)?.[0]??''
+
+  assert.match(checkout,/initial_payment_received:boolean/)
+  assert.match(checkout,/setInitialPaymentReceived\(current\.initial_payment_received\)/)
+  assert.match(checkout,/if\(initialPaymentReceived\)/)
+  assert.match(protectedState,/Pagamento recebido/)
+  assert.match(protectedState,/Não faça outro pagamento/)
+  assert.match(protectedState,/Voltar para a Alovia/)
+  assert.doesNotMatch(protectedState,/Tentar novamente|Gerar novo Pix|Pagar com cartão/)
+})
+
+test('failed Pix without initial payment remains retryable',()=>{
+  const checkout=read('src/features/billing/CheckoutPage.tsx')
+  const retryState=checkout.match(/\{terminal&&!paymentNeedsReconciliation&&[\s\S]*?\}\n  <\/div>/)?.[0]??''
+
+  assert.match(retryState,/Não foi possível ativar o Pix Automático/)
+  assert.match(retryState,/Tentar novamente/)
+  assert.match(retryState,/Pagar com cartão de crédito/)
+})
