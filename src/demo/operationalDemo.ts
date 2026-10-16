@@ -58,12 +58,11 @@ export function demoDateLabel(value: string) {
 
 export const demoToday = localDateKey(new Date())
 export const demoTomorrow = shiftDemoDate(demoToday, 1)
-export const demoBookingDate1 = shiftDemoDate(demoToday, 4)
 export const demoBookingDate2 = shiftDemoDate(demoToday, 5)
 export const demoRescheduleDate = shiftDemoDate(demoToday, 6)
 export const demoBusinessName = 'PEMA Ar Condicionado'
 
-const demoBookingLabel1 = demoDateLabel(demoBookingDate1)
+const demoTodayLabel = demoDateLabel(demoToday)
 const demoBookingLabel2 = demoDateLabel(demoBookingDate2)
 const demoRescheduleLabel = demoDateLabel(demoRescheduleDate)
 
@@ -109,15 +108,15 @@ export const demoConversations: DemoConversation[] = [
     {id:'4-5',direction:'customer',body:'São quatro aparelhos, todos na mesma padaria.',time:'08:22'},
     {id:'4-6',direction:'assistant',body:'Certo. Qual é o CEP e o número da padaria para eu verificar a visita técnica?',time:'08:23'},
   ]},
-  {id:'conversation-5',customer:'Loja Centro',phone:'(12) 99545-0505',assistantEnabled:true,lastMessage:`Agendamento confirmado para ${demoBookingLabel1}, às 11h30.`,time:'Ontem',status:'answered',assignee:'Alovia',unread:0,priority:false,appointmentId:'appointment-1',messages:[
-    {id:'5-1',direction:'customer',body:'Olá, preciso fazer manutenção preventiva em três aparelhos da loja.',time:'Ontem 16:20'},
-    {id:'5-2',direction:'assistant',body:'Olá. Os três aparelhos ficam no mesmo endereço?',time:'Ontem 16:21'},
-    {id:'5-3',direction:'customer',body:'Sim. Fica no Centro.',time:'Ontem 16:23'},
-    {id:'5-4',direction:'assistant',body:'Qual é o CEP e o número do local?',time:'Ontem 16:24'},
-    {id:'5-5',direction:'customer',body:'12210-000, número 120.',time:'Ontem 16:26'},
-    {id:'5-6',direction:'assistant',body:`Há disponibilidade para ${demoBookingLabel1}, às 11h30. Posso confirmar?`,time:'Ontem 16:27'},
-    {id:'5-7',direction:'customer',body:'Pode.',time:'Ontem 16:28'},
-    {id:'5-8',direction:'system',body:`Agendamento confirmado para ${demoBookingLabel1}, às 11h30, com Marina.`,time:'Ontem 16:29'},
+  {id:'conversation-5',customer:'Loja Centro',phone:'(12) 99545-0505',assistantEnabled:true,lastMessage:`Agendamento confirmado para ${demoTodayLabel}, às 11h30.`,time:'5 dias atrás',status:'answered',assignee:'Alovia',unread:0,priority:false,appointmentId:'appointment-1',messages:[
+    {id:'5-1',direction:'customer',body:'Olá, preciso fazer manutenção preventiva em três aparelhos da loja.',time:'5 dias atrás · 16:20'},
+    {id:'5-2',direction:'assistant',body:'Olá. Os três aparelhos ficam no mesmo endereço?',time:'5 dias atrás · 16:21'},
+    {id:'5-3',direction:'customer',body:'Sim. Fica no Centro.',time:'5 dias atrás · 16:23'},
+    {id:'5-4',direction:'assistant',body:'Qual é o CEP e o número do local?',time:'5 dias atrás · 16:24'},
+    {id:'5-5',direction:'customer',body:'12210-000, número 120.',time:'5 dias atrás · 16:26'},
+    {id:'5-6',direction:'assistant',body:`Há disponibilidade para ${demoTodayLabel}, às 11h30. Posso confirmar?`,time:'5 dias atrás · 16:27'},
+    {id:'5-7',direction:'customer',body:'Pode.',time:'5 dias atrás · 16:28'},
+    {id:'5-8',direction:'system',body:`Agendamento confirmado para ${demoTodayLabel}, às 11h30, com Marina.`,time:'5 dias atrás · 16:29'},
   ]},
   {id:'conversation-6',customer:'Rafael Lima',phone:'(12) 99436-0606',assistantEnabled:true,lastMessage:`Reagendamento confirmado para ${demoRescheduleLabel}, às 10h.`,time:'Ontem',status:'answered',assignee:'Alovia',unread:0,priority:false,appointmentId:'appointment-3',messages:[
     {id:'6-1',direction:'customer',body:'Boa tarde. Não vou conseguir receber o técnico na data marcada.',time:'Ontem 15:10'},
@@ -132,7 +131,7 @@ export const demoConversations: DemoConversation[] = [
 ]
 
 export const demoAppointments: DemoAppointment[] = [
-  {id:'appointment-1',date:demoBookingDate1,time:'11:30',customer:'Loja Centro',phone:'(12) 99545-0505',service:'Manutenção preventiva',technician:'Marina',status:'confirmed',notes:'Revisar três aparelhos no endereço informado.',conversationId:'conversation-5'},
+  {id:'appointment-1',date:demoToday,time:'11:30',customer:'Loja Centro',phone:'(12) 99545-0505',service:'Manutenção preventiva',technician:'Marina',status:'confirmed',notes:'Revisar três aparelhos no endereço informado.',conversationId:'conversation-5'},
   {id:'appointment-2',date:demoBookingDate2,time:'14:30',customer:'Juliana Rocha',phone:'(12) 99763-0303',service:'Higienização',technician:'João',status:'confirmed',notes:'Higienização de um aparelho split.',conversationId:'conversation-3'},
   {id:'appointment-3',date:demoRescheduleDate,time:'10:00',customer:'Rafael Lima',phone:'(12) 99436-0606',service:'Visita técnica',technician:'Marina',status:'confirmed',rescheduled:true,notes:'Reagendado a pedido do cliente; endereço mantido.',conversationId:'conversation-6'},
 ]
