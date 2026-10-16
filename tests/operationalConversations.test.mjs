@@ -11,7 +11,7 @@ test('real conversations use a full paid route with human reply controls', () =>
   const api = read('src/features/operations/api.ts')
 
   assert.match(router,/path="conversas\/:conversationId"/)
-  assert.match(router,/PaidOperationalGuard><ConversationDetailPage/)
+  assert.match(router,/DemoOrPaidRoute demo=\{<DemoConversationDetailPage\/>\} paid=\{<ConversationDetailPage\/>\}/)
   assert.match(list,/to=\{`\/app\/conversas\/\$\{item\.id\}`\}/)
   assert.match(detail,/conversation-composer/)
   assert.match(detail,/maxLength=\{4096\}/)

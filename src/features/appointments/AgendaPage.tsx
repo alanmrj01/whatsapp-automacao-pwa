@@ -9,7 +9,7 @@ import { LoadingState } from '../../components/LoadingState'
 import { RequiredLabel } from '../../components/RequiredLabel'
 import { StatusBadge } from '../../components/StatusBadge'
 import { demoAppointments, demoToday, type DemoAppointment, type DemoAppointmentStatus } from '../../demo/operationalDemo'
-import { DemoDataNotice } from '../access/DemoDataNotice'
+import { DemoInsight } from '../access/DemoInsight'
 import { useEntitlements } from '../access/useEntitlements'
 import { useUpgradePrompt } from '../access/upgradePromptContext'
 import { useAuth } from '../auth/useAuth'
@@ -110,7 +110,7 @@ export function AgendaPage() {
 
   return <div className="page-stack operational-page compact-page">
     <section className="operational-heading"><div><span className="eyebrow">Agenda demonstrativa</span><h1>Agenda</h1></div><button className="compact-button" type="button" onClick={openNew}><CalendarPlus2 size={18}/>Novo</button></section>
-    <DemoDataNotice />
+    <DemoInsight>O cliente quer um horário mesmo quando você está com a mão no serviço.</DemoInsight>
 
     {view!=='day'?<>
       <CalendarToolbar
@@ -153,7 +153,7 @@ export function AgendaPage() {
         <div><dt>Observações</dt><dd>{selectedDemo.notes}</dd></div>
       </dl>}
       {selectedDemo&&<div className="demo-detail-actions">
-        <Link className="compact-button" to={`/app/conversas?conversation=${selectedDemo.conversationId}`}>Ver conversa relacionada</Link>
+        <Link className="compact-button" to={`/app/conversas/${selectedDemo.conversationId}`}>Ver conversa relacionada</Link>
         <button className="demo-locked-action" type="button" onClick={()=>{setSelectedDemo(null);openUpgrade('Alterar ou reagendar um atendimento')}}>Alterar agendamento</button>
       </div>}
     </BottomSheet>
