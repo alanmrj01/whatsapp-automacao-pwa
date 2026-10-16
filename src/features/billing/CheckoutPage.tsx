@@ -441,15 +441,13 @@ export function CheckoutPage() {
     clearPaymentState()
     setPaymentMethod(method)
     setOpenStep(1)
-    const key=rotateAttempt(method)
+    rotateAttempt(method)
     if(method==='pix_automatic') {
       setCardNumber('')
       setExpiryMonth('')
       setExpiryYear('')
       setCcv('')
-      return
     }
-    void prepareCardCheckout(key)
   }
 
   const changePaymentMethod=async(method:PaymentMethod)=>{
@@ -500,12 +498,33 @@ export function CheckoutPage() {
     if(nextCheckout)setOpenStep(2)
   }
 
-  const restart=()=>{
+  const restart=async()=>{
+    if(paymentMethod==='pix_automatic'&&checkout) {
+      if(initialPaymentReceived) {
+        setError('O primeiro pagamento já foi recebido. Não faça outro pagamento enquanto regularizamos a autorização.')
+        return
+      }
+      setCancelingPix(true)
+      setError(null)
+      try {
+        const canceled=await api.request<CheckoutStatusResponse>(
+          `/billing/checkouts/${checkout.checkout_id}/cancel`,
+          {method:'POST'},
+        )
+        if(!['canceled','expired','failed'].includes(canceled.status)) {
+          throw new Error('Unexpected Pix cancellation status')
+        }
+      } catch {
+        setError('Não conseguimos encerrar o Pix anterior. Aguarde alguns instantes e tente novamente.')
+        setCancelingPix(false)
+        return
+      }
+      setCancelingPix(false)
+    }
     clearPaymentState()
     setOpenStep(paymentMethod==='pix_automatic'?2:1)
     const key=rotateAttempt(paymentMethod)
-    if(paymentMethod==='pix_automatic')void generatePix(key)
-    else void prepareCardCheckout(key)
+    if(paymentMethod==='pix_automatic')await generatePix(key)
   }
 
   const submit=async(event:FormEvent)=>{
@@ -515,7 +534,6 @@ export function CheckoutPage() {
       if(!checkout)await generatePix()
       return
     }
-    if(!checkout)return
 
     if(membership?.admin_full_access) {
       setError(null)
@@ -524,20 +542,6 @@ export function CheckoutPage() {
       setExpiryMonth('')
       setExpiryYear('')
       setCcv('')
-      return
-    }
-
-    const checkoutMode=checkout.checkout_mode??(checkout.checkout_url?'hosted':null)
-    if(checkoutMode==='hosted') {
-      if(!checkout.checkout_url||!isAsaasCheckoutUrl(checkout.checkout_url)) {
-        setError('O checkout seguro não está disponível agora.')
-        return
-      }
-      window.location.assign(checkout.checkout_url)
-      return
-    }
-    if(checkoutMode!=='native') {
-      setError('Esta forma de pagamento ainda não está disponível.')
       return
     }
 
@@ -563,7 +567,27 @@ export function CheckoutPage() {
     setError(null)
     setAdminAccessNotice(false)
     try {
-      await api.request(`/billing/checkouts/${checkout.checkout_id}/credit-card`,{
+      const cardCheckout=checkout??await prepareCardCheckout(checkoutAttempt.current.key)
+      if(!cardCheckout) {
+        setSubmitting(false)
+        return
+      }
+      const checkoutMode=cardCheckout.checkout_mode??(cardCheckout.checkout_url?'hosted':null)
+      if(checkoutMode==='hosted') {
+        if(!cardCheckout.checkout_url||!isAsaasCheckoutUrl(cardCheckout.checkout_url)) {
+          setError('O checkout seguro não está disponível agora.')
+          setSubmitting(false)
+          return
+        }
+        window.location.assign(cardCheckout.checkout_url)
+        return
+      }
+      if(checkoutMode!=='native') {
+        setError('Esta forma de pagamento ainda não está disponível.')
+        setSubmitting(false)
+        return
+      }
+      await api.request(`/billing/checkouts/${cardCheckout.checkout_id}/credit-card`,{
         method:'POST',
         body:JSON.stringify({
           payer_name:payerName.trim(),
@@ -580,7 +604,7 @@ export function CheckoutPage() {
         }),
       })
       setCcv('')
-      navigate(`/app/checkout/retorno?state=success&checkout=${checkout.checkout_id}`,{replace:true})
+      navigate(`/app/checkout/retorno?state=success&checkout=${cardCheckout.checkout_id}`,{replace:true})
     } catch (caught) {
       setCcv('')
       if(caught instanceof ApiError&&caught.status===422) {
@@ -677,7 +701,7 @@ export function CheckoutPage() {
           <button className="secondary-button" type="button" onClick={restart}><RefreshCcw size={17}/>Tentar novamente</button>
         </section>}
 
-        {!profileLoading&&!checkoutLoading&&!expired&&!hostedCheckout&&profile&&(paymentMethod==='pix_automatic'||checkout)&&<form className="native-checkout-form" onSubmit={submit} noValidate>
+        {!profileLoading&&!checkoutLoading&&!expired&&!hostedCheckout&&profile&&<form className="native-checkout-form" onSubmit={submit} noValidate>
           <IdentificationStep
             open={openStep===1}
             complete={identificationComplete}
@@ -735,11 +759,6 @@ export function CheckoutPage() {
           </section>
         </form>}
 
-        {!profileLoading&&!checkoutLoading&&paymentMethod==='credit_card'&&!checkout&&!expired&&<section className="native-checkout-card checkout-expired-card">
-          <div><strong>Não conseguimos abrir o checkout.</strong><span>{error??'Tente novamente em alguns instantes.'}</span></div>
-          <button className="secondary-button" type="button" onClick={restart}><RefreshCcw size={17}/>Tentar novamente</button>
-          <button className="secondary-button" type="button" onClick={()=>void changePaymentMethod('pix_automatic')}>Usar Pix Automático</button>
-        </section>}
       </section>
 
       <aside className="native-checkout-summary" aria-label="Resumo do pedido">
