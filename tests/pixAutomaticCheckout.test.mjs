@@ -10,12 +10,14 @@ import {
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url),'utf8')
 
-test('Pix Automático is the default and selecting card does not create a checkout',()=>{
+test('Pix Automático is fail-closed and card is the production default',()=>{
   const checkout=read('src/features/billing/CheckoutPage.tsx')
   const profileLoader=checkout.match(/const loadProfile=useCallback[\s\S]*?\},\[cycleParam,planId\]\)/)?.[0]??''
   const selection=checkout.match(/const selectPaymentMethod=[\s\S]*?\n  const changePaymentMethod=/)?.[0]??''
 
-  assert.match(checkout,/useState<PaymentMethod>\('pix_automatic'\)/)
+  assert.match(checkout,/VITE_BILLING_PIX_AUTOMATIC_ENABLED/)
+  assert.match(checkout,/PIX_AUTOMATIC_ENABLED\?'pix_automatic':'credit_card'/)
+  assert.match(checkout,/\{PIX_AUTOMATIC_ENABLED&&<label/)
   assert.match(checkout,/value="pix_automatic" checked=\{paymentMethod==='pix_automatic'\}/)
   assert.match(checkout,/value="credit_card" checked=\{paymentMethod==='credit_card'\}/)
   assert.match(selection,/setPaymentMethod\(method\)/)
