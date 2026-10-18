@@ -486,7 +486,7 @@ export function CheckoutPage() {
     if(method==='credit_card'&&!nativeCardCheckoutAvailable)return
     if(method===paymentMethod||cancelingPix||checkoutLoading)return
     if(pixReconciliationPending) {
-      setError('A solicitação do Pix Automático ainda está sendo confirmada. Não faça outro pagamento agora.')
+      setError('A solicitação de pagamento Pix ainda está sendo confirmada. Não faça outro pagamento agora.')
       return
     }
     if(
@@ -495,7 +495,7 @@ export function CheckoutPage() {
       method!==checkout.payment_method
     ) {
       if(initialPaymentReceived) {
-        setError('O primeiro pagamento já foi recebido. Não faça outro pagamento enquanto regularizamos a autorização.')
+        setError(paymentMethod==='pix_automatic'?'O primeiro pagamento já foi recebido. Não faça outro pagamento enquanto regularizamos a autorização.':'O pagamento já foi recebido. Não faça outro pagamento enquanto confirmamos a liberação da assinatura.')
         return
       }
       setCancelingPix(true)
