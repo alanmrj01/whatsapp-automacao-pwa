@@ -52,6 +52,8 @@ type PaymentMethod = 'credit_card'|'pix_automatic'
 
 const PIX_AUTOMATIC_ENABLED =
   import.meta.env.VITE_BILLING_PIX_AUTOMATIC_ENABLED === 'true'
+const NATIVE_CARD_CHECKOUT_ENABLED =
+  import.meta.env.VITE_BILLING_NATIVE_CARD_CHECKOUT_ENABLED === 'true'
 
 type CheckoutResponse = {
   checkout_id:string
@@ -577,13 +579,17 @@ export function CheckoutPage() {
     const monthDigits=digits(expiryMonth,2)
     const yearDigits=digits(expiryYear,4)
     const ccvDigits=digits(ccv,4)
-    if(
+    const identificationInvalid=
       payerName.trim().length<2||![11,14].includes(documentDigits.length)||
       ![10,11].includes(phoneDigits.length)||postalDigits.length!==8||
-      !addressNumber.trim()||cardHolderName.trim().length<2||
-      !isValidCardNumber(cardDigits)||!monthDigits||!yearDigits||
-      ccvDigits.length!==cardSecurityCodeLimit(cardDigits)
-    ) {
+      !addressNumber.trim()
+    const nativeCardInvalid=
+      NATIVE_CARD_CHECKOUT_ENABLED&&(
+        cardHolderName.trim().length<2||
+        !isValidCardNumber(cardDigits)||!monthDigits||!yearDigits||
+        ccvDigits.length!==cardSecurityCodeLimit(cardDigits)
+      )
+    if(identificationInvalid||nativeCardInvalid) {
       setError('Confira os campos obrigatórios antes de continuar.')
       return
     }
@@ -609,6 +615,11 @@ export function CheckoutPage() {
       }
       if(checkoutMode!=='native') {
         setError('Esta forma de pagamento ainda não está disponível.')
+        setSubmitting(false)
+        return
+      }
+      if(!NATIVE_CARD_CHECKOUT_ENABLED) {
+        setError('O pagamento nativo com cartão não está habilitado.')
         setSubmitting(false)
         return
       }
@@ -693,7 +704,7 @@ export function CheckoutPage() {
           <button className="secondary-button" type="button" onClick={()=>void loadProfile()}><RefreshCcw size={17}/>Tentar novamente</button>
         </section>}
 
-        {!profileLoading&&profile&&<section className="native-checkout-card checkout-method-card" aria-labelledby="checkout-payment-method-title">
+        {!profileLoading&&profile&&PIX_AUTOMATIC_ENABLED&&<section className="native-checkout-card checkout-method-card" aria-labelledby="checkout-payment-method-title">
           <div className="checkout-method-heading"><span className="eyebrow">Forma de pagamento</span><h2 id="checkout-payment-method-title">Como você prefere pagar?</h2></div>
           <div className="checkout-method-options">
             {PIX_AUTOMATIC_ENABLED&&<label className={`checkout-method-option${paymentMethod==='pix_automatic'?' is-selected':''}`}>
@@ -736,13 +747,13 @@ export function CheckoutPage() {
             onOpen={()=>setOpenStep(1)}
             onAdvance={()=>{if(identificationComplete)setOpenStep(2)}}
             setters={{setPayerName,setPayerDocument,setPayerPhone,setPostalCode,setAddressNumber,setAddressComplement,setCardHolderName}}
-            focusCard={paymentMethod==='credit_card'}
+            focusCard={paymentMethod==='credit_card'&&NATIVE_CARD_CHECKOUT_ENABLED}
           />
 
           <section className={`native-checkout-card checkout-accordion-card${openStep===2?' is-open':''}`}>
             <button className="checkout-section-toggle" type="button" aria-expanded={openStep===2} aria-controls="checkout-payment-fields" disabled={!identificationComplete} onClick={()=>identificationComplete&&setOpenStep(2)}>
               <span className="checkout-step-number">2</span>
-              <span className="checkout-step-copy"><strong>{paymentMethod==='pix_automatic'?'Pix Automático':'Cartão de crédito'}</strong><small>{identificationComplete?paymentMethod==='pix_automatic'?'Pague o primeiro Pix e autorize as próximas renovações automaticamente.':'Cobrança recorrente processada pelo Asaas.':'Conclua a identificação primeiro'}</small></span>
+              <span className="checkout-step-copy"><strong>{paymentMethod==='pix_automatic'?'Pix Automático':'Cartão de crédito'}</strong><small>{identificationComplete?paymentMethod==='pix_automatic'?'Pague o primeiro Pix e autorize as próximas renovações automaticamente.':NATIVE_CARD_CHECKOUT_ENABLED?'Cobrança recorrente processada pelo Asaas.':'Você será redirecionado para o ambiente seguro do Asaas.':'Conclua a identificação primeiro'}</small></span>
               {openStep===2?<ChevronUp size={20}/>:<ChevronDown size={20}/>}
             </button>
 
@@ -769,18 +780,25 @@ export function CheckoutPage() {
                   onCard={()=>void changePaymentMethod('credit_card')}
                   onBack={()=>navigate('/app',{replace:true})}
                 />
-                :<CardPaymentContent
-                  values={{cardHolderName,cardNumber,expiryMonth,expiryYear,ccv}}
-                  setters={{setCardHolderName,setCardNumber,setExpiryMonth,setExpiryYear,setCcv}}
-                  refs={{cardHolderNameRef,cardNumberRef,expiryMonthRef,expiryYearRef,ccvRef,submitRef}}
-                  error={error}
-                  adminAccessNotice={adminAccessNotice}
-                  submitting={submitting}
-                  expired={expired}
-                  buttonLabel={`Assinar ${plan.name} por ${formatBRL(price.total)}${cycleParam==='monthly'?'/mês':''}`}
-                  cycleLabel={cycle?.label.toLowerCase()??''}
-                  onBack={()=>navigate('/app',{replace:true})}
-                />}
+                :NATIVE_CARD_CHECKOUT_ENABLED
+                  ?<CardPaymentContent
+                    values={{cardHolderName,cardNumber,expiryMonth,expiryYear,ccv}}
+                    setters={{setCardHolderName,setCardNumber,setExpiryMonth,setExpiryYear,setCcv}}
+                    refs={{cardHolderNameRef,cardNumberRef,expiryMonthRef,expiryYearRef,ccvRef,submitRef}}
+                    error={error}
+                    adminAccessNotice={adminAccessNotice}
+                    submitting={submitting}
+                    expired={expired}
+                    buttonLabel={`Assinar ${plan.name} por ${formatBRL(price.total)}${cycleParam==='monthly'?'/mês':''}`}
+                    cycleLabel={cycle?.label.toLowerCase()??''}
+                    onBack={()=>navigate('/app',{replace:true})}
+                  />
+                  :<HostedCardPaymentContent
+                    error={error}
+                    adminAccessNotice={adminAccessNotice}
+                    submitting={submitting}
+                    onBack={()=>navigate('/app',{replace:true})}
+                  />}
             </div>
           </section>
         </form>}
@@ -897,6 +915,26 @@ function PixPaymentContent(props:PixPaymentProps) {
     {paymentNeedsReconciliation&&<div className="checkout-pix-terminal" role="alert"><strong>Pagamento recebido</strong><span>O primeiro pagamento foi confirmado, mas a autorização das próximas renovações não foi concluída.</span><span>Não faça outro pagamento. Estamos aguardando a regularização da recorrência.</span><button className="secondary-button" type="button" onClick={props.onBack}>Voltar para a Alovia</button></div>}
     {terminal&&!paymentNeedsReconciliation&&<div className="checkout-pix-terminal" role="alert"><strong>{props.status==='expired'?'O código Pix expirou.':'Não foi possível ativar o Pix Automático.'}</strong><span>Nenhuma assinatura foi liberada. Você pode tentar novamente ou escolher cartão.</span><button className="primary-button" type="button" onClick={props.onRetry}><RefreshCcw size={17}/>{props.status==='expired'?'Gerar novo Pix':'Tentar novamente'}</button><button className="secondary-button" type="button" disabled={props.canceling} onClick={props.onCard}>{props.canceling?'Cancelando Pix…':'Pagar com cartão de crédito'}</button></div>}
   </div>
+}
+
+type HostedCardPaymentProps = {
+  error:string|null
+  adminAccessNotice:boolean
+  submitting:boolean
+  onBack:()=>void
+}
+
+function HostedCardPaymentContent(props:HostedCardPaymentProps) {
+  return <>
+    <div className="checkout-pix-intro">
+      <ShieldCheck size={24} aria-hidden="true"/>
+      <div><strong>Pagamento seguro pelo Asaas</strong><span>Você será redirecionado para concluir o pagamento com cartão no ambiente seguro do Asaas.</span></div>
+    </div>
+    {props.error&&<p className="form-error checkout-native-error" role="alert">{props.error}</p>}
+    {props.adminAccessNotice
+      ?<AdminAccessNotice onBack={props.onBack}/>
+      :<button className="primary-button checkout-native-submit" type="submit" disabled={props.submitting}>{props.submitting?'Preparando pagamento…':'Continuar para pagamento seguro'}</button>}
+  </>
 }
 
 type CardPaymentProps = {
