@@ -184,3 +184,14 @@ test('reconciliation state blocks method switching and Pix resubmission',()=>{
   assert.match(submit,/if\(paymentMethod==='pix_automatic'&&pixReconciliationPending\)return/)
 })
 
+
+test('hosted card checkout is fail-closed by default and does not ask for card data before redirect',()=>{
+  const checkout=read('src/features/billing/CheckoutPage.tsx')
+
+  assert.match(checkout,/VITE_BILLING_NATIVE_CARD_CHECKOUT_ENABLED/)
+  assert.match(checkout,/NATIVE_CARD_CHECKOUT_ENABLED\s*\?\s*<CardPaymentContent/)
+  assert.match(checkout,/HostedCardPaymentContent/)
+  assert.match(checkout,/Continuar para pagamento seguro/)
+  assert.match(checkout,/if\(!NATIVE_CARD_CHECKOUT_ENABLED\)/)
+  assert.match(checkout,/NATIVE_CARD_CHECKOUT_ENABLED&&\(/)
+})
