@@ -80,7 +80,7 @@ test('expired and refused flows are recoverable without silently selecting card'
   assert.match(checkout,/Gerar novo Pix/)
   assert.match(checkout,/Não foi possível ativar o Pix Automático/)
   assert.match(checkout,/Tentar novamente/)
-  assert.match(checkout,/O Pix Automático não está disponível[\s\S]*pagar com cartão de crédito/)
+  assert.match(checkout,/O Pix Automático está temporariamente indisponível[\s\S]*plataforma que processa os pagamentos[\s\S]*cartão de crédito/)
   assert.match(checkout,/onClick=\{props\.onCard\}>Pagar com cartão de crédito/)
   assert.doesNotMatch(checkout,/setPaymentMethod\('credit_card'\)[\s\S]*catch/)
 })
