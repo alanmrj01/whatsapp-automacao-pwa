@@ -50,6 +50,9 @@ import {
 type CheckoutMode = 'hosted'|'native'|'pix'
 type PaymentMethod = 'credit_card'|'pix_automatic'
 
+const PIX_AUTOMATIC_ENABLED =
+  import.meta.env.VITE_BILLING_PIX_AUTOMATIC_ENABLED === 'true'
+
 type CheckoutResponse = {
   checkout_id:string
   payment_method:PaymentMethod
@@ -176,10 +179,15 @@ export function CheckoutPage() {
   const {membership,syncSession}=useAuth()
   const planId=params.get('plan')
   const cycleParam=params.get('cycle')
-  const checkoutAttempt=useRef<CheckoutAttempt>({method:'pix_automatic',key:crypto.randomUUID()})
+  const checkoutAttempt=useRef<CheckoutAttempt>({
+    method:PIX_AUTOMATIC_ENABLED?'pix_automatic':'credit_card',
+    key:crypto.randomUUID(),
+  })
   const finalizing=useRef(false)
 
-  const [paymentMethod,setPaymentMethod]=useState<PaymentMethod>('pix_automatic')
+  const [paymentMethod,setPaymentMethod]=useState<PaymentMethod>(
+    PIX_AUTOMATIC_ENABLED?'pix_automatic':'credit_card',
+  )
   const [profile,setProfile]=useState<CheckoutProfile|null>(null)
   const [checkout,setCheckout]=useState<CheckoutResponse|null>(null)
   const [profileLoading,setProfileLoading]=useState(true)
@@ -461,6 +469,7 @@ export function CheckoutPage() {
   }
 
   const changePaymentMethod=async(method:PaymentMethod)=>{
+    if(method==='pix_automatic'&&!PIX_AUTOMATIC_ENABLED)return
     if(method===paymentMethod||cancelingPix||checkoutLoading)return
     if(pixReconciliationPending) {
       setError('A solicitação do Pix Automático ainda está sendo confirmada. Não faça outro pagamento agora.')
@@ -495,6 +504,7 @@ export function CheckoutPage() {
   }
 
   const generatePix=async(key=checkoutAttempt.current.key)=>{
+    if(!PIX_AUTOMATIC_ENABLED)return
     if(!identificationComplete||submitting||checkoutLoading)return
     if(membership?.admin_full_access) {
       setError(null)
@@ -686,11 +696,11 @@ export function CheckoutPage() {
         {!profileLoading&&profile&&<section className="native-checkout-card checkout-method-card" aria-labelledby="checkout-payment-method-title">
           <div className="checkout-method-heading"><span className="eyebrow">Forma de pagamento</span><h2 id="checkout-payment-method-title">Como você prefere pagar?</h2></div>
           <div className="checkout-method-options">
-            <label className={`checkout-method-option${paymentMethod==='pix_automatic'?' is-selected':''}`}>
+            {PIX_AUTOMATIC_ENABLED&&<label className={`checkout-method-option${paymentMethod==='pix_automatic'?' is-selected':''}`}>
               <input type="radio" name="payment-method" value="pix_automatic" checked={paymentMethod==='pix_automatic'} disabled={checkoutLoading||cancelingPix} onChange={()=>void changePaymentMethod('pix_automatic')}/>
               <span className="checkout-method-icon"><Landmark size={22}/></span>
               <span className="checkout-method-copy"><span className="checkout-method-title"><strong>Pix Automático</strong><small>Recomendado</small></span><span>Pague o primeiro Pix e autorize as próximas renovações automaticamente.</span></span>
-            </label>
+            </label>}
             <label className={`checkout-method-option${paymentMethod==='credit_card'?' is-selected':''}`}>
               <input type="radio" name="payment-method" value="credit_card" checked={paymentMethod==='credit_card'} disabled={checkoutLoading||cancelingPix||initialPaymentReceived||pixReconciliationPending} onChange={()=>void changePaymentMethod('credit_card')}/>
               <span className="checkout-method-icon"><CreditCard size={22}/></span>
