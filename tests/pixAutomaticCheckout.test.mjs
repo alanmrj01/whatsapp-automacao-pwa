@@ -96,7 +96,7 @@ test('card flow and commercial guarantees remain intact',()=>{
   assert.match(checkout,/Pagamento: <strong>\{paymentMethod==='pix_automatic'\?'Pix Automático':'Cartão de crédito'\}/)
 })
 
-test('card checkout is created just in time by submit and preserves hosted and native paths',()=>{
+test('card checkout is created just in time and never redirects away from Alovia',()=>{
   const checkout=read('src/features/billing/CheckoutPage.tsx')
   const submit=checkout.match(/const submit=async[\s\S]*?\n  const copyPix=/)?.[0]??''
   const validationPosition=submit.indexOf('const documentDigits=')
@@ -106,7 +106,8 @@ test('card checkout is created just in time by submit and preserves hosted and n
   assert.ok(validationPosition>=0)
   assert.ok(createPosition>validationPosition)
   assert.ok(nativePosition>createPosition)
-  assert.match(submit,/checkoutMode==='hosted'[\s\S]*window\.location\.assign/)
+  assert.match(submit,/checkoutMode==='hosted'[\s\S]*temporariamente indisponível/)
+  assert.doesNotMatch(submit,/window\.location\.assign/)
   assert.match(submit,/checkoutMode!=='native'/)
   assert.match(checkout,/paymentMethod==='credit_card'[\s\S]*CardPaymentContent/)
 })
