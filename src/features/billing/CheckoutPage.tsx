@@ -911,7 +911,7 @@ function PixPaymentContent(props:PixPaymentProps) {
   return <div className="checkout-pix-content">
     {props.reconciliationPending&&<div className="checkout-pix-terminal" role="status"><strong>Estamos confirmando seu Pix Automático</strong><span>A solicitação foi enviada e estamos confirmando o resultado. Não faça outro pagamento agora.</span><button className="secondary-button" type="button" onClick={props.onBack}>Voltar para a Alovia</button></div>}
     {!props.reconciliationPending&&!props.checkout&&!terminal&&<>
-      <div className="checkout-pix-intro"><QrCode size={24}/><div><strong>Gerar autorização segura</strong><span>O QR Code será criado dentro do ALOVIA e não será enviado a serviços externos.</span></div></div>
+      <div className="checkout-pix-intro"><QrCode size={24}/><div><strong>{automatic?'Gerar autorização segura':'Gerar cobrança Pix'}</strong><span>{automatic?'O QR Code será criado para o primeiro pagamento e autorização das próximas renovações.':'O QR Code será criado para este pagamento. Nas próximas renovações, um novo Pix será gerado.'}</span></div></div>
       {props.error&&<p className="form-error checkout-native-error" role="alert">{props.error}</p>}
       {props.adminAccessNotice?<AdminAccessNotice onBack={props.onBack}/>:<button className="primary-button checkout-native-submit" type="submit" disabled={!props.identificationComplete||props.submitting}>{props.submitting?(automatic?'Gerando Pix Automático…':'Gerando Pix…'):(automatic?'Gerar Pix Automático':'Gerar Pix')}</button>}
       {props.error?.includes('não está disponível')&&<button className="secondary-button checkout-alternative-button" type="button" disabled={props.canceling} onClick={props.onCard}>Pagar com cartão de crédito</button>}
