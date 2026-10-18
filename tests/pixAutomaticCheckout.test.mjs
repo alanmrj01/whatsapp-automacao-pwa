@@ -10,15 +10,17 @@ import {
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url),'utf8')
 
-test('Pix Automático is fail-closed and card is the production default',()=>{
+test('payment priority comes from runtime capabilities and Pix stays visible when unavailable',()=>{
   const checkout=read('src/features/billing/CheckoutPage.tsx')
   const profileLoader=checkout.match(/const loadProfile=useCallback[\s\S]*?\},\[cycleParam,planId\]\)/)?.[0]??''
   const selection=checkout.match(/const selectPaymentMethod=[\s\S]*?\n  const changePaymentMethod=/)?.[0]??''
 
-  assert.match(checkout,/VITE_BILLING_PIX_AUTOMATIC_ENABLED/)
-  assert.match(checkout,/PIX_AUTOMATIC_ENABLED\?'pix_automatic':'credit_card'/)
-  assert.match(checkout,/\{PIX_AUTOMATIC_ENABLED&&<label/)
+  assert.match(checkout,/pix_automatic_available:boolean/)
+  assert.match(checkout,/native_card_checkout_available:boolean/)
+  assert.match(profileLoader,/nextProfile\.pix_automatic_available[\s\S]*'pix_automatic'[\s\S]*'credit_card'/)
   assert.match(checkout,/value="pix_automatic" checked=\{paymentMethod==='pix_automatic'\}/)
+  assert.match(checkout,/Indisponível/)
+  assert.match(checkout,/Temporariamente indisponível pela plataforma que processa os pagamentos/)
   assert.match(checkout,/value="credit_card" checked=\{paymentMethod==='credit_card'\}/)
   assert.match(selection,/setPaymentMethod\(method\)/)
   assert.match(selection,/rotateAttempt\(method\)/)
@@ -185,22 +187,13 @@ test('reconciliation state blocks method switching and Pix resubmission',()=>{
 })
 
 
-test('hosted card checkout is fail-closed by default and does not ask for card data before redirect',()=>{
+test('native card checkout stays inside Alovia and provider outages are explicit',()=>{
   const checkout=read('src/features/billing/CheckoutPage.tsx')
 
-  assert.match(checkout,/VITE_BILLING_NATIVE_CARD_CHECKOUT_ENABLED/)
-  assert.match(checkout,/NATIVE_CARD_CHECKOUT_ENABLED\s*\?\s*<CardPaymentContent/)
-  assert.match(checkout,/HostedCardPaymentContent/)
-  assert.match(checkout,/Continuar para pagamento seguro/)
-  assert.match(checkout,/if\(!NATIVE_CARD_CHECKOUT_ENABLED\)/)
-  assert.match(checkout,/NATIVE_CARD_CHECKOUT_ENABLED&&\(/)
-})
-
-test('native card checkout is the default production card experience and header has no payment chip',()=>{
-  const checkout=read('src/features/billing/CheckoutPage.tsx')
-
-  assert.match(checkout,/VITE_BILLING_NATIVE_CARD_CHECKOUT_ENABLED !== 'false'/)
-  assert.match(checkout,/NATIVE_CARD_CHECKOUT_ENABLED\s*\?\s*<CardPaymentContent/)
+  assert.match(checkout,/nativeCardCheckoutAvailable\s*\?\s*<CardPaymentContent/)
+  assert.match(checkout,/PaymentUnavailableContent/)
+  assert.doesNotMatch(checkout,/window\.location\.assign\(cardCheckout\.checkout_url\)/)
+  assert.match(checkout,/A plataforma que processa os pagamentos está temporariamente indisponível/)
+  assert.match(checkout,/Não tente pagar novamente agora/)
   assert.doesNotMatch(checkout,/className=\{\`checkout-timer/)
-  assert.match(checkout,/Já existe uma tentativa de pagamento com cartão em andamento/)
 })
