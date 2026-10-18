@@ -678,16 +678,10 @@ export function CheckoutPage() {
     }
   }
 
-  const timerLabel=remaining===null
-    ?paymentMethod==='pix_automatic'?'Pix Automático':paymentMethod==='pix'?'Pix':'Cartão'
-    :expired
-      ?paymentMethod==='pix'||paymentMethod==='pix_automatic'?'Pix expirado':'Expirado'
-      :`${paymentMethod==='pix'||paymentMethod==='pix_automatic'?'Pix válido por':'Sessão'} ${formatRemaining(remaining)}`
   return <main className="native-checkout-shell">
     <header className="native-checkout-header">
       <Link className="native-checkout-back" to={`/app/mais/plano?cycle=${cycleParam}`} aria-label="Voltar aos planos"><ArrowLeft size={20}/></Link>
       <div className="native-checkout-brand"><BrandMark/><div><strong>ALOVIA</strong></div></div>
-      <div className={`checkout-timer${expired?' is-expired':''}`} aria-live="polite"><Clock3 size={17}/><span>{timerLabel}</span></div>
     </header>
 
     <div className="native-checkout-layout">
@@ -920,7 +914,7 @@ function PixPaymentContent(props:PixPaymentProps) {
       <div className="checkout-pix-heading"><span className="checkout-pix-icon"><QrCode size={24}/></span><div><strong>{automatic?'Pague e autorize o Pix Automático':'Pague por Pix'}</strong><span>{automatic?'Abra o app do seu banco, escaneie o QR Code e confirme o pagamento e a autorização das próximas renovações.':'Abra o app do seu banco, escaneie o QR Code e confirme o pagamento. Nas próximas renovações, a Alovia gerará um novo Pix.'}</span></div></div>
       <div className="checkout-pix-grid">
         <div className="checkout-pix-qr" aria-live="polite">{props.qrLoading&&<div className="checkout-loading-spinner" aria-label="Gerando QR Code"/>}{props.qrCode&&<img src={props.qrCode} alt={automatic?'QR Code do Pix Automático':'QR Code do Pix'}/>}{!props.qrLoading&&!props.qrCode&&<span>QR Code indisponível.</span>}</div>
-        <div className="checkout-pix-details"><span>Pix Copia e Cola</span><textarea readOnly value={props.checkout.pix_payload??''} aria-label="Código Pix Copia e Cola"/><button className="secondary-button" type="button" onClick={props.onCopy}><Copy size={17}/>{props.copyState==='copied'?'Código copiado':'Copiar código Pix'}</button>{props.copyState==='failed'&&<small role="alert">Não foi possível copiar. Selecione o código acima.</small>}<dl><div><dt>Valor</dt><dd>{formatBRL(props.checkout.amount_cents/100)}</dd></div><div><dt>Plano</dt><dd>{props.planName} · {props.cycleLabel}</dd></div>{props.remaining!==null&&<div><dt>Validade</dt><dd>{formatRemaining(props.remaining)}</dd></div>}</dl></div>
+        <div className="checkout-pix-details"><span>Pix Copia e Cola</span><textarea readOnly value={props.checkout.pix_payload??''} aria-label="Código Pix Copia e Cola"/><button className="secondary-button" type="button" onClick={props.onCopy}><Copy size={17}/>{props.copyState==='copied'?'Código copiado':'Copiar código Pix'}</button>{props.copyState==='failed'&&<small role="alert">Não foi possível copiar. Selecione o código acima.</small>}<dl><div><dt>Valor</dt><dd>{formatBRL(props.checkout.amount_cents/100)}</dd></div><div><dt>Plano</dt><dd>{props.planName} · {props.cycleLabel}</dd></div>{automatic&&props.remaining!==null&&<div><dt>Validade</dt><dd>{formatRemaining(props.remaining)}</dd></div>}</dl></div>
       </div>
       <div className="checkout-pix-waiting" role="status"><div className="checkout-loading-spinner"/><div><strong>{automatic?'Aguardando pagamento e autorização':'Aguardando pagamento'}</strong><span>{automatic?'Assim que o banco confirmar o pagamento e a autorização, liberamos sua assinatura automaticamente.':'Assim que o banco confirmar o pagamento, liberamos sua assinatura. Na próxima renovação, um novo Pix será gerado para pagamento.'}</span></div></div>
       {props.error&&<p className="form-error checkout-native-error" role="alert">{props.error}</p>}
