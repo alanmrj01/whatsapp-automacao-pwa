@@ -50,11 +50,6 @@ import {
 type CheckoutMode = 'hosted'|'native'|'pix'
 type PaymentMethod = 'credit_card'|'pix_automatic'
 
-const PIX_AUTOMATIC_ENABLED =
-  import.meta.env.VITE_BILLING_PIX_AUTOMATIC_ENABLED === 'true'
-const NATIVE_CARD_CHECKOUT_ENABLED =
-  import.meta.env.VITE_BILLING_NATIVE_CARD_CHECKOUT_ENABLED !== 'false'
-
 type CheckoutResponse = {
   checkout_id:string
   payment_method:PaymentMethod
@@ -86,6 +81,8 @@ type CheckoutProfile = {
   payer_name:string|null
   postal_code:string|null
   address_number:string|null
+  pix_automatic_available:boolean
+  native_card_checkout_available:boolean
 }
 
 type CheckoutAttempt = {method:PaymentMethod;key:string}
@@ -96,15 +93,6 @@ function isBillingCycle(value:string|null):value is BillingCycle {
 
 function isPlanId(value:string|null):value is PlanId {
   return value === 'basic' || value === 'plus'
-}
-
-function isAsaasCheckoutUrl(value:string) {
-  try {
-    const url = new URL(value)
-    return url.protocol === 'https:' && (url.hostname === 'asaas.com' || url.hostname.endsWith('.asaas.com'))
-  } catch {
-    return false
-  }
 }
 
 function digits(value:string,max:number) {
@@ -182,14 +170,13 @@ export function CheckoutPage() {
   const planId=params.get('plan')
   const cycleParam=params.get('cycle')
   const checkoutAttempt=useRef<CheckoutAttempt>({
-    method:PIX_AUTOMATIC_ENABLED?'pix_automatic':'credit_card',
+    method:'credit_card',
     key:crypto.randomUUID(),
   })
   const finalizing=useRef(false)
+  const paymentMethodInitialized=useRef(false)
 
-  const [paymentMethod,setPaymentMethod]=useState<PaymentMethod>(
-    PIX_AUTOMATIC_ENABLED?'pix_automatic':'credit_card',
-  )
+  const [paymentMethod,setPaymentMethod]=useState<PaymentMethod>('credit_card')
   const [profile,setProfile]=useState<CheckoutProfile|null>(null)
   const [checkout,setCheckout]=useState<CheckoutResponse|null>(null)
   const [profileLoading,setProfileLoading]=useState(true)
@@ -231,6 +218,8 @@ export function CheckoutPage() {
   const [ccv,setCcv]=useState('')
 
   const validSelection=isPlanId(planId)&&isBillingCycle(cycleParam)&&isPurchasablePlan(planId)
+  const pixAutomaticAvailable=profile?.pix_automatic_available===true
+  const nativeCardCheckoutAvailable=profile?.native_card_checkout_available===true
 
   useEffect(()=>{
     void syncSession().catch(()=>undefined)
@@ -243,6 +232,14 @@ export function CheckoutPage() {
     try {
       const nextProfile=await api.request<CheckoutProfile>('/billing/checkout-profile')
       setProfile(nextProfile)
+      if(!paymentMethodInitialized.current) {
+        const preferredMethod:PaymentMethod=nextProfile.pix_automatic_available
+          ?'pix_automatic'
+          :'credit_card'
+        setPaymentMethod(preferredMethod)
+        checkoutAttempt.current={method:preferredMethod,key:crypto.randomUUID()}
+        paymentMethodInitialized.current=true
+      }
       setPayerName(current=>current||nextProfile.payer_name||'')
       setCardHolderName(current=>current||nextProfile.payer_name||'')
       setPostalCode(current=>current||formatPostalCode(nextProfile.postal_code??''))
@@ -315,14 +312,18 @@ export function CheckoutPage() {
       ) {
         setPixReconciliationPending(true)
         setError(null)
-      } else if(caught instanceof ApiError&&caught.status===409&&method==='pix_automatic') {
-        setError('O Pix Automático não está disponível para esta conta agora. Você ainda pode pagar com cartão de crédito.')
+      } else if(
+        caught instanceof ApiError&&
+        method==='pix_automatic'&&
+        (caught.status===409||caught.status===502||caught.status===503)
+      ) {
+        setError('O Pix Automático está temporariamente indisponível pela plataforma que processa os pagamentos. Você pode concluir com cartão de crédito.')
       } else if(caught instanceof ApiError&&caught.status===409) {
         setError(method==='credit_card'
-          ?'Já existe uma tentativa de pagamento com cartão em andamento. Continue nesta tentativa ou aguarde alguns instantes.'
+          ?'Existe uma tentativa de pagamento em andamento nesta empresa. Aguarde a confirmação antes de iniciar outra.'
           :caught.detail||'Não foi possível preparar este checkout agora.')
       } else if(method==='pix_automatic') {
-        setError('Não conseguimos gerar o Pix Automático agora. Tente novamente ou use cartão de crédito.')
+        setError('A plataforma que processa os pagamentos não respondeu ao Pix Automático agora. Você pode usar cartão de crédito.')
       } else {
         setError('Não foi possível preparar seu checkout agora. Tente novamente.')
       }
@@ -432,9 +433,6 @@ export function CheckoutPage() {
   const hostedCheckout=paymentMethod==='credit_card'&&(
     checkout?.checkout_mode==='hosted'||(!checkout?.checkout_mode&&!!checkout?.checkout_url)
   )
-  const hostedCheckoutUrl=hostedCheckout&&checkout?.checkout_url&&isAsaasCheckoutUrl(checkout.checkout_url)
-    ?checkout.checkout_url
-    :null
 
   const rotateAttempt=(method:PaymentMethod)=>{
     const key=crypto.randomUUID()
@@ -473,7 +471,8 @@ export function CheckoutPage() {
   }
 
   const changePaymentMethod=async(method:PaymentMethod)=>{
-    if(method==='pix_automatic'&&!PIX_AUTOMATIC_ENABLED)return
+    if(method==='pix_automatic'&&!pixAutomaticAvailable)return
+    if(method==='credit_card'&&!nativeCardCheckoutAvailable)return
     if(method===paymentMethod||cancelingPix||checkoutLoading)return
     if(pixReconciliationPending) {
       setError('A solicitação do Pix Automático ainda está sendo confirmada. Não faça outro pagamento agora.')
@@ -508,7 +507,7 @@ export function CheckoutPage() {
   }
 
   const generatePix=async(key=checkoutAttempt.current.key)=>{
-    if(!PIX_AUTOMATIC_ENABLED)return
+    if(!pixAutomaticAvailable)return
     if(!identificationComplete||submitting||checkoutLoading)return
     if(membership?.admin_full_access) {
       setError(null)
@@ -586,13 +585,18 @@ export function CheckoutPage() {
       ![10,11].includes(phoneDigits.length)||postalDigits.length!==8||
       !addressNumber.trim()
     const nativeCardInvalid=
-      NATIVE_CARD_CHECKOUT_ENABLED&&(
+      nativeCardCheckoutAvailable&&(
         cardHolderName.trim().length<2||
         !isValidCardNumber(cardDigits)||!monthDigits||!yearDigits||
         ccvDigits.length!==cardSecurityCodeLimit(cardDigits)
       )
     if(identificationInvalid||nativeCardInvalid) {
       setError('Confira os campos obrigatórios antes de continuar.')
+      return
+    }
+
+    if(!nativeCardCheckoutAvailable) {
+      setError('O cartão está temporariamente indisponível pela plataforma que processa os pagamentos.')
       return
     }
 
@@ -607,12 +611,8 @@ export function CheckoutPage() {
       }
       const checkoutMode=cardCheckout.checkout_mode??(cardCheckout.checkout_url?'hosted':null)
       if(checkoutMode==='hosted') {
-        if(!cardCheckout.checkout_url||!isAsaasCheckoutUrl(cardCheckout.checkout_url)) {
-          setError('O checkout seguro não está disponível agora.')
-          setSubmitting(false)
-          return
-        }
-        window.location.assign(cardCheckout.checkout_url)
+        setError('O cartão está temporariamente indisponível pela plataforma que processa os pagamentos. Tente novamente em alguns instantes.')
+        setSubmitting(false)
         return
       }
       if(checkoutMode!=='native') {
@@ -620,8 +620,8 @@ export function CheckoutPage() {
         setSubmitting(false)
         return
       }
-      if(!NATIVE_CARD_CHECKOUT_ENABLED) {
-        setError('O pagamento nativo com cartão não está habilitado.')
+      if(!nativeCardCheckoutAvailable) {
+        setError('O cartão está temporariamente indisponível pela plataforma que processa os pagamentos.')
         setSubmitting(false)
         return
       }
@@ -655,7 +655,11 @@ export function CheckoutPage() {
       } else if(caught instanceof ApiError&&caught.status===409) {
         setError(caught.detail==='Checkout expired'
           ?'Esta sessão expirou. Gere uma nova sessão para continuar.'
-          :'A confirmação anterior ainda está sendo conciliada. Aguarde alguns instantes antes de tentar novamente.')
+          :'Estamos confirmando uma tentativa anterior com a plataforma de pagamento. Não tente pagar novamente agora.')
+      } else if(caught instanceof ApiError&&caught.status===502) {
+        setError(caught.detail==='Payment confirmation is still being reconciled'
+          ?'Estamos confirmando a resposta da plataforma de pagamento. Não tente pagar novamente agora.'
+          :'A plataforma que processa os pagamentos está temporariamente indisponível. Tente novamente em alguns instantes.')
       } else {
         setError('Não foi possível concluir agora. Seus dados do cartão não foram salvos. Tente novamente em alguns instantes.')
       }
@@ -700,18 +704,21 @@ export function CheckoutPage() {
           <button className="secondary-button" type="button" onClick={()=>void loadProfile()}><RefreshCcw size={17}/>Tentar novamente</button>
         </section>}
 
-        {!profileLoading&&profile&&PIX_AUTOMATIC_ENABLED&&<section className="native-checkout-card checkout-method-card" aria-labelledby="checkout-payment-method-title">
+        {!profileLoading&&profile&&<section className="native-checkout-card checkout-method-card" aria-labelledby="checkout-payment-method-title">
           <div className="checkout-method-heading"><span className="eyebrow">Forma de pagamento</span><h2 id="checkout-payment-method-title">Como você prefere pagar?</h2></div>
           <div className="checkout-method-options">
-            {PIX_AUTOMATIC_ENABLED&&<label className={`checkout-method-option${paymentMethod==='pix_automatic'?' is-selected':''}`}>
-              <input type="radio" name="payment-method" value="pix_automatic" checked={paymentMethod==='pix_automatic'} disabled={checkoutLoading||cancelingPix} onChange={()=>void changePaymentMethod('pix_automatic')}/>
+            <label className={`checkout-method-option${paymentMethod==='pix_automatic'?' is-selected':''}${!pixAutomaticAvailable?' is-disabled':''}`}>
+              <input type="radio" name="payment-method" value="pix_automatic" checked={paymentMethod==='pix_automatic'} disabled={!pixAutomaticAvailable||checkoutLoading||cancelingPix} onChange={()=>void changePaymentMethod('pix_automatic')}/>
               <span className="checkout-method-icon"><Landmark size={22}/></span>
-              <span className="checkout-method-copy"><span className="checkout-method-title"><strong>Pix Automático</strong><small>Recomendado</small></span><span>Pague o primeiro Pix e autorize as próximas renovações automaticamente.</span></span>
-            </label>}
-            <label className={`checkout-method-option${paymentMethod==='credit_card'?' is-selected':''}`}>
-              <input type="radio" name="payment-method" value="credit_card" checked={paymentMethod==='credit_card'} disabled={checkoutLoading||cancelingPix||initialPaymentReceived||pixReconciliationPending} onChange={()=>void changePaymentMethod('credit_card')}/>
+              <span className="checkout-method-copy">
+                <span className="checkout-method-title"><strong>Pix Automático</strong><small>{pixAutomaticAvailable?'Recomendado':'Indisponível'}</small></span>
+                <span>{pixAutomaticAvailable?'Pague o primeiro Pix e autorize as próximas renovações automaticamente.':'Temporariamente indisponível pela plataforma que processa os pagamentos.'}</span>
+              </span>
+            </label>
+            <label className={`checkout-method-option${paymentMethod==='credit_card'?' is-selected':''}${!nativeCardCheckoutAvailable?' is-disabled':''}`}>
+              <input type="radio" name="payment-method" value="credit_card" checked={paymentMethod==='credit_card'} disabled={!nativeCardCheckoutAvailable||checkoutLoading||cancelingPix||initialPaymentReceived||pixReconciliationPending} onChange={()=>void changePaymentMethod('credit_card')}/>
               <span className="checkout-method-icon"><CreditCard size={22}/></span>
-              <span className="checkout-method-copy"><strong>Cartão de crédito</strong><span>Cobrança recorrente no cartão.</span></span>
+              <span className="checkout-method-copy"><strong>Cartão de crédito</strong><span>{nativeCardCheckoutAvailable?'Cobrança recorrente no cartão.':'Temporariamente indisponível pela plataforma que processa os pagamentos.'}</span></span>
             </label>
           </div>
         </section>}
@@ -723,13 +730,8 @@ export function CheckoutPage() {
           <button className="primary-button" type="button" onClick={restart}><RefreshCcw size={17}/>{paymentMethod==='pix_automatic'?'Gerar novo Pix':'Gerar nova sessão'}</button>
         </section>}
 
-        {!checkoutLoading&&!expired&&hostedCheckout&&hostedCheckoutUrl&&<section className="native-checkout-card checkout-expired-card">
-          <ShieldCheck size={24} aria-hidden="true"/><div><strong>Pagamento seguro pelo Asaas</strong><span>Você será redirecionado para concluir o pagamento com cartão no ambiente seguro do Asaas.</span></div>
-          <button className="primary-button" type="button" onClick={()=>window.location.assign(hostedCheckoutUrl)}>Continuar para pagamento</button>
-        </section>}
-
-        {!checkoutLoading&&!expired&&hostedCheckout&&!hostedCheckoutUrl&&<section className="native-checkout-card checkout-expired-card">
-          <div><strong>O checkout seguro não está disponível agora.</strong><span>Tente gerar uma nova sessão em alguns instantes.</span></div>
+        {!checkoutLoading&&!expired&&hostedCheckout&&<section className="native-checkout-card checkout-expired-card">
+          <ShieldCheck size={24} aria-hidden="true"/><div><strong>Cartão temporariamente indisponível</strong><span>A plataforma que processa os pagamentos não liberou o checkout nativo nesta tentativa. Nenhum pagamento foi concluído.</span></div>
           <button className="secondary-button" type="button" onClick={restart}><RefreshCcw size={17}/>Tentar novamente</button>
         </section>}
 
@@ -743,7 +745,7 @@ export function CheckoutPage() {
             onOpen={()=>setOpenStep(1)}
             onAdvance={()=>{if(identificationComplete)setOpenStep(2)}}
             setters={{setPayerName,setPayerDocument,setPayerPhone,setPostalCode,setAddressNumber,setAddressComplement,setCardHolderName}}
-            focusCard={paymentMethod==='credit_card'&&NATIVE_CARD_CHECKOUT_ENABLED}
+            focusCard={paymentMethod==='credit_card'&&nativeCardCheckoutAvailable}
           />
 
           <section className={`native-checkout-card checkout-accordion-card${openStep===2?' is-open':''}`}>
@@ -776,7 +778,7 @@ export function CheckoutPage() {
                   onCard={()=>void changePaymentMethod('credit_card')}
                   onBack={()=>navigate('/app',{replace:true})}
                 />
-                :NATIVE_CARD_CHECKOUT_ENABLED
+                :nativeCardCheckoutAvailable
                   ?<CardPaymentContent
                     values={{cardHolderName,cardNumber,expiryMonth,expiryYear,ccv}}
                     setters={{setCardHolderName,setCardNumber,setExpiryMonth,setExpiryYear,setCcv}}
@@ -789,12 +791,7 @@ export function CheckoutPage() {
                     cycleLabel={cycle?.label.toLowerCase()??''}
                     onBack={()=>navigate('/app',{replace:true})}
                   />
-                  :<HostedCardPaymentContent
-                    error={error}
-                    adminAccessNotice={adminAccessNotice}
-                    submitting={submitting}
-                    onBack={()=>navigate('/app',{replace:true})}
-                  />}
+                  :<PaymentUnavailableContent method="Cartão de crédito"/>}
             </div>
           </section>
         </form>}
@@ -913,24 +910,11 @@ function PixPaymentContent(props:PixPaymentProps) {
   </div>
 }
 
-type HostedCardPaymentProps = {
-  error:string|null
-  adminAccessNotice:boolean
-  submitting:boolean
-  onBack:()=>void
-}
-
-function HostedCardPaymentContent(props:HostedCardPaymentProps) {
-  return <>
-    <div className="checkout-pix-intro">
-      <ShieldCheck size={24} aria-hidden="true"/>
-      <div><strong>Pagamento seguro pelo Asaas</strong><span>Você será redirecionado para concluir o pagamento com cartão no ambiente seguro do Asaas.</span></div>
-    </div>
-    {props.error&&<p className="form-error checkout-native-error" role="alert">{props.error}</p>}
-    {props.adminAccessNotice
-      ?<AdminAccessNotice onBack={props.onBack}/>
-      :<button className="primary-button checkout-native-submit" type="submit" disabled={props.submitting}>{props.submitting?'Preparando pagamento…':'Continuar para pagamento seguro'}</button>}
-  </>
+function PaymentUnavailableContent({method}:{method:string}) {
+  return <div className="checkout-pix-terminal" role="status">
+    <strong>{method} temporariamente indisponível</strong>
+    <span>A plataforma que processa os pagamentos está indisponível para esta forma de pagamento agora.</span>
+  </div>
 }
 
 type CardPaymentProps = {
