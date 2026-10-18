@@ -203,6 +203,7 @@ test('Pix comum communicates manual renewal without claiming automatic debit',()
   const checkout=read('src/features/billing/CheckoutPage.tsx')
 
   assert.match(checkout,/Pague agora por Pix\. Nas próximas renovações, geraremos um novo Pix para pagamento\./)
+  assert.match(checkout,/automatic\?'Gerar autorização segura':'Gerar cobrança Pix'/)
   assert.match(checkout,/payment_method:method/)
   assert.match(checkout,/method==='pix'\|\|method==='pix_automatic'/)
   assert.match(checkout,/paymentMethod==='pix'\?'Renovação por novo Pix a cada ciclo':'Renovação automática'/)
