@@ -157,3 +157,28 @@ test('failed Pix without initial payment remains retryable',()=>{
   assert.match(retryState,/Tentar novamente/)
   assert.match(retryState,/Pagar com cartão de crédito/)
 })
+
+test('uncertain Pix authorization enters protected reconciliation state without another payment CTA',()=>{
+  const checkout=read('src/features/billing/CheckoutPage.tsx')
+  const prepare=checkout.match(/const prepareCheckout=useCallback[\s\S]*?\},\[cycleParam,planId\]\)/)?.[0]??''
+  const protectedState=checkout.match(/\{props\.reconciliationPending&&[\s\S]*?\}\n    \{!props\.reconciliationPending/)?.[0]??''
+
+  assert.match(checkout,/pixReconciliationPending/)
+  assert.match(prepare,/Pix Automatic authorization is being reconciled/)
+  assert.match(prepare,/setPixReconciliationPending\(true\)/)
+  assert.match(protectedState,/Estamos confirmando seu Pix Automático/)
+  assert.match(protectedState,/Não faça outro pagamento agora/)
+  assert.match(protectedState,/Voltar para a Alovia/)
+  assert.doesNotMatch(protectedState,/Gerar Pix Automático|Tentar novamente|Pagar com cartão/)
+  assert.match(checkout,/initialPaymentReceived\|\|pixReconciliationPending/)
+})
+
+test('reconciliation state blocks method switching and Pix resubmission',()=>{
+  const checkout=read('src/features/billing/CheckoutPage.tsx')
+  const switchFlow=checkout.match(/const changePaymentMethod=async[\s\S]*?\n  const generatePix=/)?.[0]??''
+  const submit=checkout.match(/const submit=async[\s\S]*?\n  const copyPix=/)?.[0]??''
+
+  assert.match(switchFlow,/if\(pixReconciliationPending\)[\s\S]*Não faça outro pagamento agora[\s\S]*return/)
+  assert.match(submit,/if\(paymentMethod==='pix_automatic'&&pixReconciliationPending\)return/)
+})
+
