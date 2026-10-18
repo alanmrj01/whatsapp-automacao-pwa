@@ -53,7 +53,7 @@ type PaymentMethod = 'credit_card'|'pix_automatic'
 const PIX_AUTOMATIC_ENABLED =
   import.meta.env.VITE_BILLING_PIX_AUTOMATIC_ENABLED === 'true'
 const NATIVE_CARD_CHECKOUT_ENABLED =
-  import.meta.env.VITE_BILLING_NATIVE_CARD_CHECKOUT_ENABLED === 'true'
+  import.meta.env.VITE_BILLING_NATIVE_CARD_CHECKOUT_ENABLED !== 'false'
 
 type CheckoutResponse = {
   checkout_id:string
@@ -318,7 +318,9 @@ export function CheckoutPage() {
       } else if(caught instanceof ApiError&&caught.status===409&&method==='pix_automatic') {
         setError('O Pix Automático não está disponível para esta conta agora. Você ainda pode pagar com cartão de crédito.')
       } else if(caught instanceof ApiError&&caught.status===409) {
-        setError(caught.detail||'Não foi possível preparar este checkout agora.')
+        setError(method==='credit_card'
+          ?'Já existe uma tentativa de pagamento com cartão em andamento. Continue nesta tentativa ou aguarde alguns instantes.'
+          :caught.detail||'Não foi possível preparar este checkout agora.')
       } else if(method==='pix_automatic') {
         setError('Não conseguimos gerar o Pix Automático agora. Tente novamente ou use cartão de crédito.')
       } else {
@@ -672,16 +674,10 @@ export function CheckoutPage() {
     }
   }
 
-  const timerLabel=remaining===null
-    ?paymentMethod==='pix_automatic'?'Pix Automático':'Cartão'
-    :expired
-      ?paymentMethod==='pix_automatic'?'Pix expirado':'Expirado'
-      :`${paymentMethod==='pix_automatic'?'Pix válido por':'Sessão'} ${formatRemaining(remaining)}`
   return <main className="native-checkout-shell">
     <header className="native-checkout-header">
       <Link className="native-checkout-back" to={`/app/mais/plano?cycle=${cycleParam}`} aria-label="Voltar aos planos"><ArrowLeft size={20}/></Link>
       <div className="native-checkout-brand"><BrandMark/><div><strong>ALOVIA</strong></div></div>
-      <div className={`checkout-timer${expired?' is-expired':''}`} aria-live="polite"><Clock3 size={17}/><span>{timerLabel}</span></div>
     </header>
 
     <div className="native-checkout-layout">
