@@ -15,10 +15,13 @@ test('payment priority comes from runtime capabilities and Pix stays visible whe
   const profileLoader=checkout.match(/const loadProfile=useCallback[\s\S]*?\},\[cycleParam,planId\]\)/)?.[0]??''
   const selection=checkout.match(/const selectPaymentMethod=[\s\S]*?\n  const changePaymentMethod=/)?.[0]??''
 
+  assert.match(checkout,/pix_available:boolean/)
   assert.match(checkout,/pix_automatic_available:boolean/)
   assert.match(checkout,/native_card_checkout_available:boolean/)
-  assert.match(profileLoader,/nextProfile\.pix_automatic_available[\s\S]*'pix_automatic'[\s\S]*'credit_card'/)
+  assert.match(profileLoader,/nextProfile\.pix_automatic_available[\s\S]*'pix_automatic'[\s\S]*nextProfile\.pix_available[\s\S]*'pix'[\s\S]*'credit_card'/)
   assert.match(checkout,/value="pix_automatic" checked=\{paymentMethod==='pix_automatic'\}/)
+  assert.match(checkout,/value="pix" checked=\{paymentMethod==='pix'\}/)
+  assert.match(checkout,/Nas próximas renovações, geraremos um novo Pix/)
   assert.match(checkout,/Indisponível/)
   assert.match(checkout,/Temporariamente indisponível pela plataforma que processa os pagamentos/)
   assert.match(checkout,/value="credit_card" checked=\{paymentMethod==='credit_card'\}/)
@@ -93,7 +96,7 @@ test('card flow and commercial guarantees remain intact',()=>{
   assert.match(checkout,/checkoutMode==='hosted'/)
   assert.match(checkout,/Garantia de 7 dias/)
   assert.doesNotMatch(checkout,/7 dias grátis|teste grátis/i)
-  assert.match(checkout,/Pagamento: <strong>\{paymentMethod==='pix_automatic'\?'Pix Automático':'Cartão de crédito'\}/)
+  assert.match(checkout,/Pagamento: <strong>\{paymentMethod==='pix_automatic'\?'Pix Automático':paymentMethod==='pix'\?'Pix':'Cartão de crédito'\}/)
 })
 
 test('card checkout is created just in time and never redirects away from Alovia',()=>{
@@ -112,18 +115,18 @@ test('card checkout is created just in time and never redirects away from Alovia
   assert.match(checkout,/paymentMethod==='credit_card'[\s\S]*CardPaymentContent/)
 })
 
-test('card selection cancels an existing Pix before creating a card checkout',()=>{
+test('switching away from either Pix method cancels the existing Pix before continuing',()=>{
   const checkout=read('src/features/billing/CheckoutPage.tsx')
   const switchFlow=checkout.match(/const changePaymentMethod=async[\s\S]*?\n  const generatePix=/)?.[0]??''
   const cancelPosition=switchFlow.indexOf('/cancel`')
-  const cardPosition=switchFlow.indexOf("selectPaymentMethod('credit_card')")
+  const selectPosition=switchFlow.indexOf("selectPaymentMethod(method)")
 
   assert.ok(cancelPosition>=0)
-  assert.ok(cardPosition>cancelPosition)
+  assert.ok(selectPosition>cancelPosition)
   assert.match(switchFlow,/await api\.request<CheckoutStatusResponse>/)
-  assert.match(switchFlow,/if\(method==='credit_card'&&checkout\?\.payment_method==='pix_automatic'\)/)
-  assert.match(switchFlow,/catch \(caught\)[\s\S]*Não foi possível cancelar o Pix Automático/)
-  assert.equal((switchFlow.match(/selectPaymentMethod\('credit_card'\)/g)??[]).length,1)
+  assert.match(switchFlow,/checkout\.payment_method==='pix'\|\|checkout\.payment_method==='pix_automatic'/)
+  assert.match(switchFlow,/catch \(caught\)[\s\S]*Não foi possível cancelar o Pix atual/)
+  assert.match(switchFlow,/selectPaymentMethod\(method\)/)
 })
 
 test('expired Pix retry cancels the previous authorization before creating another Pix',()=>{
@@ -143,7 +146,7 @@ test('expired Pix retry cancels the previous authorization before creating anoth
 
 test('a received initial payment blocks another payment and exposes reconciliation copy',()=>{
   const checkout=read('src/features/billing/CheckoutPage.tsx')
-  const protectedState=checkout.match(/\{paymentNeedsReconciliation&&[\s\S]*?\}\n    \{terminal&&!paymentNeedsReconciliation/)?.[0]??''
+  const protectedState=checkout.match(/\{props\.automatic&&paymentNeedsReconciliation&&[\s\S]*?\}\n    \{terminal&&\(!paymentNeedsReconciliation\|\|!props\.automatic\)/)?.[0]??''
 
   assert.match(checkout,/initial_payment_received:boolean/)
   assert.match(checkout,/setInitialPaymentReceived\(current\.initial_payment_received\)/)
@@ -156,7 +159,7 @@ test('a received initial payment blocks another payment and exposes reconciliati
 
 test('failed Pix without initial payment remains retryable',()=>{
   const checkout=read('src/features/billing/CheckoutPage.tsx')
-  const retryState=checkout.match(/\{terminal&&!paymentNeedsReconciliation&&[\s\S]*?\}\n  <\/div>/)?.[0]??''
+  const retryState=checkout.match(/\{terminal&&\(!paymentNeedsReconciliation\|\|!props\.automatic\)&&[\s\S]*?\}\n  <\/div>/)?.[0]??''
 
   assert.match(retryState,/Não foi possível ativar o Pix Automático/)
   assert.match(retryState,/Tentar novamente/)
@@ -171,7 +174,7 @@ test('uncertain Pix authorization enters protected reconciliation state without 
   assert.match(checkout,/pixReconciliationPending/)
   assert.match(prepare,/Pix Automatic authorization is being reconciled/)
   assert.match(prepare,/setPixReconciliationPending\(true\)/)
-  assert.match(protectedState,/Estamos confirmando seu Pix Automático/)
+  assert.match(protectedState,/Estamos confirmando seu \{methodLabel\}/)
   assert.match(protectedState,/Não faça outro pagamento agora/)
   assert.match(protectedState,/Voltar para a Alovia/)
   assert.doesNotMatch(protectedState,/Gerar Pix Automático|Tentar novamente|Pagar com cartão/)
@@ -184,7 +187,7 @@ test('reconciliation state blocks method switching and Pix resubmission',()=>{
   const submit=checkout.match(/const submit=async[\s\S]*?\n  const copyPix=/)?.[0]??''
 
   assert.match(switchFlow,/if\(pixReconciliationPending\)[\s\S]*Não faça outro pagamento agora[\s\S]*return/)
-  assert.match(submit,/if\(paymentMethod==='pix_automatic'&&pixReconciliationPending\)return/)
+  assert.match(submit,/if\(\(paymentMethod==='pix'\|\|paymentMethod==='pix_automatic'\)&&pixReconciliationPending\)return/)
 })
 
 
@@ -197,4 +200,17 @@ test('native card checkout stays inside Alovia and provider outages are explicit
   assert.match(checkout,/A plataforma que processa os pagamentos está temporariamente indisponível/)
   assert.match(checkout,/Não tente pagar novamente agora/)
   assert.doesNotMatch(checkout,/className=\{\`checkout-timer/)
+})
+
+
+test('conventional Pix is the production fallback when Pix Automático is unavailable',()=>{
+  const checkout=read('src/features/billing/CheckoutPage.tsx')
+  const generate=checkout.match(/const generatePix=async[\s\S]*?\n  const restart=/)?.[0]??''
+
+  assert.match(checkout,/Pix Automático[\s\S]*Indisponível/)
+  assert.match(checkout,/Pague agora por Pix\. Nas próximas renovações, geraremos um novo Pix para pagamento\./)
+  assert.match(checkout,/Novo Pix a cada renovação/)
+  assert.match(generate,/method:paymentMethod/)
+  assert.match(generate,/paymentMethod==='pix'/)
+  assert.match(checkout,/paymentMethod==='pix'\|\|paymentMethod==='pix_automatic'/)
 })
