@@ -195,3 +195,12 @@ test('hosted card checkout is fail-closed by default and does not ask for card d
   assert.match(checkout,/if\(!NATIVE_CARD_CHECKOUT_ENABLED\)/)
   assert.match(checkout,/NATIVE_CARD_CHECKOUT_ENABLED&&\(/)
 })
+
+test('native card checkout is the default production card experience and header has no payment chip',()=>{
+  const checkout=read('src/features/billing/CheckoutPage.tsx')
+
+  assert.match(checkout,/VITE_BILLING_NATIVE_CARD_CHECKOUT_ENABLED !== 'false'/)
+  assert.match(checkout,/NATIVE_CARD_CHECKOUT_ENABLED\s*\?\s*<CardPaymentContent/)
+  assert.doesNotMatch(checkout,/className=\{\`checkout-timer/)
+  assert.match(checkout,/Já existe uma tentativa de pagamento com cartão em andamento/)
+})
