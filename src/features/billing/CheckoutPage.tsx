@@ -751,7 +751,7 @@ export function CheckoutPage() {
           <section className={`native-checkout-card checkout-accordion-card${openStep===2?' is-open':''}`}>
             <button className="checkout-section-toggle" type="button" aria-expanded={openStep===2} aria-controls="checkout-payment-fields" disabled={!identificationComplete} onClick={()=>identificationComplete&&setOpenStep(2)}>
               <span className="checkout-step-number">2</span>
-              <span className="checkout-step-copy"><strong>{paymentMethod==='pix_automatic'?'Pix Automático':'Cartão de crédito'}</strong><small>{identificationComplete?paymentMethod==='pix_automatic'?'Pague o primeiro Pix e autorize as próximas renovações automaticamente.':NATIVE_CARD_CHECKOUT_ENABLED?'Cobrança recorrente processada pelo Asaas.':'Você será redirecionado para o ambiente seguro do Asaas.':'Conclua a identificação primeiro'}</small></span>
+              <span className="checkout-step-copy"><strong>{paymentMethod==='pix_automatic'?'Pix Automático':'Cartão de crédito'}</strong><small>{identificationComplete?paymentMethod==='pix_automatic'?'Pague o primeiro Pix e autorize as próximas renovações automaticamente.':nativeCardCheckoutAvailable?'Cobrança recorrente processada com segurança.':'Forma de pagamento temporariamente indisponível.':'Conclua a identificação primeiro'}</small></span>
               {openStep===2?<ChevronUp size={20}/>:<ChevronDown size={20}/>}
             </button>
 
