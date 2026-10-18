@@ -678,16 +678,10 @@ export function CheckoutPage() {
     }
   }
 
-  const timerLabel=remaining===null
-    ?paymentMethod==='pix_automatic'?'Pix Automático':paymentMethod==='pix'?'Pix':'Cartão'
-    :expired
-      ?paymentMethod==='pix'||paymentMethod==='pix_automatic'?'Pix expirado':'Expirado'
-      :`${paymentMethod==='pix'||paymentMethod==='pix_automatic'?'Pix válido por':'Sessão'} ${formatRemaining(remaining)}`
   return <main className="native-checkout-shell">
     <header className="native-checkout-header">
       <Link className="native-checkout-back" to={`/app/mais/plano?cycle=${cycleParam}`} aria-label="Voltar aos planos"><ArrowLeft size={20}/></Link>
       <div className="native-checkout-brand"><BrandMark/><div><strong>ALOVIA</strong></div></div>
-      <div className={`checkout-timer${expired?' is-expired':''}`} aria-live="polite"><Clock3 size={17}/><span>{timerLabel}</span></div>
     </header>
 
     <div className="native-checkout-layout">
