@@ -10,14 +10,16 @@ import {
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url),'utf8')
 
-test('Pix Automático is fail-closed and card is the production default',()=>{
+test('Pix comum is the production default and Pix Automático stays fail-closed',()=>{
   const checkout=read('src/features/billing/CheckoutPage.tsx')
   const profileLoader=checkout.match(/const loadProfile=useCallback[\s\S]*?\},\[cycleParam,planId\]\)/)?.[0]??''
   const selection=checkout.match(/const selectPaymentMethod=[\s\S]*?\n  const changePaymentMethod=/)?.[0]??''
 
   assert.match(checkout,/VITE_BILLING_PIX_AUTOMATIC_ENABLED/)
-  assert.match(checkout,/PIX_AUTOMATIC_ENABLED\?'pix_automatic':'credit_card'/)
-  assert.match(checkout,/\{PIX_AUTOMATIC_ENABLED&&<label/)
+  assert.match(checkout,/useState<PaymentMethod>\('pix'\)/)
+  assert.match(checkout,/profile\.pix_available&&<label/)
+  assert.match(checkout,/value="pix" checked=\{paymentMethod==='pix'\}/)
+  assert.match(checkout,/PIX_AUTOMATIC_ENABLED&&profile\.pix_automatic_available&&<label/)
   assert.match(checkout,/value="pix_automatic" checked=\{paymentMethod==='pix_automatic'\}/)
   assert.match(checkout,/value="credit_card" checked=\{paymentMethod==='credit_card'\}/)
   assert.match(selection,/setPaymentMethod\(method\)/)
@@ -61,8 +63,8 @@ test('waiting never unlocks access and paid is the only status that synchronizes
   const paidBlock=checkout.match(/if\(current\.status==='paid'\)[\s\S]*?return\n\s*\}/)?.[0]??''
 
   assert.equal(PIX_STATUS_POLL_MS,4000)
-  assert.match(checkout,/Aguardando pagamento e autorização/)
-  assert.match(checkout,/Assim que o banco confirmar o pagamento e a autorização/)
+  assert.match(checkout,/Aguardando pagamento/)
+  assert.match(checkout,/Na próxima renovação, um novo Pix será gerado para pagamento/)
   assert.doesNotMatch(checkout,/Pagamento aprovado/)
   assert.match(paidBlock,/await syncSession\(\)/)
   assert.match(paidBlock,/navigate\('\/app\/onboarding'/)
@@ -78,7 +80,7 @@ test('expired and refused flows are recoverable without silently selecting card'
   assert.match(checkout,/Gerar novo Pix/)
   assert.match(checkout,/Não foi possível ativar o Pix Automático/)
   assert.match(checkout,/Tentar novamente/)
-  assert.match(checkout,/O Pix Automático não está disponível[\s\S]*pagar com cartão de crédito/)
+  assert.match(checkout,/Não conseguimos gerar o Pix agora[\s\S]*cartão de crédito/)
   assert.match(checkout,/onClick=\{props\.onCard\}>Pagar com cartão de crédito/)
   assert.doesNotMatch(checkout,/setPaymentMethod\('credit_card'\)[\s\S]*catch/)
 })
@@ -91,7 +93,8 @@ test('card flow and commercial guarantees remain intact',()=>{
   assert.match(checkout,/checkoutMode==='hosted'/)
   assert.match(checkout,/Garantia de 7 dias/)
   assert.doesNotMatch(checkout,/7 dias grátis|teste grátis/i)
-  assert.match(checkout,/Pagamento: <strong>\{paymentMethod==='pix_automatic'\?'Pix Automático':'Cartão de crédito'\}/)
+  assert.match(checkout,/Pagamento: <strong>\{paymentMethod==='pix_automatic'\?'Pix Automático':paymentMethod==='pix'\?'Pix':'Cartão de crédito'\}/)
+  assert.match(checkout,/Renovação por novo Pix a cada ciclo/)
 })
 
 test('card checkout is created just in time by submit and preserves hosted and native paths',()=>{
@@ -118,8 +121,8 @@ test('card selection cancels an existing Pix before creating a card checkout',()
   assert.ok(cancelPosition>=0)
   assert.ok(cardPosition>cancelPosition)
   assert.match(switchFlow,/await api\.request<CheckoutStatusResponse>/)
-  assert.match(switchFlow,/if\(method==='credit_card'&&checkout\?\.payment_method==='pix_automatic'\)/)
-  assert.match(switchFlow,/catch \(caught\)[\s\S]*Não foi possível cancelar o Pix Automático/)
+  assert.match(switchFlow,/if\(method==='credit_card'&&\(checkout\?\.payment_method==='pix'\|\|checkout\?\.payment_method==='pix_automatic'\)\)/)
+  assert.match(switchFlow,/catch \(caught\)[\s\S]*Não foi possível cancelar o Pix\./)
   assert.equal((switchFlow.match(/selectPaymentMethod\('credit_card'\)/g)??[]).length,1)
 })
 
@@ -155,7 +158,7 @@ test('failed Pix without initial payment remains retryable',()=>{
   const checkout=read('src/features/billing/CheckoutPage.tsx')
   const retryState=checkout.match(/\{terminal&&!paymentNeedsReconciliation&&[\s\S]*?\}\n  <\/div>/)?.[0]??''
 
-  assert.match(retryState,/Não foi possível ativar o Pix Automático/)
+  assert.match(retryState,/Não foi possível concluir o Pix/)
   assert.match(retryState,/Tentar novamente/)
   assert.match(retryState,/Pagar com cartão de crédito/)
 })
@@ -194,4 +197,14 @@ test('hosted card checkout is fail-closed by default and does not ask for card d
   assert.match(checkout,/Continuar para pagamento seguro/)
   assert.match(checkout,/if\(!NATIVE_CARD_CHECKOUT_ENABLED\)/)
   assert.match(checkout,/NATIVE_CARD_CHECKOUT_ENABLED&&\(/)
+})
+
+test('Pix comum communicates manual renewal without claiming automatic debit',()=>{
+  const checkout=read('src/features/billing/CheckoutPage.tsx')
+
+  assert.match(checkout,/Pague agora por Pix\. Nas próximas renovações, geraremos um novo Pix para pagamento\./)
+  assert.match(checkout,/payment_method:method/)
+  assert.match(checkout,/method==='pix'\|\|method==='pix_automatic'/)
+  assert.match(checkout,/paymentMethod==='pix'\?'Renovação por novo Pix a cada ciclo':'Renovação automática'/)
+  assert.doesNotMatch(checkout,/paymentMethod==='pix'[^\n]*renovações automaticamente/)
 })
