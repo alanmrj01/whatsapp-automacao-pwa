@@ -231,6 +231,16 @@
   box-shadow: 0 0 0 3px rgb(23 105 224 / 10%);
 }
 
+.checkout-method-option.is-disabled {
+  cursor: not-allowed;
+  opacity: .68;
+  background: var(--color-surface-subtle);
+}
+
+.checkout-method-option.is-disabled:focus-within {
+  outline: none;
+}
+
 .checkout-method-option:focus-within {
   outline: 3px solid rgb(23 105 224 / 18%);
   outline-offset: 2px;
