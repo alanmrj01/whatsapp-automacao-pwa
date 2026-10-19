@@ -7,6 +7,7 @@ import { AppRouter } from './app/router'
 import { queryClient } from './app/queryClient'
 import { AuthProvider } from './features/auth/AuthProvider'
 import { OfflineBanner } from './components/OfflineBanner'
+import { FunnelTracker } from './lib/FunnelTracker'
 import './styles/global.css'
 import './styles/alovia-theme.css'
 import './styles/approved-mockups.css'
@@ -27,6 +28,7 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
+          <FunnelTracker />
           <OfflineBanner />
           <AppRouter />
         </AuthProvider>
