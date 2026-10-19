@@ -6,23 +6,19 @@ type TrackContext = {
 
 type TrackProperties = Record<string, string | number | boolean | null | undefined>
 
-const VISITOR_KEY = 'alovia_visitor_id'
-const SESSION_KEY = 'alovia_session_id'
-const ATTRIBUTION_KEY = 'alovia_first_touch'
+let visitorId: string | null = null
+let sessionId: string | null = null
+let attribution: Record<string,string> | null = null
 
-function uuid(storage: Storage, key: string) {
-  let value = storage.getItem(key)
-  if (!value) {
-    value = crypto.randomUUID()
-    storage.setItem(key, value)
-  }
-  return value
+function ids() {
+  visitorId ??= crypto.randomUUID()
+  sessionId ??= crypto.randomUUID()
+  return {visitorId, sessionId}
 }
 
 function firstTouch(): Record<string,string> {
+  if (attribution) return attribution
   try {
-    const stored = localStorage.getItem(ATTRIBUTION_KEY)
-    if (stored) return JSON.parse(stored) as Record<string,string>
     const params = new URLSearchParams(window.location.search)
     const keys = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','fbclid','gclid']
     const value: Record<string,string> = {}
@@ -31,10 +27,11 @@ function firstTouch(): Record<string,string> {
       if (item) value[key] = item.slice(0,180)
     }
     if (document.referrer) value.referrer_host = new URL(document.referrer).host.slice(0,180)
-    localStorage.setItem(ATTRIBUTION_KEY, JSON.stringify(value))
+    attribution = value
     return value
   } catch {
-    return {}
+    attribution = {}
+    return attribution
   }
 }
 
@@ -49,9 +46,10 @@ export function trackEvent(
 ) {
   if (typeof window === 'undefined' || typeof crypto === 'undefined') return
   try {
+    const identity = ids()
     const payload = {
-      visitor_id: uuid(localStorage, VISITOR_KEY),
-      session_id: uuid(sessionStorage, SESSION_KEY),
+      visitor_id: identity.visitorId,
+      session_id: identity.sessionId,
       event_name: eventName,
       surface: context.surface ?? 'app',
       path: window.location.pathname,
