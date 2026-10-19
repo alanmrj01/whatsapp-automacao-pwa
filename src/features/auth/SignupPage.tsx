@@ -1,5 +1,6 @@
 import { Eye, EyeOff } from 'lucide-react'
 import { useRef, useState, type FormEvent } from 'react'
+import { trackEvent } from '../../lib/tracking'
 import { Link, Navigate } from 'react-router-dom'
 import { BrandMark } from '../../components/BrandMark'
 import { LoadingState } from '../../components/LoadingState'
@@ -20,11 +21,18 @@ export function SignupPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const idempotencyKey = useRef('')
+  const started = useRef(false)
 
   if (auth.state === 'logout_failed') return <LogoutRecovery />
   if (auth.state === 'unavailable') return <SessionRecovery />
   if (auth.state === 'loading' || auth.state === 'logging_out') return <div className="auth-boundary"><LoadingState /></div>
   if (auth.user) return <Navigate to={homeFor(auth.user)} replace />
+
+  function markStarted() {
+    if (started.current) return
+    started.current = true
+    trackEvent('signup_started', {}, {surface:'signup'})
+  }
 
   function resetAttempt() {
     idempotencyKey.current = ''
@@ -33,7 +41,10 @@ export function SignupPage() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    markStarted()
+    trackEvent('signup_submit', {}, {surface:'signup'})
     if (password !== confirmation) {
+      trackEvent('signup_failed', {reason:'password_mismatch'}, {surface:'signup'})
       setError('As senhas precisam ser iguais.')
       return
     }
@@ -45,10 +56,12 @@ export function SignupPage() {
     try {
       await auth.signup(businessName.trim(), email.trim(), password, key)
       idempotencyKey.current = ''
+      trackEvent('signup_completed', {}, {surface:'signup'})
     } catch (failure) {
       const transient = failure instanceof ApiError && (failure.status === 0 || failure.status >= 500)
       preserveAttempt = transient
       if (!transient) idempotencyKey.current = ''
+      trackEvent('signup_failed', {reason: failure instanceof ApiError ? String(failure.status) : 'unknown'}, {surface:'signup'})
       setError(
         failure instanceof ApiError && failure.status === 409
           ? 'Este e-mail já está cadastrado. Entre com sua conta ou use outro e-mail.'
@@ -86,7 +99,7 @@ export function SignupPage() {
           minLength={2}
           required
           value={businessName}
-          onChange={event => { setBusinessName(event.target.value); resetAttempt() }}
+          onChange={event => { markStarted(); setBusinessName(event.target.value); resetAttempt() }}
           disabled={busy}
           placeholder="Ex.: João Refrigeração"
         />
@@ -102,7 +115,7 @@ export function SignupPage() {
           maxLength={254}
           required
           value={email}
-          onChange={event => { setEmail(event.target.value); resetAttempt() }}
+          onChange={event => { markStarted(); setEmail(event.target.value); resetAttempt() }}
           disabled={busy}
         />
 
@@ -116,7 +129,7 @@ export function SignupPage() {
             maxLength={1024}
             required
             value={password}
-            onChange={event => { setPassword(event.target.value); resetAttempt() }}
+            onChange={event => { markStarted(); setPassword(event.target.value); resetAttempt() }}
             disabled={busy}
             placeholder="Mínimo de 12 caracteres"
           />
@@ -134,7 +147,7 @@ export function SignupPage() {
           maxLength={1024}
           required
           value={confirmation}
-          onChange={event => { setConfirmation(event.target.value); resetAttempt() }}
+          onChange={event => { markStarted(); setConfirmation(event.target.value); resetAttempt() }}
           disabled={busy}
         />
 
