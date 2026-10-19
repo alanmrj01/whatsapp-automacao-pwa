@@ -1,13 +1,11 @@
 import {
   ArrowRight,
-  CalendarDays,
   CheckCircle2,
   ClipboardList,
   Eye,
   MessageCircle,
   Play,
   Snowflake,
-  Wrench,
 } from 'lucide-react'
 import { useEffect, type ReactNode } from 'react'
 import { Link, Navigate } from 'react-router-dom'
