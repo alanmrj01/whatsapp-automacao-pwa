@@ -8,7 +8,7 @@ import {
   Snowflake,
   Wrench,
 } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { BrandMark } from '../../components/BrandMark'
 import { trackEvent } from '../../lib/tracking'
@@ -16,7 +16,7 @@ import { homeFor } from '../auth/types'
 import { useAuth } from '../auth/useAuth'
 import '../../styles/public-landing.css'
 
-function TrackedLink({source, className, children}:{source:string; className:string; children:React.ReactNode}) {
+function TrackedLink({source, className, children}:{source:string; className:string; children:ReactNode}) {
   return <Link
     className={className}
     to="/criar-conta"
