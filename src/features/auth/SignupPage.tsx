@@ -44,7 +44,7 @@ export function SignupPage() {
     markStarted()
     trackEvent('signup_submit', {}, {surface:'signup'})
     if (password !== confirmation) {
-      trackEvent('signup_failed', {reason: failure instanceof ApiError ? String(failure.status) : 'unknown'}, {surface:'signup'})
+      trackEvent('signup_failed', {reason:'password_mismatch'}, {surface:'signup'})
       setError('As senhas precisam ser iguais.')
       return
     }
@@ -61,6 +61,7 @@ export function SignupPage() {
       const transient = failure instanceof ApiError && (failure.status === 0 || failure.status >= 500)
       preserveAttempt = transient
       if (!transient) idempotencyKey.current = ''
+      trackEvent('signup_failed', {reason: failure instanceof ApiError ? String(failure.status) : 'unknown'}, {surface:'signup'})
       setError(
         failure instanceof ApiError && failure.status === 409
           ? 'Este e-mail já está cadastrado. Entre com sua conta ou use outro e-mail.'
