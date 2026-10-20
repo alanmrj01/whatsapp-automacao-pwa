@@ -33,6 +33,8 @@ test('landing tracks the commercial journey without private app API dependencies
   assert.match(tracking, /utm_source/)
   assert.match(tracking, /visitor_id/)
   assert.match(tracking, /session_id/)
+  assert.match(tracking, /event_id/)
+  assert.match(tracking, /event_time_ms/)
   assert.match(landing, /auth\.state === 'authenticated' && auth\.user/)
   assert.match(landing, /homeFor\(auth\.user\)/)
 })
@@ -45,6 +47,9 @@ test('demo accounts are covered by route and interaction tracking', () => {
   assert.match(tracker, /demo_page_view/)
   assert.match(tracker, /demo_interaction/)
   assert.match(tracker, /membership\?\.access_mode === 'free'/)
+  assert.match(tracker, /route_group/)
+  assert.match(tracker, /target_path/)
+  assert.match(tracker, /funnel_stage/)
 })
 
 test('app and admin areas remain protected', () => {
@@ -86,4 +91,19 @@ test('service worker serves the public journey as shell and never caches private
   assert.match(config, /navigateFallbackAllowlist:.*\^\\\/\$.*criar-conta/s)
   assert.match(config, /navigateFallbackDenylist:.*api.*auth.*internal/)
   assert.match(config, /runtimeCaching:\s*\[\]/)
+})
+
+
+test('signup hydrates the authenticated session and enters the demo without a second login', () => {
+  const signup = read('src/features/auth/SignupPage.tsx')
+  const provider = read('src/features/auth/AuthProvider.tsx')
+  const context = read('src/features/auth/context.ts')
+  assert.match(provider, /setState\('authenticated'\)/)
+  assert.match(provider, /return me/)
+  assert.match(context, /Promise<SessionUser>/)
+  assert.match(signup, /const createdUser = await auth\.signup/)
+  assert.match(signup, /navigate\(homeFor\(createdUser\), \{replace:true\}\)/)
+  assert.match(signup, /signup_completed/)
+  assert.match(signup, /businessId:createdUser\.active_business_id/)
+  assert.match(signup, /userId:createdUser\.id/)
 })
