@@ -6,7 +6,9 @@ import {
   ClipboardList,
   CreditCard,
   Eye,
+  House,
   MapPin,
+  Menu,
   MessageCircle,
   Play,
   Snowflake,
@@ -62,31 +64,90 @@ function PhonePreview() {
   )
 }
 
-function ConversationsScreen() {
+function VideoPreview() {
   return (
-    <div className="landing-app-screen">
-      <div className="landing-app-screen__status"><span>9:41</span><span>Alovia</span></div>
-      <h3>Conversas</h3>
-      <div className="landing-tabs"><b>Todas</b><span>Não lidas</span><span>Agendadas</span></div>
-      <div className="landing-contact"><span className="landing-contact__avatar">C</span><span><b>Carlos Silva</b><small>Manutenção de split</small></span><em>10:24</em></div>
-      <div className="landing-contact"><span className="landing-contact__avatar">M</span><span><b>Mariana Costa</b><small>Orçamento</small></span><em>09:50</em></div>
-      <div className="landing-contact"><span className="landing-contact__avatar">R</span><span><b>Rafael Almeida</b><small>Instalação</small></span><em>Ontem</em></div>
-      <div className="landing-contact"><span className="landing-contact__avatar">F</span><span><b>Fernanda Souza</b><small>Limpeza</small></span><em>Ontem</em></div>
-      <div className="landing-app-nav"><b>Conversas</b><span>Agenda</span><span>Ajustes</span></div>
+    <button
+      type="button"
+      className="public-video"
+      aria-label="Assistir demonstração da Alovia"
+      onClick={() => trackEvent('landing_vsl_play_intent', {}, { surface: 'landing' })}
+    >
+      <img src={technicianPhoto} alt="" width="1672" height="941" fetchPriority="high" />
+      <span className="public-video__shade" aria-hidden="true" />
+      <span className="public-video__play"><Play fill="currentColor" /></span>
+      <span className="public-video__duration">2:18</span>
+    </button>
+  )
+}
+
+function AppScreenHeader({ title }: { title: string }) {
+  return (
+    <div className="landing-real-header">
+      <BrandMark />
+      <strong>{title}</strong>
+      <b>Alovia</b>
+    </div>
+  )
+}
+
+function AppBottomNav({ active }: { active: 'conversations' | 'agenda' }) {
+  return (
+    <nav className="landing-real-nav" aria-label="Navegação da prévia demonstrativa">
+      <span><House />Início</span>
+      <span className={active === 'conversations' ? 'is-active' : ''}><MessageCircle />Conversas</span>
+      <span className={active === 'agenda' ? 'is-active' : ''}><CalendarCheck2 />Agenda</span>
+      <span><Menu />Configurações</span>
+    </nav>
+  )
+}
+
+function ConversationsScreen() {
+  const conversations = [
+    { initials: 'CM', name: 'Carlos Mendes', preview: 'Qual é o CEP do endereço?', time: '09:18', status: 'Aguardando', tone: 'waiting', unread: true },
+    { initials: 'AP', name: 'Ana Paula', preview: 'O ponto elétrico já está pronto?', time: '09:04', status: 'Em atendimento', tone: 'active' },
+    { initials: 'JR', name: 'Juliana Rocha', preview: 'Agendamento confirmado para sábado.', time: '08:42', status: 'Respondida', tone: 'answered' },
+    { initials: 'PP', name: 'Padaria Pão Quente', preview: 'Qual é o CEP e o número?', time: '08:23', status: 'Aguardando', tone: 'waiting', unread: true },
+    { initials: 'LC', name: 'Loja Centro', preview: 'Agendamento confirmado.', time: '5 dias', status: 'Respondida', tone: 'answered' },
+  ]
+
+  return (
+    <div className="landing-app-screen landing-app-screen--real">
+      <AppScreenHeader title="Conversas" />
+      <div className="landing-real-list">
+        {conversations.map(item => (
+          <div className="landing-real-conversation" key={item.name}>
+            <span className="landing-real-avatar">{item.initials}</span>
+            <span className="landing-real-conversation__copy">
+              <b>{item.name}</b>
+              <small>{item.preview}</small>
+              <em>Alovia</em>
+            </span>
+            <span className="landing-real-conversation__meta">
+              <time>{item.time}</time>
+              {item.unread && <i>1</i>}
+              <small className={`is-${item.tone}`}>● {item.status}</small>
+            </span>
+          </div>
+        ))}
+      </div>
+      <AppBottomNav active="conversations" />
     </div>
   )
 }
 
 function AgendaScreen() {
   return (
-    <div className="landing-app-screen">
-      <div className="landing-app-screen__status"><span>9:41</span><span>Alovia</span></div>
-      <h3>Agenda</h3>
-      <p>Hoje, 14 de mar</p>
-      <div className="landing-slot landing-slot--blue"><span>08:00</span><b>Manutenção</b><small>João Silva</small></div>
-      <div className="landing-slot landing-slot--orange"><span>10:30</span><b>Instalação</b><small>Mariana Costa</small></div>
-      <div className="landing-slot landing-slot--green"><span>13:00</span><b>Orçamento</b><small>Rafael Almeida</small></div>
-      <div className="landing-slot landing-slot--purple"><span>15:30</span><b>Limpeza</b><small>Fernanda Souza</small></div>
+    <div className="landing-app-screen landing-app-screen--real">
+      <AppScreenHeader title="Agenda" />
+      <div className="landing-agenda-body">
+        <div className="landing-demo-banner"><strong>Modo demonstração</strong><span>Dados ilustrativos para visualizar a Alovia.</span></div>
+        <div className="landing-agenda-title"><span><small>AGENDA DEMONSTRATIVA</small><b>Agenda</b></span><i><CalendarCheck2 /> Novo</i></div>
+        <div className="landing-agenda-tip">Enquanto você está no serviço, a Alovia mantém o atendimento em movimento.</div>
+        <div className="landing-agenda-date"><b>‹</b><span><strong>Segunda-feira, 19 de outubro</strong><small>19/10/2026</small></span><b>›</b></div>
+        <div className="landing-agenda-count"><strong>1 atendimento</strong><span>?</span></div>
+        <div className="landing-agenda-card"><time>11:30</time><span><b>Loja Centro</b><small>Manutenção preventiva</small><em>Marina</em></span><i>● Confirmado</i></div>
+      </div>
+      <AppBottomNav active="agenda" />
     </div>
   )
 }
@@ -155,7 +216,7 @@ export function PublicLandingPage() {
             <div className="public-hero__copy">
               <span className="public-pill"><Snowflake /> Feito para Refrigeiristas</span>
               <h1>Enquanto você está no serviço, outro cliente pode estar esperando no WhatsApp</h1>
-              <p>A Alovia continua o atendimento, coleta as informações do serviço e ajuda a organizar o agendamento enquanto você está trabalhando.</p>
+              <p>Enquanto você cuida do serviço, a Alovia responde, coleta os dados e encaminha o agendamento — sem deixar o próximo cliente esfriar.</p>
               <TrackedLink source="hero" className="public-button">Experimente a Alovia grátis <ArrowRight /></TrackedLink>
               <div className="public-proof-row" aria-label="Condições do teste">
                 <span><CheckCircle2 /> Teste grátis</span>
@@ -164,14 +225,25 @@ export function PublicLandingPage() {
               </div>
             </div>
 
-            <div className="public-hero__scene">
+            <div className="public-hero__video" data-track-section="vsl">
+              <div className="public-vsl__shell public-vsl__shell--hero">
+                <h2>Como a Alovia atende enquanto você está no serviço</h2>
+                <VideoPreview />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="public-section public-static-composition" aria-label="Atendimento da Alovia em ação">
+          <div className="public-container">
+            <div className="public-vsl__scene">
               <img
                 className="public-hero__photo"
                 src={technicianPhoto}
                 alt="Refrigerista fazendo manutenção em um ar-condicionado"
                 width="1672"
                 height="941"
-                fetchPriority="high"
+                loading="lazy"
               />
               <span className="public-hero__wash" aria-hidden="true" />
               <PhonePreview />
@@ -179,29 +251,10 @@ export function PublicLandingPage() {
           </div>
         </section>
 
-        <section className="public-section public-vsl" data-track-section="vsl">
-          <div className="public-container">
-            <div className="public-vsl__shell">
-              <h2>Como a Alovia atende enquanto você está no serviço</h2>
-              <button
-                type="button"
-                className="public-video"
-                aria-label="Assistir demonstração da Alovia"
-                onClick={() => trackEvent('landing_vsl_play_intent', {}, { surface: 'landing' })}
-              >
-                <img src={technicianPhoto} alt="" width="1672" height="941" loading="lazy" />
-                <span className="public-video__shade" aria-hidden="true" />
-                <span className="public-video__play"><Play fill="currentColor" /></span>
-                <span className="public-video__duration">2:18</span>
-              </button>
-            </div>
-          </div>
-        </section>
-
         <section className="public-section public-practical" data-track-section="practical">
           <div className="public-container">
             <h2>O que acontece na prática</h2>
-            <p className="public-section__lead">Quando a resposta depende de você parar o serviço toda vez, as mensagens se acumulam e o próximo cliente pode esperar mais do que deveria.</p>
+            <p className="public-section__lead">Se você precisa parar o serviço para responder, a conversa esfria. A Alovia mantém o próximo atendimento em movimento.</p>
 
             <div className="public-flow">
               <article>
@@ -240,7 +293,7 @@ export function PublicLandingPage() {
             <div className="public-demo__copy">
               <span className="public-pill public-pill--plain"><Eye /> Veja na prática</span>
               <h2>Conheça na prática como seus clientes serão atendidos</h2>
-              <p>Veja como o atendimento funciona, como as informações são organizadas e como fica sua agenda — tudo com dados demonstrativos, sem precisar conectar seu WhatsApp ainda.</p>
+              <p>Veja conversas e agendamentos funcionando com dados demonstrativos. Você entende o fluxo antes de conectar seu WhatsApp.</p>
               <TrackedLink source="demo" className="public-button">Criar conta grátis <ArrowRight /></TrackedLink>
             </div>
             <AppPreview />
@@ -252,7 +305,7 @@ export function PublicLandingPage() {
             <div className="public-final__grid">
               <div className="public-final__copy">
                 <h2>Seu atendimento pode continuar enquanto você está no serviço.</h2>
-                <p>Com a Alovia, as conversas avançam, o agendamento se organiza e você continua focado no que importa: realizar um bom serviço.</p>
+                <p>A Alovia mantém a conversa avançando e deixa o agendamento organizado enquanto você conclui o serviço.</p>
                 <TrackedLink source="final" className="public-button">Experimente grátis <ArrowRight /></TrackedLink>
               </div>
               <div className="public-final__scene">
