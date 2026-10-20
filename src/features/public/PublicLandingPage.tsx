@@ -3,15 +3,20 @@ import {
   BarChart3,
   CalendarCheck2,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   ClipboardList,
   CreditCard,
   Eye,
+  HelpCircle,
   House,
+  Lightbulb,
   MapPin,
   Menu,
   MessageCircle,
   Play,
   Snowflake,
+  UserRound,
   Wrench,
 } from 'lucide-react'
 import { useEffect, type ReactNode } from 'react'
@@ -105,9 +110,10 @@ function ConversationsScreen() {
   const conversations = [
     { initials: 'CM', name: 'Carlos Mendes', preview: 'Qual é o CEP do endereço?', time: '09:18', status: 'Aguardando', tone: 'waiting', unread: true },
     { initials: 'AP', name: 'Ana Paula', preview: 'O ponto elétrico já está pronto?', time: '09:04', status: 'Em atendimento', tone: 'active' },
-    { initials: 'JR', name: 'Juliana Rocha', preview: 'Agendamento confirmado para sábado.', time: '08:42', status: 'Respondida', tone: 'answered' },
-    { initials: 'PP', name: 'Padaria Pão Quente', preview: 'Qual é o CEP e o número?', time: '08:23', status: 'Aguardando', tone: 'waiting', unread: true },
-    { initials: 'LC', name: 'Loja Centro', preview: 'Agendamento confirmado.', time: '5 dias', status: 'Respondida', tone: 'answered' },
+    { initials: 'JR', name: 'Juliana Rocha', preview: 'Agendamento confirmado para sábado, 24/10, às 14h.', time: '08:42', status: 'Respondida', tone: 'answered' },
+    { initials: 'PP', name: 'Padaria Pão Quente', preview: 'Qual é o CEP e o número da padaria?', time: '08:23', status: 'Aguardando', tone: 'waiting', unread: true },
+    { initials: 'LC', name: 'Loja Centro', preview: 'Agendamento confirmado para segunda-feira, 19/10.', time: '5 dias atrás', status: 'Respondida', tone: 'answered' },
+    { initials: 'RL', name: 'Rafael Lima', preview: 'Reagendamento confirmado para domingo, 25/10.', time: 'Ontem', status: 'Respondida', tone: 'answered' },
   ]
 
   return (
@@ -140,12 +146,13 @@ function AgendaScreen() {
     <div className="landing-app-screen landing-app-screen--real">
       <AppScreenHeader title="Agenda" />
       <div className="landing-agenda-body">
-        <div className="landing-demo-banner"><strong>Modo demonstração</strong><span>Dados ilustrativos para visualizar a Alovia.</span></div>
+        <div className="landing-demo-banner"><span><strong>Modo demonstração</strong><small>Dados ilustrativos para você visualizar como a Alovia funciona.</small></span><HelpCircle /></div>
         <div className="landing-agenda-title"><span><small>AGENDA DEMONSTRATIVA</small><b>Agenda</b></span><i><CalendarCheck2 /> Novo</i></div>
-        <div className="landing-agenda-tip">Enquanto você está no serviço, a Alovia mantém o atendimento em movimento.</div>
-        <div className="landing-agenda-date"><b>‹</b><span><strong>Segunda-feira, 19 de outubro</strong><small>19/10/2026</small></span><b>›</b></div>
-        <div className="landing-agenda-count"><strong>1 atendimento</strong><span>?</span></div>
-        <div className="landing-agenda-card"><time>11:30</time><span><b>Loja Centro</b><small>Manutenção preventiva</small><em>Marina</em></span><i>● Confirmado</i></div>
+        <div className="landing-agenda-tip"><Lightbulb /><span>O cliente quer um horário mesmo quando você está com a mão no serviço.</span></div>
+        <div className="landing-agenda-back"><CalendarCheck2 /> Voltar ao calendário</div>
+        <div className="landing-agenda-date"><b><ChevronLeft /></b><span><strong>Segunda-feira, 19 de outubro</strong><small>19/10/2026</small></span><b><ChevronRight /></b></div>
+        <div className="landing-agenda-count"><strong>1 atendimento</strong><HelpCircle /></div>
+        <div className="landing-agenda-card"><time>11:30</time><span><b>Loja Centro</b><small>Manutenção preventiva</small><em><UserRound /> Marina</em></span><i>● Confirmado</i></div>
       </div>
       <AppBottomNav active="agenda" />
     </div>
