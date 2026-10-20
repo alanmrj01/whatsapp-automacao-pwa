@@ -44,12 +44,12 @@ test('forgot password keeps account existence undisclosed', () => {
   assert.doesNotMatch(pages, /conta não existe/i)
 })
 
-test('reset and authenticated change enforce the twelve character policy in the PWA', () => {
+test('reset and authenticated change enforce the eight character policy in the PWA', () => {
   const pages = read('src/features/auth/PasswordRecoveryPages.tsx')
   const account = read('src/features/more/AccountPages.tsx')
-  assert.match(pages, /minLength=\{12\}/)
-  assert.match(pages, /password\.length < 12/)
-  assert.match(account, /minLength=\{12\}/)
-  assert.match(account, /newPassword\.length < 12/)
+  assert.match(pages, /minLength=\{8\}/)
+  assert.match(pages, /password\.length < 8/)
+  assert.match(account, /minLength=\{8\}/)
+  assert.match(account, /newPassword\.length < 8/)
   assert.match(account, /As outras sessões da sua conta foram encerradas\./)
 })
