@@ -68,8 +68,8 @@ test('public page keeps semantic headings and mobile-first controls', () => {
   assert.match(landing, /aria-label="Assistir demonstração da Alovia"/)
   assert.match(landing, /technician-hvac\.webp/)
   assert.doesNotMatch(landing, /function TechnicianArt/)
-  assert.match(styles, /min-height:52px/)
-  assert.match(styles, /@media \(min-width:760px\)/)
+  assert.match(styles, /min-height: 48px/)
+  assert.match(styles, /@media \(min-width:\s*760px\)/)
 })
 
 test('service worker serves the public journey as shell and never caches private responses', () => {

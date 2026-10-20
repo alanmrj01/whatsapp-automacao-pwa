@@ -2,7 +2,6 @@ import {
   ArrowRight,
   BarChart3,
   CalendarCheck2,
-  Check,
   CheckCircle2,
   ClipboardList,
   CreditCard,
@@ -261,7 +260,6 @@ export function PublicLandingPage() {
                 <span className="public-final__fade" aria-hidden="true" />
                 <span className="public-final__scribble">Mais atendimento.<br />Mais tempo<br />para o que<br />importa.</span>
               </div>
-              <span className="public-final__check" aria-hidden="true"><Check /></span>
             </div>
           </div>
         </section>
