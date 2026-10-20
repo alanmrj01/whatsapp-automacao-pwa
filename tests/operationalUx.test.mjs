@@ -236,6 +236,25 @@ test('demo conversations cover the service journey and route reply actions to up
   assert.equal(demoOverview.appointmentsToday,demoAppointments.filter(item=>item.date===demoToday).length)
 })
 
+test('demo agenda stays commercially populated without overbooking a single day', () => {
+  const counts = new Map()
+  for (const item of demoAppointments) counts.set(item.date,(counts.get(item.date)??0)+1)
+  const dayCounts=[...counts.values()]
+  assert.ok(demoAppointments.length>=24)
+  assert.ok(dayCounts.filter(count=>count===4).length>=3)
+  assert.ok(Math.max(...dayCounts)<=4)
+  assert.equal(demoAppointments.filter(item=>item.date===demoToday).length,4)
+  assert.equal(demoConversations.find(item=>item.id==='conversation-3')?.appointmentId,'appointment-2')
+  assert.equal(demoAppointments.find(item=>item.id==='appointment-2')?.customer,'Juliana Rocha')
+  assert.equal(demoAppointments.find(item=>item.id==='appointment-3')?.customer,'Rafael Lima')
+
+  const css=read('src/features/appointments/agenda-calendar.css')
+  assert.match(css,/@media \(max-width: 600px\)/)
+  assert.match(css,/grid-template-columns: repeat\(7,minmax\(0,1fr\)\)/)
+  assert.match(css,/\.agenda-calendar__event strong \{\s*display: none;/)
+  assert.match(css,/@media \(min-width: 601px\) and \(max-width: 1180px\)/)
+})
+
 test('blocked free actions open the compact subscription prompt instead of becoming dead controls', () => {
   const dashboard = read('src/features/dashboard/DashboardPage.tsx')
   const agenda = read('src/features/appointments/AgendaPage.tsx')
