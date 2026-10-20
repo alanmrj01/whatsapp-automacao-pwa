@@ -23,5 +23,5 @@ test('pending logout automatically retries instead of deadlocking the app', () =
 test('login and signup can recover from a stale logout marker', () => {
   const provider = read('src/features/auth/AuthProvider.tsx')
   assert.match(provider, /async function login\([^)]*\) \{\s*clearPendingLogout\(\)/s)
-  assert.match(provider, /async function signup\([^)]*\) \{\s*clearPendingLogout\(\)/s)
+  assert.match(provider, /async function signup\([^)]*\)(?::Promise<SessionUser>)? \{\s*clearPendingLogout\(\)/s)
 })
