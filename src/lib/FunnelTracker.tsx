@@ -27,27 +27,29 @@ export function FunnelTracker() {
   const lastPage = useRef('')
   const membership = auth.membership
   const demo = membership?.access_mode === 'free' || membership?.account_state === 'demo'
-  const surface = location.pathname === '/' ? 'landing' : demo ? 'demo' : 'app'
+  const demoRoute = demo && location.pathname.startsWith('/app')
+  const surface = location.pathname === '/' ? 'landing' : demoRoute ? 'demo' : 'app'
 
   useEffect(() => {
     const key = `${location.pathname}${location.search}:${surface}`
     if (lastPage.current === key) return
     lastPage.current = key
-    trackEvent(demo ? 'demo_page_view' : 'page_view', {
+    trackEvent(demoRoute ? 'demo_page_view' : 'page_view', {
       query_present: Boolean(location.search),
       access_mode: membership?.access_mode ?? null,
       account_state: membership?.account_state ?? null,
       route_group: routeGroup(location.pathname),
-      funnel_stage: demo ? 'demo_exploration' : location.pathname === '/' ? 'landing' : 'app',
+      funnel_stage: demoRoute ? 'demo_exploration' : location.pathname === '/' ? 'landing' : 'app',
     }, {
       surface,
       businessId: auth.user?.active_business_id,
       userId: auth.user?.id,
+      path: location.pathname,
     })
-  }, [auth.user?.active_business_id, auth.user?.id, demo, location.pathname, location.search, membership?.access_mode, membership?.account_state, surface])
+  }, [auth.user?.active_business_id, auth.user?.id, demoRoute, location.pathname, location.search, membership?.access_mode, membership?.account_state, surface])
 
   useEffect(() => {
-    if (!demo) return
+    if (!demoRoute) return
     const onClick = (event: MouseEvent) => {
       const target = event.target instanceof Element ? event.target.closest('button,a,[role="button"]') : null
       if (!target) return
@@ -62,11 +64,12 @@ export function FunnelTracker() {
         surface: 'demo',
         businessId: auth.user?.active_business_id,
         userId: auth.user?.id,
+        path: location.pathname,
       })
     }
     document.addEventListener('click', onClick, {capture:true})
     return () => document.removeEventListener('click', onClick, {capture:true})
-  }, [auth.user?.active_business_id, auth.user?.id, demo, location.pathname])
+  }, [auth.user?.active_business_id, auth.user?.id, demoRoute, location.pathname])
 
   return null
 }
