@@ -82,9 +82,12 @@ test('public page keeps semantic headings and mobile-first controls', () => {
   assert.match(landing, /Voltar ao calendário/)
   assert.match(landing, /O cliente quer um horário mesmo quando você está com a mão no serviço/)
   assert.match(landing, /Configurações/)
+  assert.match(landing, /<Send \/>/)
   assert.ok(landing.indexOf('public-hero__video') < landing.indexOf('public-static-composition'))
   assert.doesNotMatch(landing, /function TechnicianArt/)
   assert.match(styles, /min-height: 48px/)
+  assert.match(styles, /\.landing-composer b svg/)
+  assert.match(styles, /\.landing-phone\s*\{[\s\S]*bottom: 0;/)
   assert.match(styles, /@media \(min-width:\s*760px\)/)
 })
 

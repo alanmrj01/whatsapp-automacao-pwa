@@ -15,6 +15,7 @@ import {
   Menu,
   MessageCircle,
   Play,
+  Send,
   Snowflake,
   UserRound,
   Wrench,
@@ -63,7 +64,7 @@ function PhonePreview() {
             <span><ClipboardList /> Orçamento</span>
           </div>
         </div>
-        <div className="landing-composer"><span>Digite uma mensagem...</span><b>›</b></div>
+        <div className="landing-composer"><span>Digite uma mensagem...</span><b aria-hidden="true"><Send /></b></div>
       </div>
     </div>
   )

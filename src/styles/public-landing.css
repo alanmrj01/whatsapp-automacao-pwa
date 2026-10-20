@@ -154,7 +154,7 @@
   position: absolute;
   z-index: 3;
   left: 5%;
-  bottom: -3%;
+  bottom: 0;
   width: min(49%, 190px);
   padding: 5px;
   border: 5px solid #0f1927;
@@ -240,16 +240,19 @@
 }
 .landing-options svg { width: 8px; height: 8px; }
 .landing-composer {
-  min-height: 27px;
-  padding: 4px 5px 4px 8px;
+  min-height: 28px;
+  padding: 4px 4px 4px 8px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   color: #91a0b3;
   background: #fff;
+  box-shadow: inset 0 1px #e4ebe8;
   font-size: .39rem;
 }
-.landing-composer b { width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%; color: #fff; background: #12866a; font-size: .7rem; }
+.landing-composer > span { min-width: 0; flex: 1; }
+.landing-composer b { width: 20px; height: 20px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 50%; color: #fff; background: #128c7e; line-height: 0; }
+.landing-composer b svg { width: 9px; height: 9px; fill: currentColor; stroke-width: 1.8; transform: translateX(-.25px); }
 
 .public-section { padding: 26px 0; }
 .public-section h2 {
