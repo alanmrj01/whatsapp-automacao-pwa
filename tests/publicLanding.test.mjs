@@ -50,6 +50,9 @@ test('demo accounts are covered by route and interaction tracking', () => {
   assert.match(tracker, /route_group/)
   assert.match(tracker, /target_path/)
   assert.match(tracker, /funnel_stage/)
+  assert.match(tracker, /demoRoute = demo && location\.pathname\.startsWith\('\/app'\)/)
+  assert.match(tracker, /path: location\.pathname/)
+  assert.match(read('src/lib/tracking.ts'), /path: context\.path \?\? window\.location\.pathname/)
 })
 
 test('app and admin areas remain protected', () => {

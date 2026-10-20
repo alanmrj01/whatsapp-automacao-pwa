@@ -2,6 +2,7 @@ type TrackContext = {
   businessId?: string | null
   userId?: string | null
   surface?: string
+  path?: string
 }
 
 type TrackProperties = Record<string, string | number | boolean | null | undefined>
@@ -69,7 +70,7 @@ export function trackEvent(
       session_id: identity.sessionId,
       event_name: eventName,
       surface: context.surface ?? 'app',
-      path: window.location.pathname,
+      path: context.path ?? window.location.pathname,
       business_id: context.businessId ?? null,
       user_id: context.userId ?? null,
       referrer: document.referrer || null,

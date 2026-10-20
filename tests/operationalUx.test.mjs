@@ -185,8 +185,12 @@ test('demo dates roll with the current day instead of expiring on a fixed calend
   assert.equal(demoTomorrow,shiftDemoDate(demoToday,1))
   assert.equal(demoBookingDate2,shiftDemoDate(demoToday,5))
   assert.equal(demoRescheduleDate,shiftDemoDate(demoToday,6))
-  assert.deepEqual(demoAppointments.map(item=>item.date),[demoToday,demoBookingDate2,demoRescheduleDate])
-  assert.ok(demoAppointments.slice(1).every(item=>item.date>demoToday))
+  assert.ok(demoAppointments.every(item=>/^\d{4}-\d{2}-\d{2}$/.test(item.date)))
+  assert.ok(demoAppointments.some(item=>item.date===demoToday))
+  assert.ok(demoAppointments.some(item=>item.date<demoToday))
+  assert.ok(demoAppointments.some(item=>item.date>demoToday))
+  assert.ok(demoAppointments.some(item=>item.date===demoBookingDate2))
+  assert.ok(demoAppointments.some(item=>item.date===demoRescheduleDate))
   assert.match(demoDateLabel(demoToday),/^.+, \d{2}\/\d{2}$/)
   assert.doesNotMatch(source,/demoToday\s*=\s*['"]\d{4}-\d{2}-\d{2}['"]/)
   assert.doesNotMatch(preview,/Setembro 2026|8 de setembro de 2026/)
@@ -200,8 +204,9 @@ test('demo agenda is static, opens details and routes every mutation to upgrade'
   assert.match(agenda,/openUpgrade\('Criar um novo agendamento'\)/)
   assert.match(agenda,/Exemplo somente para visualização/)
   assert.doesNotMatch(agenda,/saveDemoAppointment|cancelDemoAppointment|setAppointments/)
-  assert.equal(demoAppointments.length,3)
-  assert.ok(demoAppointments.every(item => demoConversations.some(conversation => conversation.id===item.conversationId && conversation.appointmentId===item.id)))
+  assert.ok(demoAppointments.length>=24)
+  assert.ok(demoAppointments.every(item => demoConversations.some(conversation => conversation.id===item.conversationId)))
+  assert.ok(demoConversations.filter(item=>item.appointmentId).every(conversation=>demoAppointments.some(item=>item.id===conversation.appointmentId)))
 })
 
 test('demo conversations cover the service journey and route reply actions to upgrade', () => {
@@ -234,6 +239,25 @@ test('demo conversations cover the service journey and route reply actions to up
   assert.equal(demoOverview.waiting,demoConversations.filter(item=>item.status==='waiting').length)
   assert.equal(demoOverview.inProgress,demoConversations.filter(item=>item.status==='in_progress').length)
   assert.equal(demoOverview.appointmentsToday,demoAppointments.filter(item=>item.date===demoToday).length)
+})
+
+test('demo agenda stays commercially populated without overbooking a single day', () => {
+  const counts = new Map()
+  for (const item of demoAppointments) counts.set(item.date,(counts.get(item.date)??0)+1)
+  const dayCounts=[...counts.values()]
+  assert.ok(demoAppointments.length>=24)
+  assert.ok(dayCounts.filter(count=>count===4).length>=3)
+  assert.ok(Math.max(...dayCounts)<=4)
+  assert.equal(demoAppointments.filter(item=>item.date===demoToday).length,4)
+  assert.equal(demoConversations.find(item=>item.id==='conversation-3')?.appointmentId,'appointment-2')
+  assert.equal(demoAppointments.find(item=>item.id==='appointment-2')?.customer,'Juliana Rocha')
+  assert.equal(demoAppointments.find(item=>item.id==='appointment-3')?.customer,'Rafael Lima')
+
+  const css=read('src/features/appointments/agenda-calendar.css')
+  assert.match(css,/@media \(max-width: 600px\)/)
+  assert.match(css,/grid-template-columns: repeat\(7,minmax\(0,1fr\)\)/)
+  assert.match(css,/\.agenda-calendar__event strong \{\s*display: none;/)
+  assert.match(css,/@media \(min-width: 601px\) and \(max-width: 1180px\)/)
 })
 
 test('blocked free actions open the compact subscription prompt instead of becoming dead controls', () => {
