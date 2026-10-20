@@ -62,8 +62,8 @@ export function SecuritySettingsPage() {
     event.preventDefault()
     setError('')
     setSuccess('')
-    if (newPassword.length < 12) {
-      setError('A nova senha precisa ter pelo menos 12 caracteres.')
+    if (newPassword.length < 8) {
+      setError('A nova senha precisa ter pelo menos 8 caracteres.')
       return
     }
     if (currentPassword === newPassword) {
@@ -104,7 +104,7 @@ export function SecuritySettingsPage() {
     </section>
     <section className="account-action-section account-password-section">
       <h2>Alterar senha</h2>
-      <p>Use pelo menos 12 caracteres. Por segurança, as outras sessões da sua conta serão encerradas.</p>
+      <p>Use pelo menos 8 caracteres. Por segurança, as outras sessões da sua conta serão encerradas.</p>
       <form className="account-password-form" onSubmit={event=>void submit(event)}>
         <label htmlFor="current-password">Senha atual</label>
         <div className="password-field">
@@ -112,9 +112,9 @@ export function SecuritySettingsPage() {
           <button type="button" className="icon-button" aria-label={visible?'Ocultar senhas':'Mostrar senhas'} aria-pressed={visible} onClick={()=>setVisible(!visible)}>{visible?<EyeOff size={20}/>:<Eye size={20}/>}</button>
         </div>
         <label htmlFor="new-password">Nova senha</label>
-        <input id="new-password" type={visible?'text':'password'} autoComplete="new-password" minLength={12} maxLength={1024} required value={newPassword} onChange={event=>{setNewPassword(event.target.value);setError('');setSuccess('')}} disabled={busy} placeholder="Mínimo de 12 caracteres"/>
+        <input id="new-password" type={visible?'text':'password'} autoComplete="new-password" minLength={8} maxLength={1024} required value={newPassword} onChange={event=>{setNewPassword(event.target.value);setError('');setSuccess('')}} disabled={busy} placeholder="Mínimo de 8 caracteres"/>
         <label htmlFor="new-password-confirmation">Confirme a nova senha</label>
-        <input id="new-password-confirmation" type={visible?'text':'password'} autoComplete="new-password" minLength={12} maxLength={1024} required value={confirmation} onChange={event=>{setConfirmation(event.target.value);setError('');setSuccess('')}} disabled={busy}/>
+        <input id="new-password-confirmation" type={visible?'text':'password'} autoComplete="new-password" minLength={8} maxLength={1024} required value={confirmation} onChange={event=>{setConfirmation(event.target.value);setError('');setSuccess('')}} disabled={busy}/>
         {error&&<p className="form-error" role="alert">{error}</p>}
         {success&&<p className="form-success" role="status">{success}</p>}
         <PrimaryButton type="submit" fullWidth disabled={busy} aria-busy={busy}>{busy?'Alterando…':'Alterar senha'}</PrimaryButton>

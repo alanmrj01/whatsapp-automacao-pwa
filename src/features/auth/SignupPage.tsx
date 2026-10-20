@@ -1,7 +1,7 @@
 import { Eye, EyeOff } from 'lucide-react'
 import { useRef, useState, type FormEvent } from 'react'
 import { trackEvent } from '../../lib/tracking'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { BrandMark } from '../../components/BrandMark'
 import { LoadingState } from '../../components/LoadingState'
 import { PrimaryButton } from '../../components/PrimaryButton'
@@ -13,6 +13,7 @@ import { useAuth } from './useAuth'
 
 export function SignupPage() {
   const auth = useAuth()
+  const navigate = useNavigate()
   const [businessName, setBusinessName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -54,9 +55,19 @@ export function SignupPage() {
     setBusy(true)
     setError('')
     try {
-      await auth.signup(businessName.trim(), email.trim(), password, key)
+      const createdUser = await auth.signup(businessName.trim(), email.trim(), password, key)
       idempotencyKey.current = ''
-      trackEvent('signup_completed', {}, {surface:'signup'})
+      const createdMembership = createdUser.memberships.find(item=>item.business_id===createdUser.active_business_id)
+      trackEvent('signup_completed', {
+        funnel_stage:'registration_completed',
+        access_mode:createdMembership?.access_mode ?? null,
+        account_state:createdMembership?.account_state ?? null,
+      }, {
+        surface:'signup',
+        businessId:createdUser.active_business_id,
+        userId:createdUser.id,
+      })
+      navigate(homeFor(createdUser), {replace:true})
     } catch (failure) {
       const transient = failure instanceof ApiError && (failure.status === 0 || failure.status >= 500)
       preserveAttempt = transient
@@ -68,7 +79,7 @@ export function SignupPage() {
           : failure instanceof ApiError && failure.status === 429
             ? 'Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente novamente.'
             : failure instanceof ApiError && failure.status === 422
-              ? 'Revise os dados. A senha precisa ter pelo menos 12 caracteres.'
+              ? 'Revise os dados. A senha precisa ter pelo menos 8 caracteres.'
               : transient
                 ? 'A conexão oscilou durante o cadastro. Tente novamente: a Alovia reutilizará a mesma solicitação sem duplicar sua empresa.'
                 : 'Não foi possível criar sua conta. Revise os dados e tente novamente.',
@@ -125,13 +136,13 @@ export function SignupPage() {
             id="signup-password"
             type={visible ? 'text' : 'password'}
             autoComplete="new-password"
-            minLength={12}
+            minLength={8}
             maxLength={1024}
             required
             value={password}
             onChange={event => { markStarted(); setPassword(event.target.value); resetAttempt() }}
             disabled={busy}
-            placeholder="Mínimo de 12 caracteres"
+            placeholder="Mínimo de 8 caracteres"
           />
           <button type="button" className="icon-button" aria-label={visible ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={visible} onClick={() => setVisible(!visible)}>
             {visible ? <EyeOff size={20}/> : <Eye size={20}/>}
@@ -143,7 +154,7 @@ export function SignupPage() {
           id="signup-confirmation"
           type={visible ? 'text' : 'password'}
           autoComplete="new-password"
-          minLength={12}
+          minLength={8}
           maxLength={1024}
           required
           value={confirmation}

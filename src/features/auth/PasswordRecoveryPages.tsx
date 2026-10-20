@@ -91,8 +91,8 @@ export function ResetPasswordPage() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (password.length < 12) {
-      setError('A nova senha precisa ter pelo menos 12 caracteres.')
+    if (password.length < 8) {
+      setError('A nova senha precisa ter pelo menos 8 caracteres.')
       return
     }
     if (password !== confirmation) {
@@ -138,7 +138,7 @@ export function ResetPasswordPage() {
               <Link to="/esqueci-senha" className="auth-secondary-link auth-secondary-link--standalone auth-secondary-link--primary">Solicitar novo link</Link>
             </>
           : <>
-              <p>Use pelo menos 12 caracteres. Ao concluir, as sessões anteriores serão encerradas.</p>
+              <p>Use pelo menos 8 caracteres. Ao concluir, as sessões anteriores serão encerradas.</p>
               <form onSubmit={event => void submit(event)} className="auth-form">
                 <label htmlFor="reset-password">Nova senha</label>
                 <div className="password-field">
@@ -146,13 +146,13 @@ export function ResetPasswordPage() {
                     id="reset-password"
                     type={visible ? 'text' : 'password'}
                     autoComplete="new-password"
-                    minLength={12}
+                    minLength={8}
                     maxLength={1024}
                     required
                     value={password}
                     onChange={event => { setPassword(event.target.value); setError('') }}
                     disabled={busy}
-                    placeholder="Mínimo de 12 caracteres"
+                    placeholder="Mínimo de 8 caracteres"
                   />
                   <button type="button" className="icon-button" aria-label={visible ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={visible} onClick={() => setVisible(!visible)}>
                     {visible ? <EyeOff size={20}/> : <Eye size={20}/>}
@@ -163,7 +163,7 @@ export function ResetPasswordPage() {
                   id="reset-confirmation"
                   type={visible ? 'text' : 'password'}
                   autoComplete="new-password"
-                  minLength={12}
+                  minLength={8}
                   maxLength={1024}
                   required
                   value={confirmation}
