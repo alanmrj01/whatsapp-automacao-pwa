@@ -12,6 +12,10 @@ export type PlatformBusiness = {
   commercial_billing_cycle: 'monthly' | 'quarterly' | 'annual' | null
   commercial_subscription_status: 'active' | 'past_due' | 'canceled' | 'suspended' | null
   commercial_access_until: string | null
+  commercial_cancellation_requested_at: string | null
+  commercial_refund_status: 'none' | 'requested' | 'reconcile_required' | 'refunded' | null
+  commercial_refund_requested_at: string | null
+  commercial_refunded_at: string | null
   owners: string[]
   whatsapp_status: 'disconnected' | 'pending' | 'connected' | 'error'
 }
