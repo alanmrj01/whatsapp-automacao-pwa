@@ -18,7 +18,7 @@ test('admin distinguishes commercial billing from administrative access', () => 
   assert.match(page, /monthly: 'mensal'/)
   assert.match(page, /return 'Pago'/)
   assert.match(page, /Plano \$\{plan\} \$\{cycle\}/)
-  assert.match(page, /!business\.commercial_plan_code&&<button/)
+  assert.match(page, /!business\.commercial_access_active&&<button/)
   assert.match(page, /Liberação administrativa ativa, sem assinatura comercial vinculada\./)
 })
 
