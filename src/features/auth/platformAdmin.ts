@@ -16,6 +16,8 @@ export type PlatformBusiness = {
   commercial_refund_status: 'none' | 'requested' | 'reconcile_required' | 'refunded' | null
   commercial_refund_requested_at: string | null
   commercial_refunded_at: string | null
+  commercial_provider_payment_id: string | null
+  commercial_provider_subscription_id: string | null
   owners: string[]
   whatsapp_status: 'disconnected' | 'pending' | 'connected' | 'error'
 }
