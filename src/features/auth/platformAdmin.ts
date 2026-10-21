@@ -6,6 +6,12 @@ export type PlatformBusiness = {
   timezone: string
   active: boolean
   access_mode: 'free' | 'paid'
+  admin_full_access: boolean
+  commercial_access_active: boolean
+  commercial_plan_code: 'basic' | 'plus' | null
+  commercial_billing_cycle: 'monthly' | 'quarterly' | 'annual' | null
+  commercial_subscription_status: 'active' | 'past_due' | 'canceled' | 'suspended' | null
+  commercial_access_until: string | null
   owners: string[]
   whatsapp_status: 'disconnected' | 'pending' | 'connected' | 'error'
 }
