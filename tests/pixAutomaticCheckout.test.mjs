@@ -58,6 +58,41 @@ test('QR and Pix Copia e Cola stay local and never log the financial payload',as
   assert.doesNotMatch(`${helper}\n${checkout}`,/qrserver|api\.qr|console\.(?:log|info|debug)/i)
 })
 
+test('Pix receiver notice is isolated to the generated Pix state with the approved copy',()=>{
+  const checkout=read('src/features/billing/CheckoutPage.tsx')
+
+  assert.match(checkout,/checkout-pix-receiver-notice/)
+  assert.match(checkout,/Pagamento seguro/)
+  assert.match(checkout,/No seu banco, o recebedor aparecerá como/)
+  assert.match(checkout,/68\.936\.099 ALAN DE MAGALHAES RAIMUNDO JUNIOR\./)
+  assert.match(checkout,/Isso acontece por uma regra cadastral do Pix para contas MEI/)
+  assert.match(checkout,/Seu pagamento é para a Alovia normalmente\./)
+  assert.ok(checkout.indexOf('checkout-pix-receiver-notice')>checkout.indexOf('props.checkout&&!terminal&&!props.initialPaymentReceived'))
+})
+
+test('Pix funnel tracking is deduplicated, payment-safe and never sends QR or payer data',()=>{
+  const checkout=read('src/features/billing/CheckoutPage.tsx')
+  const tracking=checkout.match(/const trackPixEvent=useCallback[\s\S]*?\},\[user\?\.active_business_id,user\?\.id\]\)/)?.[0]??''
+  const abandonment=checkout.match(/const trackPixAbandonIntent=useCallback[\s\S]*?\},\[trackPixEvent\]\)/)?.[0]??''
+
+  for(const eventName of ['pix_payment_viewed','pix_payment_abandon_intent','pix_payment_expired_unpaid']) {
+    assert.match(checkout,new RegExp(eventName))
+  }
+  for(const property of ['checkout_id','plan','billing_cycle','amount_cents']) {
+    assert.match(tracking,new RegExp(property))
+  }
+  assert.match(tracking,/payment_method:'pix'/)
+  assert.doesNotMatch(tracking,/pix_payload|payer_|cpf|cnpj|token/i)
+  assert.match(checkout,/viewedPixCheckoutIds\.current\.has\(checkout\.checkout_id\)/)
+  assert.match(checkout,/expiredPixCheckoutIds\.current\.has\(currentCheckout\.checkout_id\)/)
+  assert.match(abandonment,/abandonedPixCheckoutIds\.current\.has\(currentCheckout\.checkout_id\)/)
+  assert.match(abandonment,/status==='paid'/)
+  assert.match(abandonment,/paidPixCheckoutIds\.current\.has/)
+  assert.match(checkout,/paidPixCheckoutIds\.current\.add\(checkoutId\)/)
+  assert.match(checkout,/onClick=\{\(\)=>trackPixAbandonIntent/)
+  assert.doesNotMatch(checkout,/beforeunload/)
+})
+
 test('waiting never unlocks access and paid is the only status that synchronizes the session',()=>{
   const checkout=read('src/features/billing/CheckoutPage.tsx')
   const paidBlock=checkout.match(/if\(current\.status==='paid'\)[\s\S]*?return\n\s*\}/)?.[0]??''

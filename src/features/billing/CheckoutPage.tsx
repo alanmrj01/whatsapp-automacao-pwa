@@ -28,6 +28,7 @@ import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { BrandMark } from '../../components/BrandMark'
 import { api } from '../../lib/api'
 import { ApiError } from '../../lib/httpClient'
+import { trackEvent } from '../../lib/tracking'
 import { useAuth } from '../auth/useAuth'
 import {
   billingCycles,
@@ -92,6 +93,11 @@ type CheckoutProfile = {
 }
 
 type CheckoutAttempt = {method:PaymentMethod;key:string}
+type PixTrackingEvent = 'pix_payment_viewed'|'pix_payment_abandon_intent'|'pix_payment_expired_unpaid'
+
+function isPixCheckout(checkout:CheckoutResponse|null):checkout is CheckoutResponse {
+  return checkout?.payment_method==='pix'||checkout?.payment_method==='pix_automatic'
+}
 
 function isBillingCycle(value:string|null):value is BillingCycle {
   return value === 'monthly' || value === 'quarterly' || value === 'annual'
@@ -181,7 +187,7 @@ function formatRemaining(seconds:number) {
 export function CheckoutPage() {
   const [params]=useSearchParams()
   const navigate=useNavigate()
-  const {membership,syncSession}=useAuth()
+  const {membership,user,syncSession}=useAuth()
   const planId=params.get('plan')
   const cycleParam=params.get('cycle')
   const checkoutAttempt=useRef<CheckoutAttempt>({
@@ -189,6 +195,17 @@ export function CheckoutPage() {
     key:crypto.randomUUID(),
   })
   const finalizing=useRef(false)
+  const viewedPixCheckoutIds=useRef(new Set<string>())
+  const abandonedPixCheckoutIds=useRef(new Set<string>())
+  const expiredPixCheckoutIds=useRef(new Set<string>())
+  const paidPixCheckoutIds=useRef(new Set<string>())
+  const latestPixState=useRef<{
+    checkout:CheckoutResponse|null
+    status:CheckoutStatus|null
+    initialPaymentReceived:boolean
+    expired:boolean
+  }>({checkout:null,status:null,initialPaymentReceived:false,expired:false})
+  const trackPixAbandonRef=useRef<()=>void>(()=>undefined)
 
   const [paymentMethod,setPaymentMethod]=useState<PaymentMethod>('pix')
   const [profile,setProfile]=useState<CheckoutProfile|null>(null)
@@ -366,6 +383,67 @@ export function CheckoutPage() {
 
   const expired=remaining===0&&!initialPaymentReceived
 
+  const trackPixEvent=useCallback((eventName:PixTrackingEvent,currentCheckout:CheckoutResponse)=>{
+    trackEvent(eventName,{
+      checkout_id:currentCheckout.checkout_id,
+      plan:currentCheckout.plan,
+      billing_cycle:currentCheckout.cycle,
+      amount_cents:currentCheckout.amount_cents,
+      payment_method:'pix',
+    },{
+      surface:'checkout',
+      businessId:user?.active_business_id,
+      userId:user?.id,
+      path:window.location.pathname,
+    })
+  },[user?.active_business_id,user?.id])
+
+  const trackPixExpired=useCallback((currentCheckout:CheckoutResponse|null)=>{
+    if(!isPixCheckout(currentCheckout)||initialPaymentReceived||paidPixCheckoutIds.current.has(currentCheckout.checkout_id)||expiredPixCheckoutIds.current.has(currentCheckout.checkout_id))return
+    expiredPixCheckoutIds.current.add(currentCheckout.checkout_id)
+    trackPixEvent('pix_payment_expired_unpaid',currentCheckout)
+  },[initialPaymentReceived,trackPixEvent])
+
+  const trackPixAbandonIntent=useCallback((
+    currentCheckout:CheckoutResponse|null,
+    status:CheckoutStatus|null,
+    paymentReceived:boolean,
+    isExpired:boolean,
+  )=>{
+    if(!isPixCheckout(currentCheckout)||paymentReceived||isExpired||paidPixCheckoutIds.current.has(currentCheckout.checkout_id)||expiredPixCheckoutIds.current.has(currentCheckout.checkout_id)||abandonedPixCheckoutIds.current.has(currentCheckout.checkout_id))return
+    if(status==='paid'||status==='expired'||status==='canceled'||status==='failed')return
+    abandonedPixCheckoutIds.current.add(currentCheckout.checkout_id)
+    trackPixEvent('pix_payment_abandon_intent',currentCheckout)
+  },[trackPixEvent])
+
+  useEffect(()=>{
+    latestPixState.current={checkout,status:pixStatus,initialPaymentReceived,expired}
+    trackPixAbandonRef.current=()=>{
+      const latest=latestPixState.current
+      trackPixAbandonIntent(latest.checkout,latest.status,latest.initialPaymentReceived,latest.expired)
+    }
+  },[checkout,expired,initialPaymentReceived,pixStatus,trackPixAbandonIntent])
+
+  useEffect(()=>{
+    if(!isPixCheckout(checkout)||!pixQrCode||expired||initialPaymentReceived||pixStatus==='paid'||viewedPixCheckoutIds.current.has(checkout.checkout_id))return
+    viewedPixCheckoutIds.current.add(checkout.checkout_id)
+    trackPixEvent('pix_payment_viewed',checkout)
+  },[checkout,expired,initialPaymentReceived,pixQrCode,pixStatus,trackPixEvent])
+
+  useEffect(()=>{
+    if(!isPixCheckout(checkout)||initialPaymentReceived||paidPixCheckoutIds.current.has(checkout.checkout_id))return
+    if(expired||pixStatus==='expired')trackPixExpired(checkout)
+  },[checkout,expired,initialPaymentReceived,pixStatus,trackPixExpired])
+
+  useEffect(()=>{
+    let armed=false
+    const timer=window.setTimeout(()=>{armed=true},0)
+    return()=>{
+      window.clearTimeout(timer)
+      if(armed)trackPixAbandonRef.current()
+    }
+  },[])
+
   useEffect(()=>{
     const checkoutId=checkout?.payment_method==='pix'||checkout?.payment_method==='pix_automatic'?checkout.checkout_id:null
     if(!checkoutId||expired)return
@@ -384,9 +462,20 @@ export function CheckoutPage() {
       try {
         const current=await api.request<CheckoutStatusResponse>(`/billing/checkouts/${checkoutId}`)
         if(cancelled||(current.payment_method!=='pix'&&current.payment_method!=='pix_automatic'))return
+        latestPixState.current={
+          ...latestPixState.current,
+          status:current.status,
+          initialPaymentReceived:current.initial_payment_received,
+        }
         setPixStatus(current.status)
         setInitialPaymentReceived(current.initial_payment_received)
         if(current.status==='paid') {
+          paidPixCheckoutIds.current.add(checkoutId)
+          latestPixState.current={
+            ...latestPixState.current,
+            status:'paid',
+            initialPaymentReceived:true,
+          }
           if(finalizing.current)return
           finalizing.current=true
           try {
@@ -497,6 +586,8 @@ export function CheckoutPage() {
         if(!['canceled','expired','failed'].includes(canceled.status)) {
           throw new Error('Unexpected Pix cancellation status')
         }
+        if(canceled.status==='expired')trackPixExpired(checkout)
+        else trackPixAbandonIntent(checkout,pixStatus,initialPaymentReceived,expired)
         selectPaymentMethod('credit_card')
       } catch (caught) {
         setError(caught instanceof ApiError&&caught.status===409
@@ -678,9 +769,14 @@ export function CheckoutPage() {
     }
   }
 
+  const leavePixCheckout=()=>{
+    trackPixAbandonIntent(checkout,pixStatus,initialPaymentReceived,expired)
+    navigate('/app',{replace:true})
+  }
+
   return <main className="native-checkout-shell">
     <header className="native-checkout-header">
-      <Link className="native-checkout-back" to={`/app/mais/plano?cycle=${cycleParam}`} aria-label="Voltar aos planos"><ArrowLeft size={20}/></Link>
+      <Link className="native-checkout-back" to={`/app/mais/plano?cycle=${cycleParam}`} aria-label="Voltar aos planos" onClick={()=>trackPixAbandonIntent(checkout,pixStatus,initialPaymentReceived,expired)}><ArrowLeft size={20}/></Link>
       <div className="native-checkout-brand"><BrandMark/><div><strong>ALOVIA</strong></div></div>
     </header>
 
@@ -784,7 +880,7 @@ export function CheckoutPage() {
                   onCopy={()=>void copyPix()}
                   onRetry={restart}
                   onCard={()=>void changePaymentMethod('credit_card')}
-                  onBack={()=>navigate('/app',{replace:true})}
+                  onBack={leavePixCheckout}
                 />
                 :NATIVE_CARD_CHECKOUT_ENABLED
                   ?<CardPaymentContent
@@ -916,6 +1012,14 @@ function PixPaymentContent(props:PixPaymentProps) {
         <div className="checkout-pix-qr" aria-live="polite">{props.qrLoading&&<div className="checkout-loading-spinner" aria-label="Gerando QR Code"/>}{props.qrCode&&<img src={props.qrCode} alt={automatic?'QR Code do Pix Automático':'QR Code do Pix'}/>}{!props.qrLoading&&!props.qrCode&&<span>QR Code indisponível.</span>}</div>
         <div className="checkout-pix-details"><span>Pix Copia e Cola</span><textarea readOnly value={props.checkout.pix_payload??''} aria-label="Código Pix Copia e Cola"/><button className="secondary-button" type="button" onClick={props.onCopy}><Copy size={17}/>{props.copyState==='copied'?'Código copiado':'Copiar código Pix'}</button>{props.copyState==='failed'&&<small role="alert">Não foi possível copiar. Selecione o código acima.</small>}<dl><div><dt>Valor</dt><dd>{formatBRL(props.checkout.amount_cents/100)}</dd></div><div><dt>Plano</dt><dd>{props.planName} · {props.cycleLabel}</dd></div>{automatic&&props.remaining!==null&&<div><dt>Validade</dt><dd>{formatRemaining(props.remaining)}</dd></div>}</dl></div>
       </div>
+      <section className="checkout-pix-receiver-notice" aria-label="Pagamento seguro">
+        <ShieldCheck size={20} aria-hidden="true"/>
+        <div>
+          <strong className="checkout-pix-receiver-title">Pagamento seguro</strong>
+          <p>No seu banco, o recebedor aparecerá como <strong className="checkout-pix-receiver-name">68.936.099 ALAN DE MAGALHAES RAIMUNDO JUNIOR.</strong></p>
+          <p>Isso acontece por uma regra cadastral do Pix para contas MEI: o banco exibe o nome empresarial vinculado ao CNPJ responsável pela operação da Alovia. <span className="checkout-pix-receiver-confirmation">Seu pagamento é para a Alovia normalmente.</span></p>
+        </div>
+      </section>
       <div className="checkout-pix-waiting" role="status"><div className="checkout-loading-spinner"/><div><strong>{automatic?'Aguardando pagamento e autorização':'Aguardando pagamento'}</strong><span>{automatic?'Assim que o banco confirmar o pagamento e a autorização, liberamos sua assinatura automaticamente.':'Assim que o banco confirmar o pagamento, liberamos sua assinatura. Na próxima renovação, um novo Pix será gerado para pagamento.'}</span></div></div>
       {props.error&&<p className="form-error checkout-native-error" role="alert">{props.error}</p>}
     </>}

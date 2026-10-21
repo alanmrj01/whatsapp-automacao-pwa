@@ -9,6 +9,7 @@ import { LoadingState } from '../../components/LoadingState'
 import { RequiredLabel } from '../../components/RequiredLabel'
 import { StatusBadge } from '../../components/StatusBadge'
 import { demoAppointments, demoToday, type DemoAppointment, type DemoAppointmentStatus } from '../../demo/operationalDemo'
+import { ActivateAloviaCta } from '../access/ActivateAloviaCta'
 import { DemoInsight } from '../access/DemoInsight'
 import { useEntitlements } from '../access/useEntitlements'
 import { useUpgradePrompt } from '../access/upgradePromptContext'
@@ -109,7 +110,7 @@ export function AgendaPage() {
   for(const item of demoAppointments) demoByDate.set(item.date,[...(demoByDate.get(item.date)??[]),item])
 
   return <div className="page-stack operational-page compact-page">
-    <section className="operational-heading"><div><span className="eyebrow">Agenda demonstrativa</span><h1>Agenda</h1></div><button className="compact-button" type="button" onClick={openNew}><CalendarPlus2 size={18}/>Novo</button></section>
+    <section className="operational-heading"><div><span className="eyebrow">Agenda demonstrativa</span><h1>Agenda</h1></div><div className="operational-heading__actions"><ActivateAloviaCta/><button className="compact-button" type="button" onClick={openNew}><CalendarPlus2 size={18}/>Novo</button></div></section>
     <DemoInsight>O cliente quer um horário mesmo quando você está com a mão no serviço.</DemoInsight>
 
     {view!=='day'?<>
@@ -372,7 +373,7 @@ function RealAgenda({selectedDate,setSelectedDate,canMutate,initialView,setOuter
   }
 
   return <div className="page-stack operational-page compact-page">
-    <section className="operational-heading"><div><span className="eyebrow">Planejamento real</span><h1>Agenda</h1></div>{canEdit&&<button className="compact-button" type="button" onClick={()=>{setView('day');setOuterView('day');setDraft(realDraft(selectedDate,timezone))}}><CalendarPlus2 size={18}/>Novo</button>}</section>
+    <section className="operational-heading"><div><span className="eyebrow">Planejamento real</span><h1>Agenda</h1></div><div className="operational-heading__actions"><ActivateAloviaCta/>{canEdit&&<button className="compact-button" type="button" onClick={()=>{setView('day');setOuterView('day');setDraft(realDraft(selectedDate,timezone))}}><CalendarPlus2 size={18}/>Novo</button>}</div></section>
     {!canMutate&&<section className="account-note" role="status"><strong>Agenda preservada</strong><span>Você pode consultar seus atendimentos. Alterações ficam disponíveis com uma assinatura ativa.</span></section>}
 
     {pendingItems.length>0&&<section className="reschedule-pending-section" aria-labelledby="reschedule-pending-title">

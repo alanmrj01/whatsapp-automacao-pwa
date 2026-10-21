@@ -8,6 +8,7 @@ import { InfoHelp } from '../../components/InfoHelp'
 import { LoadingState } from '../../components/LoadingState'
 import { StatusBadge } from '../../components/StatusBadge'
 import { demoConversations } from '../../demo/operationalDemo'
+import { ActivateAloviaCta } from '../access/ActivateAloviaCta'
 import { DemoInsight } from '../access/DemoInsight'
 import { useEntitlements } from '../access/useEntitlements'
 import { useBulkConversationAction, useDeleteConversation, useBusiness, useConversations, useSetConversationPinned, useSetConversationRead } from '../operations/api'
@@ -32,7 +33,7 @@ function DemoConversationList({search,setSearch,filter,setFilter}:{search:string
     return matchesFilter && value.includes(search.toLocaleLowerCase('pt-BR'))
   }),[filter,search])
   return <div className="page-stack operational-page compact-page">
-    <section className="operational-heading"><div><span className="eyebrow">Fila de atendimento</span><h1>Conversas</h1></div><StatusBadge tone="info">Demo</StatusBadge></section>
+    <section className="operational-heading"><div><span className="eyebrow">Fila de atendimento</span><h1>Conversas</h1></div><div className="operational-heading__actions"><ActivateAloviaCta/><StatusBadge tone="info">Demo</StatusBadge></div></section>
       <DemoInsight>Enquanto você está no serviço, as mensagens continuam chegando.</DemoInsight>
       <div className="toolbar-row">
         <label className="search-field"><Search size={19}/><span className="sr-only">Buscar conversa</span><input value={search} onChange={event=>setSearch(event.target.value)} type="search" placeholder="Buscar conversa" /></label>
@@ -54,7 +55,7 @@ function PaidConversationList({search,setSearch,filter,setFilter}:{search:string
   const realConversations=useConversations(search,filter==='all'?'':filter)
   const business=useBusiness()
   return <div className="page-stack operational-page compact-page">
-      <section className="operational-heading"><div><span className="eyebrow">Fila de atendimento</span><h1>Conversas</h1></div></section>
+      <section className="operational-heading"><div><span className="eyebrow">Fila de atendimento</span><h1>Conversas</h1></div><ActivateAloviaCta/></section>
       <div className="toolbar-row"><label className="search-field"><Search size={19}/><span className="sr-only">Buscar conversa</span><input value={search} onChange={event=>setSearch(event.target.value)} type="search" placeholder="Buscar conversa" /></label><InfoHelp title="Fila real">A fila usa somente conversas da empresa ativa e ordena itens não lidos primeiro.</InfoHelp></div>
       <ConversationFilters filter={filter} setFilter={setFilter}/>
       {(realConversations.isPending||business.isPending)&&<LoadingState/>}
