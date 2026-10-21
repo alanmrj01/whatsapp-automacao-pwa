@@ -289,7 +289,7 @@ export function AdminPage() {
                 : 'Acesso demonstrativo, sem operação liberada.')}</span>
             </div>
             <div className="platform-admin__actions">
-              {!business.commercial_plan_code&&<button className="platform-admin__toggle" type="button" disabled={busyId === business.id}
+              {!business.commercial_access_active&&<button className="platform-admin__toggle" type="button" disabled={busyId === business.id}
                 onClick={()=>setAccessConfirmation(business)}>
                 <KeyRound size={18}/>{busyId === business.id ? 'Salvando…' : business.access_mode==='free' ? 'Liberar funcionalidades' : 'Revogar liberação'}
               </button>}
