@@ -2,6 +2,7 @@ import { Bot, Boxes, Building2, CalendarCog, CircleUserRound, Clock3, CreditCard
 import { ListRow } from '../../components/ListRow'
 import { Section } from '../../components/Section'
 import { StatusBadge } from '../../components/StatusBadge'
+import { ActivateAloviaCta } from '../access/ActivateAloviaCta'
 import { useEntitlements } from '../access/useEntitlements'
 import { SessionActions } from '../auth/SessionActions'
 import { useUpgradePrompt } from '../access/upgradePromptContext'
@@ -22,7 +23,7 @@ export function MorePage(){
   const gated=(label:string)=>()=>openUpgrade(label)
 
   return <div className="page-stack operational-page compact-page">
-    <section className="operational-heading"><div><span className="eyebrow">{membership?.business_name??'Sua empresa'}</span><h1>Configurações</h1></div></section>
+    <section className="operational-heading"><div><span className="eyebrow">{membership?.business_name??'Sua empresa'}</span><h1>Configurações</h1></div><ActivateAloviaCta/></section>
 
     {needsReview?<section className="setup-callout setup-callout--warning" role="status"><div><strong>Revise sua configuração</strong><span>{nonWhatsAppBlockingReasons.join(' ')}</span></div></section>:paid&&setup.data?.onboarding_completed&&!whatsappPending&&<section className="setup-callout setup-callout--complete"><div><strong>Configuração inicial concluída</strong><span>Você pode alterar os dados da operação a qualquer momento nas opções abaixo.</span></div></section>}
 

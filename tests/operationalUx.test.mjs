@@ -282,6 +282,20 @@ test('blocked free actions open the compact subscription prompt instead of becom
   assert.match(prompt,/Ver planos/)
 })
 
+test('non-paid operational headings expose the small shared activation CTA', () => {
+  const cta = read('src/features/access/ActivateAloviaCta.tsx')
+  const conversations = read('src/features/conversations/ConversationsPage.tsx')
+  const agenda = read('src/features/appointments/AgendaPage.tsx')
+  const more = read('src/features/more/MorePage.tsx')
+  const css = read('src/styles/operational-app.css')
+
+  assert.match(cta,/if\(entitlement\.isPaid\)return null/)
+  assert.match(cta,/openUpgrade\('Ativar Alovia'\)/)
+  assert.match(cta,/activate-alovia-cta/)
+  for(const page of [conversations,agenda,more]) assert.match(page,/ActivateAloviaCta/)
+  assert.match(css,/\.activate-alovia-cta[\s\S]*background: var\(--color-surface\)/)
+})
+
 test('WhatsApp status keeps pending Meta onboarding visible and refreshes it safely', () => {
   const dashboard = read('src/features/dashboard/DashboardPage.tsx')
   const whatsapp = read('src/features/whatsapp/WhatsAppPage.tsx')
