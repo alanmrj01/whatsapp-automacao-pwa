@@ -16,6 +16,8 @@ test('admin distinguishes commercial billing from administrative access', () => 
   assert.match(api, /commercial_cancellation_requested_at: string \| null/)
   assert.match(api, /commercial_refund_status:/)
   assert.match(api, /commercial_refund_requested_at: string \| null/)
+  assert.match(api, /commercial_provider_payment_id: string \| null/)
+  assert.match(api, /commercial_provider_subscription_id: string \| null/)
 
   assert.match(page, /basic: 'Básico'/)
   assert.match(page, /monthly: 'mensal'/)
@@ -25,6 +27,8 @@ test('admin distinguishes commercial billing from administrative access', () => 
   assert.match(page, /Liberação administrativa ativa, sem assinatura comercial vinculada\./)
   assert.match(page, /cliente solicitou cancelamento e reembolso dentro da garantia/)
   assert.match(page, /cliente solicitou cancelamento da renovação/)
+  assert.match(page, /Pagamento Asaas:/)
+  assert.match(page, /Assinatura Asaas:/)
 })
 
 test('admin does not relabel a commercial subscription as an administrative grant', () => {
