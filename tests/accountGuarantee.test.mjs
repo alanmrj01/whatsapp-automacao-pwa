@@ -32,8 +32,8 @@ test('account guarantee uses server status and protected request endpoints', () 
 test('account guarantee never presents a refund request as completed payment reversal', () => {
   const page = read('src/features/more/AccountPages.tsx')
   const pendingBlock = page.slice(
-    page.indexOf("refundPending&&"),
-    page.indexOf("refundCompleted&&"),
+    page.indexOf("{refundPending&&<div"),
+    page.indexOf("{refundCompleted&&<div"),
   )
 
   assert.match(pendingBlock, /Reembolso solicitado/)
