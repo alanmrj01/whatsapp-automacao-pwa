@@ -296,6 +296,10 @@ export function AdminPage() {
                 ? 'Liberação administrativa ativa, sem assinatura comercial vinculada.'
                 : 'Acesso demonstrativo, sem operação liberada.')}</span>
               {commercialFinancialRequestText(business)&&<span className="platform-admin__financial-alert">{commercialFinancialRequestText(business)}</span>}
+              {commercialFinancialRequestText(business)&&(business.commercial_provider_payment_id||business.commercial_provider_subscription_id)&&<span className="platform-admin__financial-refs">
+                {business.commercial_provider_payment_id&&<>Pagamento Asaas: <code>{business.commercial_provider_payment_id}</code></>}
+                {business.commercial_provider_subscription_id&&<> · Assinatura Asaas: <code>{business.commercial_provider_subscription_id}</code></>}
+              </span>}
             </div>
             <div className="platform-admin__actions">
               {!business.commercial_access_active&&<button className="platform-admin__toggle" type="button" disabled={busyId === business.id}
