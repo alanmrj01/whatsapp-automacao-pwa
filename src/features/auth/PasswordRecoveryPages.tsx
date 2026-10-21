@@ -48,6 +48,10 @@ export function ForgotPasswordPage() {
               <LockKeyhole size={18}/>
               <span>O link é válido por 30 minutos e pode ser usado uma única vez.</span>
             </div>
+            <p className="auth-delivery-help">Se não encontrar a mensagem em alguns minutos, confira também as abas Spam e Promoções e procure pelo assunto <strong>“Redefina sua senha da Alovia”</strong>.</p>
+            <button className="auth-secondary-link auth-secondary-link--standalone" type="button" onClick={()=>{setSent(false);setError('')}}>
+              Enviar novamente
+            </button>
             <Link to="/login" className="auth-secondary-link auth-secondary-link--standalone">Voltar para entrar</Link>
           </>
         : <>
