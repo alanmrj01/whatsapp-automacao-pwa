@@ -23,6 +23,48 @@ const whatsappLabel: Record<PlatformBusiness['whatsapp_status'], string> = {
   error: 'Erro no WhatsApp',
 }
 
+const planLabel: Record<NonNullable<PlatformBusiness['commercial_plan_code']>, string> = {
+  basic: 'Básico',
+  plus: 'Plus',
+}
+
+const cycleLabel: Record<NonNullable<PlatformBusiness['commercial_billing_cycle']>, string> = {
+  monthly: 'mensal',
+  quarterly: 'trimestral',
+  annual: 'anual',
+}
+
+function commercialAccessText(business: PlatformBusiness) {
+  if (!business.commercial_plan_code || !business.commercial_billing_cycle) return null
+  const plan = planLabel[business.commercial_plan_code]
+  const cycle = cycleLabel[business.commercial_billing_cycle]
+  const until = business.commercial_access_until
+    ? new Intl.DateTimeFormat('pt-BR').format(new Date(business.commercial_access_until))
+    : null
+  if (business.commercial_access_active) {
+    return `Plano ${plan} ${cycle}${until ? ` ativo até ${until}` : ' ativo'}.`
+  }
+  if (business.commercial_subscription_status === 'past_due') {
+    return `Plano ${plan} ${cycle} com pagamento pendente.`
+  }
+  if (business.commercial_subscription_status === 'suspended') {
+    return `Plano ${plan} ${cycle} suspenso.`
+  }
+  if (business.commercial_subscription_status === 'canceled') {
+    return `Plano ${plan} ${cycle} cancelado${until ? `; acesso até ${until}` : ''}.`
+  }
+  return `Plano ${plan} ${cycle} registrado.`
+}
+
+function commercialAccessTitle(business: PlatformBusiness) {
+  if (!business.commercial_plan_code) return null
+  if (business.commercial_access_active) return 'Pago'
+  if (business.commercial_subscription_status === 'past_due') return 'Pagamento pendente'
+  if (business.commercial_subscription_status === 'suspended') return 'Suspenso'
+  if (business.commercial_subscription_status === 'canceled') return 'Cancelado'
+  return 'Assinatura'
+}
+
 const emptyForm = () => ({
   name: '',
   owner_email: '',
@@ -239,16 +281,18 @@ export function AdminPage() {
               <span>{business.timezone}</span>
             </div>
             <div className="platform-admin__access">
-              <strong className={business.access_mode==='paid'?'is-paid':'is-free'}>{business.access_mode==='paid'?'Acesso liberado':'Gratuito'}</strong>
-              <span>{business.access_mode==='paid'
-                ? 'Plano comercial: não registrado. A origem da liberação não existe no modelo atual.'
-                : 'Acesso demonstrativo, sem operação liberada.'}</span>
+              <strong className={(business.commercial_access_active||business.access_mode==='paid')?'is-paid':'is-free'}>
+                {commercialAccessTitle(business) ?? (business.access_mode==='paid'?'Acesso liberado':'Gratuito')}
+              </strong>
+              <span>{commercialAccessText(business) ?? (business.access_mode==='paid'
+                ? 'Liberação administrativa ativa, sem assinatura comercial vinculada.'
+                : 'Acesso demonstrativo, sem operação liberada.')}</span>
             </div>
             <div className="platform-admin__actions">
-              <button className="platform-admin__toggle" type="button" disabled={busyId === business.id}
+              {!business.commercial_plan_code&&<button className="platform-admin__toggle" type="button" disabled={busyId === business.id}
                 onClick={()=>setAccessConfirmation(business)}>
                 <KeyRound size={18}/>{busyId === business.id ? 'Salvando…' : business.access_mode==='free' ? 'Liberar funcionalidades' : 'Revogar liberação'}
-              </button>
+              </button>}
               <button className="platform-admin__toggle" type="button" disabled={busyId === business.id}
                 onClick={()=>void toggleBusiness(business)}>
                 <CirclePower size={18}/>{busyId === business.id ? 'Salvando…' : business.active ? 'Desativar empresa' : 'Reativar empresa'}
