@@ -356,3 +356,24 @@
     grid-column: 1;
   }
 }
+
+
+.platform-admin__financial-alert {
+  display: block;
+  margin-top: 6px;
+  font-weight: 800;
+  color: var(--color-danger, #a61b1b);
+}
+
+
+.platform-admin__financial-refs {
+  display: block;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+  color: var(--color-text-soft);
+  font-size: .76rem;
+}
+
+.platform-admin__financial-refs code {
+  font-size: inherit;
+}

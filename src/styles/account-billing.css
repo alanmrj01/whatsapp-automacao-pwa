@@ -132,6 +132,60 @@
   margin-top: 0;
 }
 
+.account-billing-section {
+  display: grid;
+  gap: 12px;
+}
+
+.account-guarantee-state {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-subtle);
+}
+
+.account-guarantee-state.is-active {
+  border: 1px solid color-mix(in srgb,var(--color-primary-600) 30%,var(--color-border));
+}
+
+.account-guarantee-state span {
+  color: var(--color-text-soft);
+  font-size: .84rem;
+  line-height: 1.5;
+}
+
+.account-financial-action {
+  width: 100%;
+  justify-content: center;
+}
+
+.account-financial-confirmation {
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.account-financial-confirmation p {
+  margin: 0;
+  font-size: .84rem;
+  line-height: 1.5;
+}
+
+.account-financial-confirmation > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.account-financial-confirmation > div > button {
+  flex: 1 1 160px;
+  justify-content: center;
+}
+
 .account-password-section {
   display: grid;
   gap: 8px;

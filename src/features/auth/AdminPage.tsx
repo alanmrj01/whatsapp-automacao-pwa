@@ -56,6 +56,14 @@ function commercialAccessText(business: PlatformBusiness) {
   return `Plano ${plan} ${cycle} registrado.`
 }
 
+function commercialFinancialRequestText(business: PlatformBusiness) {
+  if (business.commercial_refund_status === 'refunded') return 'Reembolso confirmado pelo fluxo financeiro.'
+  if (business.commercial_refund_status === 'requested') return 'ATENÇÃO: cliente solicitou cancelamento e reembolso dentro da garantia.'
+  if (business.commercial_refund_status === 'reconcile_required') return 'ATENÇÃO: reembolso exige reconciliação financeira antes de qualquer nova ação.'
+  if (business.commercial_cancellation_requested_at) return 'ATENÇÃO: cliente solicitou cancelamento da renovação.'
+  return null
+}
+
 function commercialAccessTitle(business: PlatformBusiness) {
   if (!business.commercial_plan_code) return null
   if (business.commercial_access_active) return 'Pago'
@@ -287,6 +295,11 @@ export function AdminPage() {
               <span>{commercialAccessText(business) ?? (business.access_mode==='paid'
                 ? 'Liberação administrativa ativa, sem assinatura comercial vinculada.'
                 : 'Acesso demonstrativo, sem operação liberada.')}</span>
+              {commercialFinancialRequestText(business)&&<span className="platform-admin__financial-alert">{commercialFinancialRequestText(business)}</span>}
+              {commercialFinancialRequestText(business)&&(business.commercial_provider_payment_id||business.commercial_provider_subscription_id)&&<span className="platform-admin__financial-refs">
+                {business.commercial_provider_payment_id&&<>Pagamento Asaas: <code>{business.commercial_provider_payment_id}</code></>}
+                {business.commercial_provider_subscription_id&&<> · Assinatura Asaas: <code>{business.commercial_provider_subscription_id}</code></>}
+              </span>}
             </div>
             <div className="platform-admin__actions">
               {!business.commercial_access_active&&<button className="platform-admin__toggle" type="button" disabled={busyId === business.id}
