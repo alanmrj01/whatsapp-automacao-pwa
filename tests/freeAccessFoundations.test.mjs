@@ -81,11 +81,13 @@ test('never-activated free WhatsApp CTA routes to upgrade without starting the M
   assert.match(dashboard, /whatsapp-summary/)
 })
 
-test('platform admin presents entitlement as access without inventing a commercial plan', () => {
+test('platform admin presents commercial billing separately from administrative access', () => {
   const admin = read('src/features/auth/AdminPage.tsx')
   const api = read('src/features/auth/platformAdmin.ts')
   assert.match(api,/access_mode: 'free' \| 'paid'/)
-  assert.match(admin,/business\.access_mode==='paid'\?'Acesso liberado':'Gratuito'/)
-  assert.match(admin,/Plano comercial: não registrado/)
-  assert.doesNotMatch(`${admin}${api}`,/\b(?:Basic|Premium|Pro)\b|checkout|billing/i)
+  assert.match(api,/commercial_access_active: boolean/)
+  assert.match(api,/commercial_plan_code: 'basic' \| 'plus' \| null/)
+  assert.match(admin,/return 'Pago'/)
+  assert.match(admin,/Liberação administrativa ativa, sem assinatura comercial vinculada/)
+  assert.doesNotMatch(`${admin}${api}`,/\b(?:Premium|Pro)\b|checkout/i)
 })
