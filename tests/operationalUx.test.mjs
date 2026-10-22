@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { demoAppointments, demoBookingDate2, demoConversations, demoDateLabel, demoOverview, demoRescheduleDate, demoToday, demoTomorrow, shiftDemoDate } from '../src/demo/operationalDemo.ts'
+import { demoAppointments, demoBookingDate2, demoConversations, demoDateLabel, demoMonthDate, demoOverview, demoRescheduleDate, demoToday, demoTomorrow, shiftDemoDate } from '../src/demo/operationalDemo.ts'
 import { DEMO_DATA_NOTICE, entitlementsFor, requirePaidAccess, UpgradeRequiredError } from '../src/features/access/entitlements.ts'
 import { deriveProductState } from '../src/features/product/deriveProductState.ts'
 import { zonedDateTimeToIso } from '../src/features/operations/timezone.ts'
@@ -203,6 +203,17 @@ test('demo dates roll with the current day instead of expiring on a fixed calend
   assert.doesNotMatch(preview,/Setembro 2026|8 de setembro de 2026/)
   assert.match(preview,/demoMonthLabel/)
   assert.match(preview,/demoDayLabel/)
+})
+
+test('demo month dates avoid collisions with today and rolling booking dates', () => {
+  assert.equal(
+    demoMonthDate('2026-10-22',22,['2026-10-22','2026-10-27','2026-10-28']),
+    '2026-10-23',
+  )
+  assert.equal(
+    demoMonthDate('2026-10-19',24,['2026-10-19','2026-10-24','2026-10-25']),
+    '2026-10-23',
+  )
 })
 
 test('demo agenda is static, opens details and routes every mutation to upgrade', () => {
