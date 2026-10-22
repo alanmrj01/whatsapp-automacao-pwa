@@ -833,8 +833,8 @@ export function CheckoutPage() {
         },
         {
           surface: 'checkout',
-          businessId: user?.active_business_id,
-          userId: user?.id,
+          businessId: trackingIdentity.current.businessId,
+          userId: trackingIdentity.current.userId,
         },
       )
       navigate(`/app/checkout/retorno?state=success&checkout=${cardCheckout.checkout_id}`,{replace:true})
