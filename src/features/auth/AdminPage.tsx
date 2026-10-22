@@ -1,4 +1,4 @@
-import { Building2, CirclePower, Eye, KeyRound, Plus, RefreshCw, ShieldCheck } from 'lucide-react'
+import { AlertTriangle, Building2, CirclePower, Clock3, Eye, KeyRound, Mail, Phone, Plus, RefreshCw, ShieldCheck } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppHeader } from '../../components/AppHeader'
@@ -73,6 +73,23 @@ function commercialAccessTitle(business: PlatformBusiness) {
   return 'Assinatura'
 }
 
+function formatAdminDate(value:string|null) {
+  if (!value) return '—'
+  return new Intl.DateTimeFormat('pt-BR',{
+    dateStyle:'short',
+    timeStyle:'short',
+    timeZone:'America/Sao_Paulo',
+  }).format(new Date(value))
+}
+
+function formatAdminPhone(value:string|null) {
+  if (!value) return 'Celular não informado'
+  const digits=value.replace(/\D/g,'')
+  if (digits.length===11)return digits.replace(/^(\d{2})(\d{5})(\d{4})$/,'($1) $2-$3')
+  if (digits.length===10)return digits.replace(/^(\d{2})(\d{4})(\d{4})$/,'($1) $2-$3')
+  return value
+}
+
 const emptyForm = () => ({
   name: '',
   owner_email: '',
@@ -109,6 +126,14 @@ export function AdminPage() {
   }, [])
 
   useEffect(() => { void Promise.resolve().then(load) }, [load])
+
+  const pendingRefunds=businesses
+    .filter(item=>item.commercial_refund_status==='requested'||item.commercial_refund_status==='reconcile_required')
+    .sort((a,b)=>{
+      const left=a.commercial_refund_requested_at?new Date(a.commercial_refund_requested_at).getTime():Number.MAX_SAFE_INTEGER
+      const right=b.commercial_refund_requested_at?new Date(b.commercial_refund_requested_at).getTime():Number.MAX_SAFE_INTEGER
+      return left-right
+    })
 
   function changeForm(field: keyof ReturnType<typeof emptyForm>, value: string) {
     creationKey.current = ''
@@ -259,6 +284,46 @@ export function AdminPage() {
         <span>{loadError}</span>
         <button type="button" onClick={()=>void load()}>Tentar novamente</button>
       </div>}
+
+      {pendingRefunds.length>0&&<section className="platform-admin__refund-queue" aria-labelledby="refund-queue-title">
+        <div className="platform-admin__refund-queue-heading">
+          <div>
+            <span className="platform-admin__refund-queue-eyebrow"><AlertTriangle size={17}/> RETENÇÃO</span>
+            <h2 id="refund-queue-title">Reembolsos aguardando ação</h2>
+            <p>{pendingRefunds.length} {pendingRefunds.length===1?'cliente precisa':'clientes precisam'} de acompanhamento antes da conclusão.</p>
+          </div>
+          <span className="platform-admin__refund-mode">Aprovação manual no Asaas</span>
+        </div>
+        <div className="platform-admin__refund-cards">
+          {pendingRefunds.map(business=><article className="platform-admin__refund-card" key={business.id}>
+            <div className="platform-admin__refund-card-top">
+              <div>
+                <strong>{business.commercial_contact_name||business.name}</strong>
+                <span>{business.name}</span>
+              </div>
+              <span className={business.commercial_refund_status==='reconcile_required'?'is-critical':'is-pending'}>
+                {business.commercial_refund_status==='reconcile_required'?'Exige conferência':'Aguardando aprovação'}
+              </span>
+            </div>
+            <div className="platform-admin__refund-contact">
+              {business.commercial_contact_email
+                ?<a href={`mailto:${business.commercial_contact_email}`}><Mail size={16}/>{business.commercial_contact_email}</a>
+                :<span><Mail size={16}/>E-mail não informado</span>}
+              {business.commercial_contact_phone
+                ?<a href={`tel:+55${business.commercial_contact_phone.replace(/\D/g,'')}`}><Phone size={16}/>{formatAdminPhone(business.commercial_contact_phone)}</a>
+                :<span><Phone size={16}/>Celular não informado</span>}
+            </div>
+            <div className="platform-admin__refund-timing">
+              <span><Clock3 size={16}/>Solicitado em {formatAdminDate(business.commercial_refund_requested_at)}</span>
+              <strong>Concluir até {formatAdminDate(business.commercial_refund_deadline_at)}</strong>
+            </div>
+            {business.commercial_provider_payment_id&&<div className="platform-admin__refund-reference">
+              Pagamento Asaas: <code>{business.commercial_provider_payment_id}</code>
+            </div>}
+            <p>Entre em contato para entender o motivo e tentar retenção. Se o reembolso seguir, autorize manualmente no Asaas dentro do prazo.</p>
+          </article>)}
+        </div>
+      </section>}
 
       <section className="platform-admin__list-header">
         <div><h2>Empresas cadastradas</h2><p>{businesses.length} {businesses.length === 1 ? 'empresa' : 'empresas'}</p></div>
