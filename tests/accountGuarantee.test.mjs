@@ -24,6 +24,7 @@ test('refund status uses protected endpoints and distinguishes provider reconcil
   assert.match(billing,/\/billing\/subscription\/refund-request/)
   assert.match(billing,/\/billing\/subscription\/cancel-request/)
   assert.match(billing,/refund_provider_status/)
+  assert.match(billing,/Reembolso aguardando autorização no Asaas/)
   assert.match(billing,/Reembolso em processamento no Asaas/)
   assert.match(billing,/Reembolso precisa de conferência/)
   assert.match(billing,/Reembolso confirmado/)

@@ -14,7 +14,7 @@ type SubscriptionStatus = {
   guarantee_until:string|null
   guarantee_eligible:boolean
   refund_status:'none'|'requested'|'reconcile_required'|'refunded'
-  refund_provider_status:'pending'|'done'|'cancelled'|'partial'|'unknown'|null
+  refund_provider_status:'awaiting_authorization'|'pending'|'done'|'cancelled'|'partial'|'unknown'|null
 }
 
 function formatBillingDate(value:string|null) {
@@ -108,10 +108,16 @@ export function SubscriptionManagement() {
         <span>Se a Alovia não fizer sentido para sua operação dentro desse prazo, você pode solicitar o cancelamento e a devolução integral do valor pago.</span>
       </div>}
       {refundPending&&<div className="account-guarantee-state">
-        <strong>{subscription.refund_provider_status==='pending'?'Reembolso em processamento no Asaas':'Reembolso enviado ao Asaas'}</strong>
-        <span>{subscription.refund_provider_status==='pending'
-          ? 'O Asaas confirmou que o estorno está em processamento. O valor só será considerado devolvido quando o provedor concluir a operação.'
-          : 'A solicitação foi enviada. A Alovia está aguardando a confirmação financeira do Asaas antes de considerar o valor devolvido.'}</span>
+        <strong>{subscription.refund_provider_status==='awaiting_authorization'
+          ? 'Reembolso aguardando autorização no Asaas'
+          : subscription.refund_provider_status==='pending'
+            ? 'Reembolso em processamento no Asaas'
+            : 'Reembolso enviado ao Asaas'}</strong>
+        <span>{subscription.refund_provider_status==='awaiting_authorization'
+          ? 'O Asaas criou o estorno, mas exige uma autorização por Token antes de movimentar o valor.'
+          : subscription.refund_provider_status==='pending'
+            ? 'O Asaas confirmou que o estorno está em processamento. O valor só será considerado devolvido quando o provedor concluir a operação.'
+            : 'A solicitação foi enviada. A Alovia está aguardando a confirmação financeira do Asaas antes de considerar o valor devolvido.'}</span>
       </div>}
       {refundReconcile&&<div className="account-guarantee-state">
         <strong>Reembolso precisa de conferência</strong>
