@@ -386,7 +386,7 @@ export function CheckoutPage() {
     } finally {
       setCheckoutLoading(false)
     }
-  },[cycleParam,planId])
+  },[cycleParam,planId,user?.active_business_id,user?.id])
 
   const expiration=checkout?.payment_method==='pix'||checkout?.payment_method==='pix_automatic'
     ?checkout.pix_expires_at??checkout.expires_at
