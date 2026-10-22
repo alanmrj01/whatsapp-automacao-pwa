@@ -286,11 +286,13 @@ export function CheckoutPage() {
     key,
     payerNameValue,
     payerDocumentValue,
+    payerPhoneValue,
   }:{
     method:PaymentMethod
     key:string
     payerNameValue?:string
     payerDocumentValue?:string
+    payerPhoneValue?:string
   })=>{
     if(!isPlanId(planId)||!isBillingCycle(cycleParam)||!isPurchasablePlan(planId))return null
     setCheckoutLoading(true)
@@ -306,8 +308,9 @@ export function CheckoutPage() {
           cycle:cycleParam,
           payment_method:method,
           return_origin:window.location.origin,
+          payer_name:payerNameValue,
+          payer_phone:payerPhoneValue,
           ...((method==='pix'||method==='pix_automatic')?{
-            payer_name:payerNameValue,
             payer_cpf_cnpj:payerDocumentValue,
           }:{}),
         }),
@@ -549,7 +552,12 @@ export function CheckoutPage() {
     setPixReconciliationPending(false)
   }
 
-  const prepareCardCheckout=(key:string)=>prepareCheckout({method:'credit_card',key})
+  const prepareCardCheckout=(key:string)=>prepareCheckout({
+    method:'credit_card',
+    key,
+    payerNameValue:payerName.trim(),
+    payerPhoneValue:digits(payerPhone,11),
+  })
 
   const selectPaymentMethod=(method:PaymentMethod)=>{
     clearPaymentState()
@@ -616,6 +624,7 @@ export function CheckoutPage() {
       key,
       payerNameValue:payerName.trim(),
       payerDocumentValue:digits(payerDocument,14),
+      payerPhoneValue:digits(payerPhone,11),
     })
     setSubmitting(false)
     if(nextCheckout)setOpenStep(2)
