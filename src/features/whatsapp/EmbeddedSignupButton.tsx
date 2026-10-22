@@ -74,6 +74,25 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
       )
       return
     }
+    if (connection.status === 'pending') {
+      trackEventOnce(
+        `whatsapp_connection_pending:${membership?.business_id ?? 'unknown'}:${connection.onboarding_attempt_id ?? 'current'}:${connection.pending_state ?? connection.journey_state ?? connection.next_action ?? 'pending'}`,
+        'whatsapp_connection_blocked',
+        {
+          reason: connection.pending_state ?? connection.journey_state ?? 'pending',
+          next_action: connection.next_action ?? null,
+          review_status: connection.review_status ?? null,
+          mode: connection.mode,
+          preferred_mode: connection.preferred_mode ?? null,
+          from_onboarding: fromOnboarding,
+        },
+        {
+          surface: 'whatsapp_onboarding',
+          businessId: membership?.business_id,
+          userId: user?.id,
+        },
+      )
+    }
     if (connection.status === 'error') {
       setPhase('error')
       trackEventOnce(
@@ -219,6 +238,20 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
             return
           }
           void beginRedirectSignup().catch(() => {
+            trackEventOnce(
+              `whatsapp_connection_redirect_failed:${membership?.business_id ?? 'unknown'}`,
+              'whatsapp_connection_failed',
+              {
+                reason:'redirect_start_failed',
+                from_onboarding:fromOnboarding,
+              },
+              {
+                surface:'whatsapp_onboarding',
+                businessId:membership?.business_id,
+                userId:user?.id,
+              },
+              'session',
+            )
             setFailedAttempts(value => value + 1)
             setPhase('error')
             setMessage('Não foi possível abrir a autorização da Meta. Tente novamente.')
