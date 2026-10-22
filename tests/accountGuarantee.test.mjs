@@ -17,28 +17,33 @@ test('subscription and guarantee controls live at the end of the Plan page, not 
   assert.match(billing,/Solicitar cancelamento e reembolso/)
 })
 
-test('refund status uses protected endpoints and distinguishes provider reconciliation', () => {
+test('refund status uses protected endpoints, a 24-hour customer notice and session resync', () => {
   const billing = read('src/features/billing/SubscriptionManagement.tsx')
+  const css = read('src/styles/account-billing.css')
 
   assert.match(billing,/api\.request<SubscriptionStatus>\('\/billing\/subscription'\)/)
   assert.match(billing,/\/billing\/subscription\/refund-request/)
   assert.match(billing,/\/billing\/subscription\/cancel-request/)
-  assert.match(billing,/refund_provider_status/)
-  assert.match(billing,/Reembolso aguardando autorização no Asaas/)
-  assert.match(billing,/Reembolso em processamento no Asaas/)
-  assert.match(billing,/Reembolso precisa de conferência/)
-  assert.match(billing,/Reembolso confirmado/)
+  assert.match(billing,/refund_deadline_at/)
+  assert.match(billing,/Solicitação de reembolso recebida/)
+  assert.match(billing,/Seu reembolso será concluído em até 24 horas\./)
+  assert.match(billing,/sua conta voltará automaticamente ao modo gratuito/)
+  assert.match(billing,/window\.setInterval\(\(\)=>void loadSubscription\(true\),10_000\)/)
+  assert.match(billing,/void syncSession\(\)\.catch/)
+  assert.match(css,/\.account-refund-timeline/)
+  assert.match(css,/background: #fff4c2/)
   assert.match(billing,/membership\?\.role === 'owner' \|\| membership\?\.role === 'admin'/)
 })
 
-test('pending refund is never presented as completed', () => {
+test('pending refund never exposes internal Asaas approval details to the customer', () => {
   const billing = read('src/features/billing/SubscriptionManagement.tsx')
-  const pendingBlock = billing.slice(
-    billing.indexOf('{refundPending&&<div'),
-    billing.indexOf('{refundReconcile&&<div'),
+  const waitingBlock = billing.slice(
+    billing.indexOf('{refundWaiting&&<div'),
+    billing.indexOf('{refundCompleted&&<div'),
   )
 
-  assert.match(pendingBlock,/Reembolso em processamento no Asaas|Reembolso enviado ao Asaas/)
-  assert.match(pendingBlock,/só será considerado devolvido quando o provedor concluir|aguardando a confirmação financeira do Asaas/)
-  assert.doesNotMatch(pendingBlock,/Reembolso confirmado/)
+  assert.match(waitingBlock,/até 24 horas/)
+  assert.doesNotMatch(waitingBlock,/Token|aprovação manual|reconcile_required|Asaas criou o estorno/)
+  assert.match(billing,/Reembolso concluído/)
+  assert.match(billing,/conta voltou ao modo gratuito/)
 })

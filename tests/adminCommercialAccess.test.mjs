@@ -19,6 +19,11 @@ test('admin distinguishes commercial billing from administrative access', () => 
   assert.match(api, /commercial_provider_payment_id: string \| null/)
   assert.match(api, /commercial_provider_subscription_id: string \| null/)
 
+  assert.match(api, /commercial_contact_name: string \| null/)
+  assert.match(api, /commercial_contact_email: string \| null/)
+  assert.match(api, /commercial_contact_phone: string \| null/)
+  assert.match(api, /commercial_refund_deadline_at: string \| null/)
+
   assert.match(page, /basic: 'Básico'/)
   assert.match(page, /monthly: 'mensal'/)
   assert.match(page, /return 'Pago'/)
@@ -40,4 +45,23 @@ test('admin does not relabel a commercial subscription as an administrative gran
   assert.match(commercialBlock, /commercial_access_active/)
   assert.match(commercialBlock, /commercial_subscription_status/)
   assert.doesNotMatch(commercialBlock, /setPlatformBusinessAccess/)
+})
+
+test('admin has a retention-first refund queue with direct contact data and manual Asaas approval', () => {
+  const page = read('src/features/auth/AdminPage.tsx')
+  const css = read('src/features/auth/AdminPage.css')
+
+  assert.match(page,/Reembolsos aguardando ação/)
+  assert.match(page,/Aprovação manual no Asaas/)
+  assert.match(page,/commercial_contact_name/)
+  assert.match(page,/commercial_contact_email/)
+  assert.match(page,/commercial_contact_phone/)
+  assert.match(page,/mailto:/)
+  assert.match(page,/tel:\+55/)
+  assert.match(page,/Concluir até/)
+  assert.match(page,/Pagamento Asaas:/)
+  assert.match(page,/tentar retenção/)
+  assert.match(page,/autorize manualmente no Asaas dentro do prazo/)
+  assert.match(css,/\.platform-admin__refund-queue/)
+  assert.match(css,/background: #fff8da/)
 })
