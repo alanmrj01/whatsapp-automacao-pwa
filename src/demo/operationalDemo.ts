@@ -49,24 +49,42 @@ export function shiftDemoDate(value: string, days: number) {
   return localDateKey(date)
 }
 
-const DEMO_FIXED_MONTH_DAYS = new Set([2,4,6,9,11,15,17,18,20,22,24,26])
+const DEMO_FIXED_MONTH_DAYS = [4,6,9,11,13,15,17,18,20,22,24,26] as const
 
-export function demoMonthDate(value: string, day: number, reservedDates: readonly string[] = []) {
+export function resolveDemoMonthDates(
+  value: string,
+  days: readonly number[],
+  reservedDates: readonly string[] = [],
+) {
   const monthPrefix = value.slice(0, 8)
-  const candidate = `${monthPrefix}${String(day).padStart(2, '0')}`
-  if (!reservedDates.includes(candidate)) return candidate
+  const fixedDays = new Set(days)
+  const occupiedDates = new Set(reservedDates)
+  const resolved: Record<number,string> = {}
 
-  for (let distance = 1; distance <= 31; distance += 1) {
-    for (const offset of [distance, -distance]) {
-      const shifted = shiftDemoDate(candidate, offset)
-      if (!shifted.startsWith(monthPrefix)) continue
-      if (reservedDates.includes(shifted)) continue
-      if (DEMO_FIXED_MONTH_DAYS.has(Number(shifted.slice(-2)))) continue
-      return shifted
+  for (const day of days) {
+    const candidate = `${monthPrefix}${String(day).padStart(2, '0')}`
+    let selected = candidate
+
+    if (occupiedDates.has(candidate)) {
+      selected = ''
+      for (let distance = 1; distance <= 31 && !selected; distance += 1) {
+        for (const offset of [distance, -distance]) {
+          const shifted = shiftDemoDate(candidate, offset)
+          if (!shifted.startsWith(monthPrefix)) continue
+          if (occupiedDates.has(shifted)) continue
+          if (fixedDays.has(Number(shifted.slice(-2)))) continue
+          selected = shifted
+          break
+        }
+      }
     }
+
+    if (!selected) throw new Error('Unable to place demo appointment date safely')
+    resolved[day] = selected
+    occupiedDates.add(selected)
   }
 
-  throw new Error('Unable to place demo appointment date safely')
+  return resolved
 }
 
 export function demoDateLabel(value: string) {
@@ -77,11 +95,17 @@ export function demoDateLabel(value: string) {
 }
 
 export const demoToday = localDateKey(new Date())
+export const demoPastDate = shiftDemoDate(demoToday, -2)
 export const demoTomorrow = shiftDemoDate(demoToday, 1)
 export const demoBookingDate2 = shiftDemoDate(demoToday, 5)
 export const demoRescheduleDate = shiftDemoDate(demoToday, 6)
-const demoReservedDates = [demoToday, demoBookingDate2, demoRescheduleDate] as const
-const currentDemoMonthDate = (day: number) => demoMonthDate(demoToday, day, demoReservedDates)
+const demoReservedDates = [demoPastDate, demoToday, demoBookingDate2, demoRescheduleDate] as const
+const resolvedDemoMonthDates = resolveDemoMonthDates(demoToday, DEMO_FIXED_MONTH_DAYS, demoReservedDates)
+const currentDemoMonthDate = (day: number) => {
+  const value = resolvedDemoMonthDates[day]
+  if (!value) throw new Error('Unknown demo month date')
+  return value
+}
 export const demoBusinessName = 'PEMA Ar Condicionado'
 
 const demoTodayLabel = demoDateLabel(demoToday)
@@ -153,7 +177,7 @@ export const demoConversations: DemoConversation[] = [
 ]
 
 export const demoAppointments: DemoAppointment[] = [
-  {id:'appointment-28',date:currentDemoMonthDate(2),time:'08:00',customer:'Mercado São Lucas',phone:'(12) 99110-1010',service:'Manutenção preventiva',technician:'Marina',status:'completed',notes:'Preventiva em dois splits da área de vendas.',conversationId:'conversation-5'},
+  {id:'appointment-28',date:demoPastDate,time:'08:00',customer:'Mercado São Lucas',phone:'(12) 99110-1010',service:'Manutenção preventiva',technician:'Marina',status:'completed',notes:'Preventiva em dois splits da área de vendas.',conversationId:'conversation-5'},
   {id:'appointment-29',date:currentDemoMonthDate(4),time:'10:00',customer:'Carlos Mendes',phone:'(12) 99941-0101',service:'Diagnóstico técnico',technician:'João',status:'completed',notes:'Equipamento liga, mas não está refrigerando.',conversationId:'conversation-1'},
   {id:'appointment-30',date:currentDemoMonthDate(4),time:'13:30',customer:'Clínica Sorriso',phone:'(12) 99110-1313',service:'Higienização',technician:'Marina',status:'completed',notes:'Higienização de dois aparelhos split.',conversationId:'conversation-3'},
   {id:'appointment-1',date:demoToday,time:'16:00',customer:'Loja Centro',phone:'(12) 99545-0505',service:'Manutenção preventiva',technician:'João',status:'confirmed',notes:'Revisar três aparelhos no endereço informado.',conversationId:'conversation-5'},
@@ -166,13 +190,14 @@ export const demoAppointments: DemoAppointment[] = [
   {id:'appointment-9',date:currentDemoMonthDate(11),time:'09:00',customer:'Rafael Lima',phone:'(12) 99436-0606',service:'Visita técnica',technician:'João',status:'completed',notes:'Verificar ruído informado pelo cliente.',conversationId:'conversation-6'},
 
   {id:'appointment-10',date:currentDemoMonthDate(11),time:'14:00',customer:'Academia Movimento',phone:'(12) 99110-3030',service:'Manutenção preventiva',technician:'Marina',status:'completed',notes:'Preventiva programada em quatro equipamentos.',conversationId:'conversation-5'},
-  {id:'appointment-11',date:currentDemoMonthDate(17),time:'10:30',customer:'Juliana Rocha',phone:'(12) 99763-0303',service:'Higienização',technician:'João',status:'completed',notes:'Higienização de um aparelho split.',conversationId:'conversation-3'},
+  {id:'appointment-11',date:currentDemoMonthDate(13),time:'10:30',customer:'Juliana Rocha',phone:'(12) 99763-0303',service:'Higienização',technician:'João',status:'completed',notes:'Higienização de um aparelho split.',conversationId:'conversation-3'},
   {id:'appointment-12',date:currentDemoMonthDate(15),time:'08:00',customer:'Farmácia Central',phone:'(12) 99110-3131',service:'Diagnóstico técnico',technician:'Marina',status:'completed',notes:'Avaliar baixa refrigeração no salão.',conversationId:'conversation-1'},
   {id:'appointment-13',date:currentDemoMonthDate(15),time:'10:30',customer:'Condomínio Horizonte',phone:'(12) 99110-3232',service:'Limpeza preventiva',technician:'João',status:'completed',notes:'Atendimento na sala administrativa.',conversationId:'conversation-4'},
 
   {id:'appointment-14',date:currentDemoMonthDate(15),time:'13:30',customer:'Restaurante da Praça',phone:'(12) 99110-5050',service:'Manutenção corretiva',technician:'Marina',status:'completed',notes:'Equipamento da cozinha com baixa refrigeração.',conversationId:'conversation-1'},
   {id:'appointment-15',date:currentDemoMonthDate(15),time:'16:00',customer:'Ótica Visão',phone:'(12) 99110-5151',service:'Higienização',technician:'João',status:'completed',notes:'Higienização preventiva do salão.',conversationId:'conversation-3'},
   {id:'appointment-2',date:demoBookingDate2,time:'14:30',customer:'Juliana Rocha',phone:'(12) 99763-0303',service:'Higienização',technician:'João',status:'confirmed',notes:'Higienização de um aparelho split.',conversationId:'conversation-3'},
+  {id:'appointment-32',date:currentDemoMonthDate(17),time:'08:30',customer:'Escola Pinheiros',phone:'(12) 99110-9494',service:'Higienização',technician:'João',status:'completed',notes:'Higienização preventiva da sala dos professores.',conversationId:'conversation-3'},
   {id:'appointment-17',date:currentDemoMonthDate(18),time:'09:00',customer:'Pet Shop Amigo',phone:'(12) 99110-5252',service:'Visita técnica',technician:'Marina',status:'completed',notes:'Avaliar aparelho da recepção.',conversationId:'conversation-4'},
 
   {id:'appointment-18',date:currentDemoMonthDate(20),time:'14:00',customer:'Café Estação',phone:'(12) 99110-6060',service:'Instalação de split',technician:'João',status:'completed',notes:'Instalação em área de atendimento.',conversationId:'conversation-2'},
