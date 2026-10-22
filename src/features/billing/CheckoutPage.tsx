@@ -28,7 +28,7 @@ import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { BrandMark } from '../../components/BrandMark'
 import { api } from '../../lib/api'
 import { ApiError } from '../../lib/httpClient'
-import { trackEvent } from '../../lib/tracking'
+import { trackEvent, trackEventOnce } from '../../lib/tracking'
 import { useAuth } from '../auth/useAuth'
 import {
   billingCycles,
@@ -274,12 +274,27 @@ export function CheckoutPage() {
     } finally {
       setProfileLoading(false)
     }
-  },[cycleParam,planId])
+  },[cycleParam,planId,user?.active_business_id,user?.id])
 
   useEffect(()=>{
     if(!validSelection)return
+    trackEventOnce(
+      `checkout_started:${user?.active_business_id ?? 'unknown'}:${planId}:${cycleParam}`,
+      'checkout_started',
+      {
+        plan: planId,
+        billing_cycle: cycleParam,
+        funnel_stage: 'checkout_started',
+      },
+      {
+        surface: 'checkout',
+        businessId: user?.active_business_id,
+        userId: user?.id,
+      },
+      'session',
+    )
     void loadProfile()
-  },[loadProfile,validSelection])
+  },[cycleParam,loadProfile,planId,user?.active_business_id,user?.id,validSelection])
 
   const prepareCheckout=useCallback(async({
     method,
@@ -325,6 +340,24 @@ export function CheckoutPage() {
       setPixStatus(method==='pix'||method==='pix_automatic'?'active':null)
       setInitialPaymentReceived(nextCheckout.initial_payment_received===true)
       setCopyState('idle')
+      trackEventOnce(
+        `checkout_created:${nextCheckout.checkout_id}`,
+        'checkout_created',
+        {
+          checkout_id: nextCheckout.checkout_id,
+          plan: nextCheckout.plan,
+          billing_cycle: nextCheckout.cycle,
+          amount_cents: nextCheckout.amount_cents,
+          payment_method: nextCheckout.payment_method,
+          checkout_mode: nextCheckout.checkout_mode ?? null,
+          funnel_stage: 'checkout_created',
+        },
+        {
+          surface: 'checkout',
+          businessId: user?.active_business_id,
+          userId: user?.id,
+        },
+      )
       return nextCheckout
     } catch (caught) {
       if(caught instanceof ApiError&&caught.status===401) {
@@ -474,6 +507,22 @@ export function CheckoutPage() {
         setInitialPaymentReceived(current.initial_payment_received)
         if(current.status==='paid') {
           paidPixCheckoutIds.current.add(checkoutId)
+          trackEventOnce(
+            `payment_confirmed:${checkoutId}`,
+            'payment_confirmed',
+            {
+              checkout_id: checkoutId,
+              plan: current.plan,
+              billing_cycle: current.cycle,
+              payment_method: current.payment_method,
+              funnel_stage: 'subscription_paid',
+            },
+            {
+              surface: 'checkout',
+              businessId: user?.active_business_id,
+              userId: user?.id,
+            },
+          )
           latestPixState.current={
             ...latestPixState.current,
             status:'paid',
@@ -501,7 +550,7 @@ export function CheckoutPage() {
       cancelled=true
       if(timer)window.clearTimeout(timer)
     }
-  },[checkout?.checkout_id,checkout?.payment_method,expired,navigate,syncSession])
+  },[checkout?.checkout_id,checkout?.payment_method,expired,navigate,syncSession,user?.active_business_id,user?.id])
 
   const identificationComplete=
     payerName.trim().length>=2&&
@@ -716,6 +765,23 @@ export function CheckoutPage() {
           setSubmitting(false)
           return
         }
+        trackEventOnce(
+          `checkout_redirected:${cardCheckout.checkout_id}`,
+          'checkout_redirected',
+          {
+            checkout_id: cardCheckout.checkout_id,
+            plan: cardCheckout.plan,
+            billing_cycle: cardCheckout.cycle,
+            amount_cents: cardCheckout.amount_cents,
+            payment_method: 'credit_card',
+            checkout_mode: 'hosted',
+          },
+          {
+            surface: 'checkout',
+            businessId: user?.active_business_id,
+            userId: user?.id,
+          },
+        )
         window.location.assign(cardCheckout.checkout_url)
         return
       }
@@ -746,6 +812,23 @@ export function CheckoutPage() {
         }),
       })
       setCcv('')
+      trackEventOnce(
+        `payment_submitted:${cardCheckout.checkout_id}`,
+        'payment_submitted',
+        {
+          checkout_id: cardCheckout.checkout_id,
+          plan: cardCheckout.plan,
+          billing_cycle: cardCheckout.cycle,
+          amount_cents: cardCheckout.amount_cents,
+          payment_method: 'credit_card',
+          checkout_mode: 'native',
+        },
+        {
+          surface: 'checkout',
+          businessId: user?.active_business_id,
+          userId: user?.id,
+        },
+      )
       navigate(`/app/checkout/retorno?state=success&checkout=${cardCheckout.checkout_id}`,{replace:true})
     } catch (caught) {
       setCcv('')
