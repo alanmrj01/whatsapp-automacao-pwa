@@ -139,6 +139,7 @@ export function trackEvent(
       user_id: context.userId ?? null,
       referrer: document.referrer || null,
       properties: {
+        event_time_ms: Date.now(),
         ...attributionProperties(),
         ...Object.fromEntries(Object.entries(properties).filter(([,value])=>value !== undefined)),
       },
