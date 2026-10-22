@@ -27,6 +27,32 @@ export function CheckoutReturnPage() {
   const validCheckout = useMemo(()=>!!checkoutId&&UUID_PATTERN.test(checkoutId),[checkoutId])
 
   useEffect(()=>{
+    if (!validCheckout || !checkoutId) return
+    const terminalReason =
+      browserState === 'canceled' || status === 'canceled'
+        ? 'canceled'
+        : browserState === 'expired' || status === 'expired'
+          ? 'expired'
+          : status === 'failed'
+            ? 'failed'
+            : null
+    if (!terminalReason) return
+    trackEventOnce(
+      `payment_terminal:${checkoutId}:${terminalReason}`,
+      'payment_failed',
+      {
+        checkout_id:checkoutId,
+        reason:terminalReason,
+        funnel_stage:'payment_not_completed',
+      },
+      {
+        surface:'checkout_return',
+        businessId:membership?.business_id,
+      },
+    )
+  },[browserState,checkoutId,membership?.business_id,status,validCheckout])
+
+  useEffect(()=>{
     if (!validCheckout || !checkoutId || browserState !== 'success') return
     let cancelled = false
     let timer:number | undefined
