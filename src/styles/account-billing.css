@@ -155,6 +155,32 @@
   line-height: 1.5;
 }
 
+.account-refund-timeline {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid #d79b00;
+  border-radius: var(--radius-md);
+  background: #fff4c2;
+  color: #5c4300;
+  box-shadow: 0 0 0 2px rgb(215 155 0 / 8%);
+}
+
+.account-refund-timeline strong {
+  font-size: .96rem;
+}
+
+.account-refund-timeline span {
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.account-refund-timeline small {
+  color: #6b5212;
+  font-size: .78rem;
+  line-height: 1.45;
+}
+
 .account-financial-action {
   width: 100%;
   justify-content: center;
