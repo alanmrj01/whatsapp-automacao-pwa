@@ -14,6 +14,9 @@ test('first-party tracking delegates durable identity to HttpOnly backend cookie
   assert.match(tracking, /occurred_at/)
   assert.match(tracking, /event_id/)
   assert.match(tracking, /attribution_version:\s*3/)
+  for (const key of ['campaign_id','adset_id','ad_id','placement','fbclid','gclid']) {
+    assert.match(tracking, new RegExp(key))
+  }
   assert.match(tracking, /trackEventOnce/)
 })
 
