@@ -194,6 +194,14 @@ export function CheckoutPage() {
     method:'pix',
     key:crypto.randomUUID(),
   })
+  const trackingIdentity=useRef({
+    businessId:user?.active_business_id,
+    userId:user?.id,
+  })
+  trackingIdentity.current={
+    businessId:user?.active_business_id,
+    userId:user?.id,
+  }
   const finalizing=useRef(false)
   const viewedPixCheckoutIds=useRef(new Set<string>())
   const abandonedPixCheckoutIds=useRef(new Set<string>())
@@ -274,7 +282,7 @@ export function CheckoutPage() {
     } finally {
       setProfileLoading(false)
     }
-  },[cycleParam,planId,user?.active_business_id,user?.id])
+  },[cycleParam,planId])
 
   useEffect(()=>{
     if(!validSelection)return
@@ -354,8 +362,8 @@ export function CheckoutPage() {
         },
         {
           surface: 'checkout',
-          businessId: user?.active_business_id,
-          userId: user?.id,
+          businessId: trackingIdentity.current.businessId,
+          userId: trackingIdentity.current.userId,
         },
       )
       return nextCheckout
@@ -386,7 +394,7 @@ export function CheckoutPage() {
     } finally {
       setCheckoutLoading(false)
     }
-  },[cycleParam,planId,user?.active_business_id,user?.id])
+  },[cycleParam,planId])
 
   const expiration=checkout?.payment_method==='pix'||checkout?.payment_method==='pix_automatic'
     ?checkout.pix_expires_at??checkout.expires_at
