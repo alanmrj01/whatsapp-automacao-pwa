@@ -1,6 +1,6 @@
 import { Eye, EyeOff } from 'lucide-react'
 import { useRef, useState, type FormEvent } from 'react'
-import { trackEvent } from '../../lib/tracking'
+import { trackEvent, trackEventOnce } from '../../lib/tracking'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { BrandMark } from '../../components/BrandMark'
 import { LoadingState } from '../../components/LoadingState'
@@ -58,7 +58,7 @@ export function SignupPage() {
       const createdUser = await auth.signup(businessName.trim(), email.trim(), password, key)
       idempotencyKey.current = ''
       const createdMembership = createdUser.memberships.find(item=>item.business_id===createdUser.active_business_id)
-      trackEvent('signup_completed', {
+      trackEventOnce(`signup_completed:${createdUser.active_business_id}`, 'signup_completed', {
         funnel_stage:'registration_completed',
         access_mode:createdMembership?.access_mode ?? null,
         account_state:createdMembership?.account_state ?? null,
