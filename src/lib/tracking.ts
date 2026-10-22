@@ -31,7 +31,22 @@ function newUuid() {
 function currentAttribution(): Record<string,string|number> {
   try {
     const params = new URLSearchParams(window.location.search)
-    const keys = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','fbclid','gclid']
+    const keys = [
+      'utm_source',
+      'utm_medium',
+      'utm_campaign',
+      'utm_content',
+      'utm_term',
+      'utm_id',
+      'utm_source_platform',
+      'utm_creative_format',
+      'campaign_id',
+      'adset_id',
+      'ad_id',
+      'placement',
+      'fbclid',
+      'gclid',
+    ]
     const value: Record<string,string|number> = {attribution_version: 3}
     for (const key of keys) {
       const item = params.get(key)
