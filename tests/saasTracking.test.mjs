@@ -4,18 +4,16 @@ import test from 'node:test'
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 
-test('first-party tracking persists visitor attribution and session identity', () => {
+test('first-party tracking delegates durable identity to HttpOnly backend cookies', () => {
   const tracking = read('src/lib/tracking.ts')
 
-  assert.match(tracking, /alovia_tracking_visitor_id_v1/)
-  assert.match(tracking, /alovia_tracking_session_id_v1/)
-  assert.match(tracking, /alovia_tracking_first_touch_v1/)
-  assert.match(tracking, /alovia_tracking_session_touch_v1/)
-  assert.match(tracking, /localStorage/)
-  assert.match(tracking, /sessionStorage/)
+  assert.match(tracking, /visitor_id:\s*null/)
+  assert.match(tracking, /session_id:\s*null/)
+  assert.match(tracking, /HttpOnly cookies/)
+  assert.doesNotMatch(tracking, /\b(localStorage|sessionStorage|indexedDB)\b/)
   assert.match(tracking, /occurred_at/)
   assert.match(tracking, /event_id/)
-  assert.match(tracking, /attribution_version:\s*2/)
+  assert.match(tracking, /attribution_version:\s*3/)
   assert.match(tracking, /trackEventOnce/)
 })
 
