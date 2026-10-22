@@ -81,7 +81,7 @@ export const demoTomorrow = shiftDemoDate(demoToday, 1)
 export const demoBookingDate2 = shiftDemoDate(demoToday, 5)
 export const demoRescheduleDate = shiftDemoDate(demoToday, 6)
 const demoReservedDates = [demoToday, demoBookingDate2, demoRescheduleDate] as const
-const currentDemoMonthDate = (day: number) => currentDemoMonthDate( day, demoReservedDates)
+const currentDemoMonthDate = (day: number) => demoMonthDate(demoToday, day, demoReservedDates)
 export const demoBusinessName = 'PEMA Ar Condicionado'
 
 const demoTodayLabel = demoDateLabel(demoToday)
