@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { demoAppointments, demoBookingDate2, demoConversations, demoDateLabel, demoOverview, demoRescheduleDate, demoToday, demoTomorrow, shiftDemoDate } from '../src/demo/operationalDemo.ts'
+import { demoAppointments, demoBookingDate2, demoConversations, demoDateLabel, demoOverview, demoRescheduleDate, demoToday, demoTomorrow, resolveDemoMonthDates, shiftDemoDate } from '../src/demo/operationalDemo.ts'
 import { DEMO_DATA_NOTICE, entitlementsFor, requirePaidAccess, UpgradeRequiredError } from '../src/features/access/entitlements.ts'
 import { deriveProductState } from '../src/features/product/deriveProductState.ts'
 import { zonedDateTimeToIso } from '../src/features/operations/timezone.ts'
@@ -203,6 +203,19 @@ test('demo dates roll with the current day instead of expiring on a fixed calend
   assert.doesNotMatch(preview,/Setembro 2026|8 de setembro de 2026/)
   assert.match(preview,/demoMonthLabel/)
   assert.match(preview,/demoDayLabel/)
+})
+
+test('demo month dates avoid collisions with today and rolling booking dates', () => {
+  const resolved = resolveDemoMonthDates(
+    '2026-10-22',
+    [15,17,18,20,22,24,26],
+    ['2026-10-20','2026-10-22','2026-10-27','2026-10-28'],
+  )
+  const dates = Object.values(resolved)
+
+  assert.equal(resolved[22],'2026-10-23')
+  assert.equal(new Set(dates).size,dates.length)
+  assert.ok(dates.every(date=>!['2026-10-20','2026-10-22','2026-10-27','2026-10-28'].includes(date)))
 })
 
 test('demo agenda is static, opens details and routes every mutation to upgrade', () => {

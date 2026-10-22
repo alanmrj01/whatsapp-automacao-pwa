@@ -49,8 +49,42 @@ export function shiftDemoDate(value: string, days: number) {
   return localDateKey(date)
 }
 
-function demoMonthDate(value: string, day: number) {
-  return `${value.slice(0, 8)}${String(day).padStart(2, '0')}`
+const DEMO_FIXED_MONTH_DAYS = [4,6,9,11,13,15,17,18,20,22,24,26] as const
+
+export function resolveDemoMonthDates(
+  value: string,
+  days: readonly number[],
+  reservedDates: readonly string[] = [],
+) {
+  const monthPrefix = value.slice(0, 8)
+  const fixedDays = new Set(days)
+  const occupiedDates = new Set(reservedDates)
+  const resolved: Record<number,string> = {}
+
+  for (const day of days) {
+    const candidate = `${monthPrefix}${String(day).padStart(2, '0')}`
+    let selected = candidate
+
+    if (occupiedDates.has(candidate)) {
+      selected = ''
+      for (let distance = 1; distance <= 31 && !selected; distance += 1) {
+        for (const offset of [distance, -distance]) {
+          const shifted = shiftDemoDate(candidate, offset)
+          if (!shifted.startsWith(monthPrefix)) continue
+          if (occupiedDates.has(shifted)) continue
+          if (fixedDays.has(Number(shifted.slice(-2)))) continue
+          selected = shifted
+          break
+        }
+      }
+    }
+
+    if (!selected) throw new Error('Unable to place demo appointment date safely')
+    resolved[day] = selected
+    occupiedDates.add(selected)
+  }
+
+  return resolved
 }
 
 export function demoDateLabel(value: string) {
@@ -61,9 +95,17 @@ export function demoDateLabel(value: string) {
 }
 
 export const demoToday = localDateKey(new Date())
+export const demoPastDate = shiftDemoDate(demoToday, -2)
 export const demoTomorrow = shiftDemoDate(demoToday, 1)
 export const demoBookingDate2 = shiftDemoDate(demoToday, 5)
 export const demoRescheduleDate = shiftDemoDate(demoToday, 6)
+const demoReservedDates = [demoPastDate, demoToday, demoBookingDate2, demoRescheduleDate] as const
+const resolvedDemoMonthDates = resolveDemoMonthDates(demoToday, DEMO_FIXED_MONTH_DAYS, demoReservedDates)
+const currentDemoMonthDate = (day: number) => {
+  const value = resolvedDemoMonthDates[day]
+  if (!value) throw new Error('Unknown demo month date')
+  return value
+}
 export const demoBusinessName = 'PEMA Ar Condicionado'
 
 const demoTodayLabel = demoDateLabel(demoToday)
@@ -135,40 +177,42 @@ export const demoConversations: DemoConversation[] = [
 ]
 
 export const demoAppointments: DemoAppointment[] = [
-  {id:'appointment-28',date:demoMonthDate(demoToday,2),time:'08:00',customer:'Mercado São Lucas',phone:'(12) 99110-1010',service:'Manutenção preventiva',technician:'Marina',status:'completed',notes:'Preventiva em dois splits da área de vendas.',conversationId:'conversation-5'},
-  {id:'appointment-29',date:demoMonthDate(demoToday,4),time:'10:00',customer:'Carlos Mendes',phone:'(12) 99941-0101',service:'Diagnóstico técnico',technician:'João',status:'completed',notes:'Equipamento liga, mas não está refrigerando.',conversationId:'conversation-1'},
-  {id:'appointment-30',date:demoMonthDate(demoToday,4),time:'13:30',customer:'Clínica Sorriso',phone:'(12) 99110-1313',service:'Higienização',technician:'Marina',status:'completed',notes:'Higienização de dois aparelhos split.',conversationId:'conversation-3'},
+  {id:'appointment-28',date:demoPastDate,time:'08:00',customer:'Mercado São Lucas',phone:'(12) 99110-1010',service:'Manutenção preventiva',technician:'Marina',status:'completed',notes:'Preventiva em dois splits da área de vendas.',conversationId:'conversation-5'},
+  {id:'appointment-29',date:currentDemoMonthDate(4),time:'10:00',customer:'Carlos Mendes',phone:'(12) 99941-0101',service:'Diagnóstico técnico',technician:'João',status:'completed',notes:'Equipamento liga, mas não está refrigerando.',conversationId:'conversation-1'},
+  {id:'appointment-30',date:currentDemoMonthDate(4),time:'13:30',customer:'Clínica Sorriso',phone:'(12) 99110-1313',service:'Higienização',technician:'Marina',status:'completed',notes:'Higienização de dois aparelhos split.',conversationId:'conversation-3'},
   {id:'appointment-1',date:demoToday,time:'16:00',customer:'Loja Centro',phone:'(12) 99545-0505',service:'Manutenção preventiva',technician:'João',status:'confirmed',notes:'Revisar três aparelhos no endereço informado.',conversationId:'conversation-5'},
 
-  {id:'appointment-5',date:demoMonthDate(demoToday,6),time:'08:30',customer:'Ana Paula',phone:'(12) 99872-0202',service:'Instalação de split',technician:'João',status:'completed',notes:'Instalação de split inverter de 18 mil BTUs.',conversationId:'conversation-2'},
-  {id:'appointment-6',date:demoMonthDate(demoToday,9),time:'08:00',customer:'Padaria Pão Quente',phone:'(12) 99654-0404',service:'Visita técnica',technician:'Marina',status:'completed',notes:'Avaliar quatro equipamentos da padaria.',conversationId:'conversation-4'},
-  {id:'appointment-7',date:demoMonthDate(demoToday,9),time:'10:30',customer:'Residencial Oliveira',phone:'(12) 99110-1515',service:'Carga de gás',technician:'João',status:'completed',notes:'Confirmar diagnóstico antes da carga.',conversationId:'conversation-1'},
+  {id:'appointment-5',date:currentDemoMonthDate(6),time:'08:30',customer:'Ana Paula',phone:'(12) 99872-0202',service:'Instalação de split',technician:'João',status:'completed',notes:'Instalação de split inverter de 18 mil BTUs.',conversationId:'conversation-2'},
+  {id:'appointment-6',date:currentDemoMonthDate(9),time:'08:00',customer:'Padaria Pão Quente',phone:'(12) 99654-0404',service:'Visita técnica',technician:'Marina',status:'completed',notes:'Avaliar quatro equipamentos da padaria.',conversationId:'conversation-4'},
+  {id:'appointment-7',date:currentDemoMonthDate(9),time:'10:30',customer:'Residencial Oliveira',phone:'(12) 99110-1515',service:'Carga de gás',technician:'João',status:'completed',notes:'Confirmar diagnóstico antes da carga.',conversationId:'conversation-1'},
 
-  {id:'appointment-8',date:demoMonthDate(demoToday,9),time:'13:30',customer:'Escritório Vale',phone:'(12) 99110-2020',service:'Higienização',technician:'Marina',status:'completed',notes:'Higienização de três evaporadoras.',conversationId:'conversation-3'},
-  {id:'appointment-9',date:demoMonthDate(demoToday,11),time:'09:00',customer:'Rafael Lima',phone:'(12) 99436-0606',service:'Visita técnica',technician:'João',status:'completed',notes:'Verificar ruído informado pelo cliente.',conversationId:'conversation-6'},
+  {id:'appointment-8',date:currentDemoMonthDate(9),time:'13:30',customer:'Escritório Vale',phone:'(12) 99110-2020',service:'Higienização',technician:'Marina',status:'completed',notes:'Higienização de três evaporadoras.',conversationId:'conversation-3'},
+  {id:'appointment-9',date:currentDemoMonthDate(11),time:'09:00',customer:'Rafael Lima',phone:'(12) 99436-0606',service:'Visita técnica',technician:'João',status:'completed',notes:'Verificar ruído informado pelo cliente.',conversationId:'conversation-6'},
 
-  {id:'appointment-10',date:demoMonthDate(demoToday,11),time:'14:00',customer:'Academia Movimento',phone:'(12) 99110-3030',service:'Manutenção preventiva',technician:'Marina',status:'completed',notes:'Preventiva programada em quatro equipamentos.',conversationId:'conversation-5'},
-  {id:'appointment-11',date:demoMonthDate(demoToday,13),time:'10:30',customer:'Juliana Rocha',phone:'(12) 99763-0303',service:'Higienização',technician:'João',status:'completed',notes:'Higienização de um aparelho split.',conversationId:'conversation-3'},
-  {id:'appointment-12',date:demoMonthDate(demoToday,15),time:'08:00',customer:'Farmácia Central',phone:'(12) 99110-3131',service:'Diagnóstico técnico',technician:'Marina',status:'completed',notes:'Avaliar baixa refrigeração no salão.',conversationId:'conversation-1'},
-  {id:'appointment-13',date:demoMonthDate(demoToday,15),time:'10:30',customer:'Condomínio Horizonte',phone:'(12) 99110-3232',service:'Limpeza preventiva',technician:'João',status:'completed',notes:'Atendimento na sala administrativa.',conversationId:'conversation-4'},
+  {id:'appointment-10',date:currentDemoMonthDate(11),time:'14:00',customer:'Academia Movimento',phone:'(12) 99110-3030',service:'Manutenção preventiva',technician:'Marina',status:'completed',notes:'Preventiva programada em quatro equipamentos.',conversationId:'conversation-5'},
+  {id:'appointment-11',date:currentDemoMonthDate(13),time:'10:30',customer:'Juliana Rocha',phone:'(12) 99763-0303',service:'Higienização',technician:'João',status:'completed',notes:'Higienização de um aparelho split.',conversationId:'conversation-3'},
+  {id:'appointment-12',date:currentDemoMonthDate(15),time:'08:00',customer:'Farmácia Central',phone:'(12) 99110-3131',service:'Diagnóstico técnico',technician:'Marina',status:'completed',notes:'Avaliar baixa refrigeração no salão.',conversationId:'conversation-1'},
+  {id:'appointment-13',date:currentDemoMonthDate(15),time:'10:30',customer:'Condomínio Horizonte',phone:'(12) 99110-3232',service:'Limpeza preventiva',technician:'João',status:'completed',notes:'Atendimento na sala administrativa.',conversationId:'conversation-4'},
 
-  {id:'appointment-14',date:demoMonthDate(demoToday,15),time:'13:30',customer:'Restaurante da Praça',phone:'(12) 99110-5050',service:'Manutenção corretiva',technician:'Marina',status:'completed',notes:'Equipamento da cozinha com baixa refrigeração.',conversationId:'conversation-1'},
-  {id:'appointment-15',date:demoMonthDate(demoToday,15),time:'16:00',customer:'Ótica Visão',phone:'(12) 99110-5151',service:'Higienização',technician:'João',status:'completed',notes:'Higienização preventiva do salão.',conversationId:'conversation-3'},
+  {id:'appointment-14',date:currentDemoMonthDate(15),time:'13:30',customer:'Restaurante da Praça',phone:'(12) 99110-5050',service:'Manutenção corretiva',technician:'Marina',status:'completed',notes:'Equipamento da cozinha com baixa refrigeração.',conversationId:'conversation-1'},
+  {id:'appointment-15',date:currentDemoMonthDate(15),time:'16:00',customer:'Ótica Visão',phone:'(12) 99110-5151',service:'Higienização',technician:'João',status:'completed',notes:'Higienização preventiva do salão.',conversationId:'conversation-3'},
   {id:'appointment-2',date:demoBookingDate2,time:'14:30',customer:'Juliana Rocha',phone:'(12) 99763-0303',service:'Higienização',technician:'João',status:'confirmed',notes:'Higienização de um aparelho split.',conversationId:'conversation-3'},
-  {id:'appointment-17',date:demoMonthDate(demoToday,18),time:'09:00',customer:'Pet Shop Amigo',phone:'(12) 99110-5252',service:'Visita técnica',technician:'Marina',status:'completed',notes:'Avaliar aparelho da recepção.',conversationId:'conversation-4'},
+  {id:'appointment-32',date:currentDemoMonthDate(17),time:'08:30',customer:'Escola Pinheiros',phone:'(12) 99110-9494',service:'Higienização',technician:'João',status:'completed',notes:'Higienização preventiva da sala dos professores.',conversationId:'conversation-3'},
+  {id:'appointment-17',date:currentDemoMonthDate(18),time:'09:00',customer:'Pet Shop Amigo',phone:'(12) 99110-5252',service:'Visita técnica',technician:'Marina',status:'completed',notes:'Avaliar aparelho da recepção.',conversationId:'conversation-4'},
 
-  {id:'appointment-18',date:demoMonthDate(demoToday,18),time:'14:00',customer:'Café Estação',phone:'(12) 99110-6060',service:'Instalação de split',technician:'João',status:'completed',notes:'Instalação em área de atendimento.',conversationId:'conversation-2'},
+  {id:'appointment-18',date:currentDemoMonthDate(20),time:'14:00',customer:'Café Estação',phone:'(12) 99110-6060',service:'Instalação de split',technician:'João',status:'completed',notes:'Instalação em área de atendimento.',conversationId:'conversation-2'},
   {id:'appointment-3',date:demoRescheduleDate,time:'10:00',customer:'Rafael Lima',phone:'(12) 99436-0606',service:'Visita técnica',technician:'Marina',status:'confirmed',rescheduled:true,notes:'Reagendado a pedido do cliente; endereço mantido.',conversationId:'conversation-6'},
   {id:'appointment-20',date:demoToday,time:'08:00',customer:'Salão Bella',phone:'(12) 99110-6262',service:'Carga de gás',technician:'João',status:'confirmed',notes:'Diagnóstico prévio já realizado.',conversationId:'conversation-1'},
 
   {id:'appointment-21',date:demoToday,time:'10:30',customer:'Hotel Jardim',phone:'(12) 99110-8080',service:'Manutenção preventiva',technician:'Marina',status:'confirmed',notes:'Preventiva nos equipamentos da recepção.',conversationId:'conversation-5'},
   {id:'appointment-22',date:demoToday,time:'13:30',customer:'Studio Pilates',phone:'(12) 99110-8181',service:'Higienização',technician:'João',status:'confirmed',notes:'Higienização de dois splits.',conversationId:'conversation-3'},
-  {id:'appointment-23',date:demoMonthDate(demoToday,22),time:'08:30',customer:'Papelaria Avenida',phone:'(12) 99110-8282',service:'Diagnóstico técnico',technician:'Marina',status:'confirmed',notes:'Verificar equipamento sem refrigeração.',conversationId:'conversation-1'},
-  {id:'appointment-24',date:demoMonthDate(demoToday,24),time:'08:30',customer:'Consultório Vida',phone:'(12) 99110-8383',service:'Manutenção preventiva',technician:'João',status:'confirmed',notes:'Preventiva de rotina.',conversationId:'conversation-5'},
+  {id:'appointment-23',date:currentDemoMonthDate(22),time:'08:30',customer:'Papelaria Avenida',phone:'(12) 99110-8282',service:'Diagnóstico técnico',technician:'Marina',status:'confirmed',notes:'Verificar equipamento sem refrigeração.',conversationId:'conversation-1'},
+  {id:'appointment-24',date:currentDemoMonthDate(24),time:'08:30',customer:'Consultório Vida',phone:'(12) 99110-8383',service:'Manutenção preventiva',technician:'João',status:'confirmed',notes:'Preventiva de rotina.',conversationId:'conversation-5'},
 
-  {id:'appointment-25',date:demoMonthDate(demoToday,24),time:'11:30',customer:'Oficina Norte',phone:'(12) 99110-9090',service:'Visita técnica',technician:'João',status:'confirmed',notes:'Diagnóstico concluído.',conversationId:'conversation-4'},
-  {id:'appointment-26',date:demoMonthDate(demoToday,24),time:'15:00',customer:'Boutique Bela',phone:'(12) 99110-9191',service:'Higienização',technician:'Marina',status:'confirmed',notes:'Higienização concluída.',conversationId:'conversation-3'},
-  {id:'appointment-27',date:demoMonthDate(demoToday,24),time:'17:00',customer:'Auto Peças Sul',phone:'(12) 99110-9292',service:'Manutenção corretiva',technician:'João',status:'confirmed',notes:'Atendimento concluído.',conversationId:'conversation-1'},
+  {id:'appointment-25',date:currentDemoMonthDate(24),time:'11:30',customer:'Oficina Norte',phone:'(12) 99110-9090',service:'Visita técnica',technician:'João',status:'confirmed',notes:'Diagnóstico concluído.',conversationId:'conversation-4'},
+  {id:'appointment-26',date:currentDemoMonthDate(24),time:'15:00',customer:'Boutique Bela',phone:'(12) 99110-9191',service:'Higienização',technician:'Marina',status:'confirmed',notes:'Higienização concluída.',conversationId:'conversation-3'},
+  {id:'appointment-27',date:currentDemoMonthDate(24),time:'17:00',customer:'Auto Peças Sul',phone:'(12) 99110-9292',service:'Manutenção corretiva',technician:'João',status:'confirmed',notes:'Atendimento concluído.',conversationId:'conversation-1'},
+  {id:'appointment-31',date:currentDemoMonthDate(26),time:'09:30',customer:'Escola Horizonte',phone:'(12) 99110-9393',service:'Manutenção preventiva',technician:'Marina',status:'confirmed',notes:'Preventiva programada para a sala administrativa.',conversationId:'conversation-5'},
 ]
 
 export const demoOverview = {
