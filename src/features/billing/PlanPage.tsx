@@ -1,5 +1,6 @@
 import { Check, ChevronLeft } from 'lucide-react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { SubscriptionManagement } from './SubscriptionManagement'
 import {
   billingCycles,
   cyclePrice,
@@ -111,5 +112,6 @@ export function PlanPage() {
     </section>
 
     <p className="plan-footnote">Você confere plano, período e valor novamente antes de pagar. Basic inclui 7 dias de garantia.</p>
+    <SubscriptionManagement />
   </div>
 }
