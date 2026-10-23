@@ -28,7 +28,7 @@ import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { BrandMark } from '../../components/BrandMark'
 import { api } from '../../lib/api'
 import { ApiError } from '../../lib/httpClient'
-import { trackEvent } from '../../lib/tracking'
+import { trackEvent, trackEventOnce } from '../../lib/tracking'
 import { useAuth } from '../auth/useAuth'
 import {
   billingCycles,
@@ -194,6 +194,14 @@ export function CheckoutPage() {
     method:'pix',
     key:crypto.randomUUID(),
   })
+  const trackingIdentity=useRef({
+    businessId:user?.active_business_id,
+    userId:user?.id,
+  })
+  trackingIdentity.current={
+    businessId:user?.active_business_id,
+    userId:user?.id,
+  }
   const finalizing=useRef(false)
   const viewedPixCheckoutIds=useRef(new Set<string>())
   const abandonedPixCheckoutIds=useRef(new Set<string>())
@@ -266,6 +274,23 @@ export function CheckoutPage() {
       setPostalCode(current=>current||formatPostalCode(nextProfile.postal_code??''))
       setAddressNumber(current=>current||nextProfile.address_number||'')
     } catch (caught) {
+      trackEvent('checkout_profile_failed', {
+        reason: caught instanceof ApiError
+          ? caught.status===401
+            ? 'session_expired'
+            : caught.status===0
+              ? 'network_error'
+              : caught.status>=500
+                ? 'server_error'
+                : `http_${caught.status}`
+          : 'unknown',
+        plan: planId,
+        billing_cycle: cycleParam,
+      }, {
+        surface:'checkout',
+        businessId:trackingIdentity.current.businessId,
+        userId:trackingIdentity.current.userId,
+      })
       if(caught instanceof ApiError&&caught.status===401) {
         setError('Sua sessão expirou. Entre novamente para continuar.')
       } else {
@@ -278,8 +303,23 @@ export function CheckoutPage() {
 
   useEffect(()=>{
     if(!validSelection)return
+    trackEventOnce(
+      `checkout_started:${user?.active_business_id ?? 'unknown'}:${planId}:${cycleParam}`,
+      'checkout_started',
+      {
+        plan: planId,
+        billing_cycle: cycleParam,
+        funnel_stage: 'checkout_started',
+      },
+      {
+        surface: 'checkout',
+        businessId: user?.active_business_id,
+        userId: user?.id,
+      },
+      'session',
+    )
     void loadProfile()
-  },[loadProfile,validSelection])
+  },[cycleParam,loadProfile,planId,user?.active_business_id,user?.id,validSelection])
 
   const prepareCheckout=useCallback(async({
     method,
@@ -325,8 +365,56 @@ export function CheckoutPage() {
       setPixStatus(method==='pix'||method==='pix_automatic'?'active':null)
       setInitialPaymentReceived(nextCheckout.initial_payment_received===true)
       setCopyState('idle')
+      trackEventOnce(
+        `checkout_created:${nextCheckout.checkout_id}`,
+        'checkout_created',
+        {
+          checkout_id: nextCheckout.checkout_id,
+          plan: nextCheckout.plan,
+          billing_cycle: nextCheckout.cycle,
+          amount_cents: nextCheckout.amount_cents,
+          payment_method: nextCheckout.payment_method,
+          checkout_mode: nextCheckout.checkout_mode ?? null,
+          funnel_stage: 'checkout_created',
+        },
+        {
+          surface: 'checkout',
+          businessId: trackingIdentity.current.businessId,
+          userId: trackingIdentity.current.userId,
+        },
+      )
       return nextCheckout
     } catch (caught) {
+      const failureReason =
+        caught instanceof ApiError&&caught.status===401
+          ? 'session_expired'
+          : caught instanceof ApiError&&method==='pix_automatic'&&caught.detail==='Pix Automatic authorization is being reconciled'
+            ? 'pix_automatic_reconciliation'
+            : caught instanceof ApiError&&caught.status===409&&method==='pix_automatic'
+              ? 'pix_automatic_unavailable'
+              : caught instanceof ApiError&&caught.status===409&&method==='pix'
+                ? 'pix_conflict'
+                : caught instanceof ApiError&&caught.status===409
+                  ? 'checkout_conflict'
+                  : caught instanceof ApiError&&caught.status===0
+                    ? 'network_error'
+                    : caught instanceof ApiError&&caught.status>=500
+                      ? 'server_error'
+                      : caught instanceof Error&&caught.message==='Invalid Pix checkout'
+                        ? 'invalid_provider_checkout'
+                        : caught instanceof Error&&caught.message==='Unexpected payment method'
+                          ? 'unexpected_payment_method'
+                          : 'unknown'
+      trackEvent('checkout_creation_failed', {
+        reason: failureReason,
+        plan: planId,
+        billing_cycle: cycleParam,
+        payment_method: method,
+      }, {
+        surface:'checkout',
+        businessId:trackingIdentity.current.businessId,
+        userId:trackingIdentity.current.userId,
+      })
       if(caught instanceof ApiError&&caught.status===401) {
         setError('Sua sessão expirou. Entre novamente para continuar.')
       } else if(
@@ -474,6 +562,22 @@ export function CheckoutPage() {
         setInitialPaymentReceived(current.initial_payment_received)
         if(current.status==='paid') {
           paidPixCheckoutIds.current.add(checkoutId)
+          trackEventOnce(
+            `payment_confirmed:${checkoutId}`,
+            'payment_confirmed',
+            {
+              checkout_id: checkoutId,
+              plan: current.plan,
+              billing_cycle: current.cycle,
+              payment_method: current.payment_method,
+              funnel_stage: 'subscription_paid',
+            },
+            {
+              surface: 'checkout',
+              businessId: user?.active_business_id,
+              userId: user?.id,
+            },
+          )
           latestPixState.current={
             ...latestPixState.current,
             status:'paid',
@@ -501,7 +605,7 @@ export function CheckoutPage() {
       cancelled=true
       if(timer)window.clearTimeout(timer)
     }
-  },[checkout?.checkout_id,checkout?.payment_method,expired,navigate,syncSession])
+  },[checkout?.checkout_id,checkout?.payment_method,expired,navigate,syncSession,user?.active_business_id,user?.id])
 
   const identificationComplete=
     payerName.trim().length>=2&&
@@ -696,6 +800,16 @@ export function CheckoutPage() {
         ccvDigits.length!==cardSecurityCodeLimit(cardDigits)
       )
     if(identificationInvalid||nativeCardInvalid) {
+      trackEvent('checkout_validation_failed', {
+        reason: identificationInvalid ? 'identification_invalid' : 'card_fields_invalid',
+        plan: planId,
+        billing_cycle: cycleParam,
+        payment_method: paymentMethod,
+      }, {
+        surface:'checkout',
+        businessId:user?.active_business_id,
+        userId:user?.id,
+      })
       setError('Confira os campos obrigatórios antes de continuar.')
       return
     }
@@ -712,19 +826,69 @@ export function CheckoutPage() {
       const checkoutMode=cardCheckout.checkout_mode??(cardCheckout.checkout_url?'hosted':null)
       if(checkoutMode==='hosted') {
         if(!cardCheckout.checkout_url||!isAsaasCheckoutUrl(cardCheckout.checkout_url)) {
+          trackEvent('checkout_creation_failed', {
+            reason:'hosted_checkout_url_invalid',
+            checkout_id:cardCheckout.checkout_id,
+            plan:cardCheckout.plan,
+            billing_cycle:cardCheckout.cycle,
+            payment_method:'credit_card',
+          }, {
+            surface:'checkout',
+            businessId:user?.active_business_id,
+            userId:user?.id,
+          })
           setError('O checkout seguro não está disponível agora.')
           setSubmitting(false)
           return
         }
+        trackEventOnce(
+          `checkout_redirected:${cardCheckout.checkout_id}`,
+          'checkout_redirected',
+          {
+            checkout_id: cardCheckout.checkout_id,
+            plan: cardCheckout.plan,
+            billing_cycle: cardCheckout.cycle,
+            amount_cents: cardCheckout.amount_cents,
+            payment_method: 'credit_card',
+            checkout_mode: 'hosted',
+          },
+          {
+            surface: 'checkout',
+            businessId: user?.active_business_id,
+            userId: user?.id,
+          },
+        )
         window.location.assign(cardCheckout.checkout_url)
         return
       }
       if(checkoutMode!=='native') {
+        trackEvent('checkout_creation_failed', {
+          reason:'checkout_mode_unavailable',
+          checkout_id:cardCheckout.checkout_id,
+          plan:cardCheckout.plan,
+          billing_cycle:cardCheckout.cycle,
+          payment_method:'credit_card',
+        }, {
+          surface:'checkout',
+          businessId:user?.active_business_id,
+          userId:user?.id,
+        })
         setError('Esta forma de pagamento ainda não está disponível.')
         setSubmitting(false)
         return
       }
       if(!NATIVE_CARD_CHECKOUT_ENABLED) {
+        trackEvent('checkout_creation_failed', {
+          reason:'native_card_disabled',
+          checkout_id:cardCheckout.checkout_id,
+          plan:cardCheckout.plan,
+          billing_cycle:cardCheckout.cycle,
+          payment_method:'credit_card',
+        }, {
+          surface:'checkout',
+          businessId:user?.active_business_id,
+          userId:user?.id,
+        })
         setError('O pagamento nativo com cartão não está habilitado.')
         setSubmitting(false)
         return
@@ -746,9 +910,51 @@ export function CheckoutPage() {
         }),
       })
       setCcv('')
+      trackEventOnce(
+        `payment_submitted:${cardCheckout.checkout_id}`,
+        'payment_submitted',
+        {
+          checkout_id: cardCheckout.checkout_id,
+          plan: cardCheckout.plan,
+          billing_cycle: cardCheckout.cycle,
+          amount_cents: cardCheckout.amount_cents,
+          payment_method: 'credit_card',
+          checkout_mode: 'native',
+        },
+        {
+          surface: 'checkout',
+          businessId: trackingIdentity.current.businessId,
+          userId: trackingIdentity.current.userId,
+        },
+      )
       navigate(`/app/checkout/retorno?state=success&checkout=${cardCheckout.checkout_id}`,{replace:true})
     } catch (caught) {
       setCcv('')
+      const paymentFailureReason =
+        caught instanceof ApiError&&caught.status===422
+          ? 'card_not_authorized'
+          : caught instanceof ApiError&&caught.status===409&&caught.detail==='Admin full access is active; a paid plan is not required'
+            ? 'admin_access_no_payment_required'
+            : caught instanceof ApiError&&caught.status===409&&caught.detail==='Checkout expired'
+              ? 'checkout_expired'
+              : caught instanceof ApiError&&caught.status===409
+                ? 'payment_reconciliation_pending'
+                : caught instanceof ApiError&&caught.status===0
+                  ? 'network_error'
+                  : caught instanceof ApiError&&caught.status>=500
+                    ? 'server_error'
+                    : 'unknown'
+      trackEvent('payment_failed', {
+        reason:paymentFailureReason,
+        checkout_id:checkout?.checkout_id ?? null,
+        plan:planId,
+        billing_cycle:cycleParam,
+        payment_method:'credit_card',
+      }, {
+        surface:'checkout',
+        businessId:user?.active_business_id,
+        userId:user?.id,
+      })
       if(caught instanceof ApiError&&caught.status===422) {
         setError('Não foi possível autorizar o cartão. Confira os dados ou tente outro cartão.')
       } else if(caught instanceof ApiError&&caught.status===409&&caught.detail==='Admin full access is active; a paid plan is not required') {

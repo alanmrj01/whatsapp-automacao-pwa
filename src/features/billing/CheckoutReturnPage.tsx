@@ -2,6 +2,7 @@ import { Clock3, LoaderCircle, RotateCcw, XCircle } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../../lib/api'
+import { trackEventOnce } from '../../lib/tracking'
 import { useAuth } from '../auth/useAuth'
 
 type CheckoutStatus = {
@@ -9,6 +10,7 @@ type CheckoutStatus = {
   status:'creating'|'active'|'paid'|'canceled'|'expired'|'failed'
   plan:'basic'|'plus'
   cycle:'monthly'|'quarterly'|'annual'
+  payment_method?:'credit_card'|'pix'|'pix_automatic'
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -25,6 +27,32 @@ export function CheckoutReturnPage() {
   const validCheckout = useMemo(()=>!!checkoutId&&UUID_PATTERN.test(checkoutId),[checkoutId])
 
   useEffect(()=>{
+    if (!validCheckout || !checkoutId) return
+    const terminalReason =
+      browserState === 'canceled' || status === 'canceled'
+        ? 'canceled'
+        : browserState === 'expired' || status === 'expired'
+          ? 'expired'
+          : status === 'failed'
+            ? 'failed'
+            : null
+    if (!terminalReason) return
+    trackEventOnce(
+      `payment_terminal:${checkoutId}:${terminalReason}`,
+      'payment_failed',
+      {
+        checkout_id:checkoutId,
+        reason:terminalReason,
+        funnel_stage:'payment_not_completed',
+      },
+      {
+        surface:'checkout_return',
+        businessId:membership?.business_id,
+      },
+    )
+  },[browserState,checkoutId,membership?.business_id,status,validCheckout])
+
+  useEffect(()=>{
     if (!validCheckout || !checkoutId || browserState !== 'success') return
     let cancelled = false
     let timer:number | undefined
@@ -36,6 +64,21 @@ export function CheckoutReturnPage() {
         const current = await api.request<CheckoutStatus>(`/billing/checkouts/${checkoutId}`)
         if (cancelled) return
         if (current.status === 'paid') {
+          trackEventOnce(
+            `payment_confirmed:${checkoutId}`,
+            'payment_confirmed',
+            {
+              checkout_id: checkoutId,
+              plan: current.plan,
+              billing_cycle: current.cycle,
+              payment_method: current.payment_method ?? 'credit_card',
+              funnel_stage: 'subscription_paid',
+            },
+            {
+              surface: 'checkout_return',
+              businessId: membership?.business_id,
+            },
+          )
           if (finalizing.current) return
           finalizing.current = true
           setStatus('checking')
@@ -65,7 +108,7 @@ export function CheckoutReturnPage() {
       cancelled = true
       if (timer) window.clearTimeout(timer)
     }
-  },[browserState,checkoutId,membership?.access_mode,navigate,retry,syncSession,validCheckout])
+  },[browserState,checkoutId,membership?.access_mode,membership?.business_id,navigate,retry,syncSession,validCheckout])
 
   if (!validCheckout) return <Navigate to="/app/mais/plano" replace />
 

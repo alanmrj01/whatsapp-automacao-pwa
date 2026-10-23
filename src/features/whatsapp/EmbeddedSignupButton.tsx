@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ExternalLink, RotateCw, ShieldCheck } from 'lucide-react'
 import { PrimaryButton } from '../../components/PrimaryButton'
 import { api } from '../../lib/api'
+import { trackEventOnce } from '../../lib/tracking'
 import { useAuth } from '../auth/useAuth'
 import {
   canStartEmbeddedSignup,
@@ -57,10 +58,57 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
       setMessage(null)
       setFailedAttempts(0)
       setPhase('success')
+      trackEventOnce(
+        `whatsapp_connection_completed:${membership?.business_id ?? 'unknown'}:${connection.onboarding_attempt_id ?? connection.mode ?? 'current'}`,
+        'whatsapp_connection_completed',
+        {
+          mode: connection.mode,
+          funnel_stage: 'whatsapp_connected',
+          from_onboarding: fromOnboarding,
+        },
+        {
+          surface: 'whatsapp_onboarding',
+          businessId: membership?.business_id,
+          userId: user?.id,
+        },
+      )
       return
+    }
+    if (connection.status === 'pending') {
+      trackEventOnce(
+        `whatsapp_connection_pending:${membership?.business_id ?? 'unknown'}:${connection.onboarding_attempt_id ?? 'current'}:${connection.pending_state ?? connection.journey_state ?? connection.next_action ?? 'pending'}`,
+        'whatsapp_connection_blocked',
+        {
+          reason: connection.pending_state ?? connection.journey_state ?? 'pending',
+          next_action: connection.next_action ?? null,
+          review_status: connection.review_status ?? null,
+          mode: connection.mode,
+          preferred_mode: connection.preferred_mode ?? null,
+          from_onboarding: fromOnboarding,
+        },
+        {
+          surface: 'whatsapp_onboarding',
+          businessId: membership?.business_id,
+          userId: user?.id,
+        },
+      )
     }
     if (connection.status === 'error') {
       setPhase('error')
+      trackEventOnce(
+        `whatsapp_connection_failed:${membership?.business_id ?? 'unknown'}:${connection.onboarding_attempt_id ?? connection.error_reason ?? 'unknown'}`,
+        'whatsapp_connection_failed',
+        {
+          reason: connection.error_reason ?? 'unknown',
+          mode: connection.mode,
+          from_onboarding: fromOnboarding,
+        },
+        {
+          surface: 'whatsapp_onboarding',
+          businessId: membership?.business_id,
+          userId: user?.id,
+        },
+      )
       setMessage(
         connection.error_reason === 'authorization_incomplete'
           ? 'A autorização da Meta não foi concluída. Tente novamente.'
@@ -85,7 +133,7 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
       setMessage(null)
       setPhase('waiting')
     }
-  }, [queryClient, queryKey])
+  }, [fromOnboarding, membership?.business_id, queryClient, queryKey, user?.id])
 
   useEffect(() => {
     if (liveConnection.data) applyServerConnection(liveConnection.data)
@@ -117,6 +165,19 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
       throw new Error('Onboarding attempt unavailable')
     }
     applyServerConnection(pending)
+    trackEventOnce(
+      `whatsapp_connection_started:${pending.onboarding_attempt_id}`,
+      'whatsapp_connection_started',
+      {
+        preferred_mode: pending.preferred_mode ?? pending.mode,
+        from_onboarding: fromOnboarding,
+      },
+      {
+        surface: 'whatsapp_onboarding',
+        businessId: membership?.business_id,
+        userId: user?.id,
+      },
+    )
 
     const redirect = await api.request<MetaRedirectStartResponse>(
       '/whatsapp/onboarding/embedded-signup/redirect/start',
@@ -136,7 +197,7 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
     }
 
     window.location.assign(redirect.authorization_url)
-  }, [applyServerConnection, configuration.data, fromOnboarding])
+  }, [applyServerConnection, configuration.data, fromOnboarding, membership?.business_id, user?.id])
 
   if (!allowed) {
     return (
@@ -177,6 +238,20 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
             return
           }
           void beginRedirectSignup().catch(() => {
+            trackEventOnce(
+              `whatsapp_connection_redirect_failed:${membership?.business_id ?? 'unknown'}`,
+              'whatsapp_connection_failed',
+              {
+                reason:'redirect_start_failed',
+                from_onboarding:fromOnboarding,
+              },
+              {
+                surface:'whatsapp_onboarding',
+                businessId:membership?.business_id,
+                userId:user?.id,
+              },
+              'session',
+            )
             setFailedAttempts(value => value + 1)
             setPhase('error')
             setMessage('Não foi possível abrir a autorização da Meta. Tente novamente.')

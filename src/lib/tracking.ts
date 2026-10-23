@@ -6,10 +6,10 @@ type TrackContext = {
 }
 
 type TrackProperties = Record<string, string | number | boolean | null | undefined>
+type TrackOnceScope = 'visitor' | 'session'
 
-let visitorId: string | null = null
-let sessionId: string | null = null
-let attribution: Record<string,string> | null = null
+const completedOnce = new Set<string>()
+const pendingOnce = new Set<string>()
 
 function newUuid() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -28,28 +28,35 @@ function newUuid() {
   return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`
 }
 
-function ids() {
-  visitorId ??= newUuid()
-  sessionId ??= newUuid()
-  return {visitorId, sessionId}
-}
-
-function firstTouch(): Record<string,string> {
-  if (attribution) return attribution
+function currentAttribution(): Record<string,string|number> {
   try {
     const params = new URLSearchParams(window.location.search)
-    const keys = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','fbclid','gclid']
-    const value: Record<string,string> = {}
+    const keys = [
+      'utm_source',
+      'utm_medium',
+      'utm_campaign',
+      'utm_content',
+      'utm_term',
+      'utm_id',
+      'utm_source_platform',
+      'utm_creative_format',
+      'campaign_id',
+      'adset_id',
+      'ad_id',
+      'placement',
+      'fbclid',
+      'gclid',
+    ]
+    const value: Record<string,string|number> = {attribution_version: 3}
     for (const key of keys) {
       const item = params.get(key)
       if (item) value[key] = item.slice(0,180)
     }
     if (document.referrer) value.referrer_host = new URL(document.referrer).host.slice(0,180)
-    attribution = value
+    value.landing_path = window.location.pathname.slice(0,255)
     return value
   } catch {
-    attribution = {}
-    return attribution
+    return {attribution_version: 3}
   }
 }
 
@@ -61,13 +68,18 @@ export function trackEvent(
   eventName: string,
   properties: TrackProperties = {},
   context: TrackContext = {},
-) {
-  if (typeof window === 'undefined') return
+): Promise<boolean> {
+  if (typeof window === 'undefined') return Promise.resolve(false)
   try {
-    const identity = ids()
+    const eventId = newUuid()
     const payload = {
-      visitor_id: identity.visitorId,
-      session_id: identity.sessionId,
+      event_id: eventId,
+      occurred_at: new Date().toISOString(),
+      // Visitor/session identity is assigned by the first-party backend and
+      // persisted only in HttpOnly cookies. Null keeps backward compatibility
+      // with the request contract while client code remains storage-free.
+      visitor_id: null,
+      session_id: null,
       event_name: eventName,
       surface: context.surface ?? 'app',
       path: context.path ?? window.location.pathname,
@@ -75,20 +87,36 @@ export function trackEvent(
       user_id: context.userId ?? null,
       referrer: document.referrer || null,
       properties: {
-        event_id: newUuid(),
         event_time_ms: Date.now(),
-        ...firstTouch(),
+        ...currentAttribution(),
         ...Object.fromEntries(Object.entries(properties).filter(([,value])=>value !== undefined)),
       },
     }
-    void fetch(`${apiBase()}/api/v1/marketing/events`, {
+    return fetch(`${apiBase()}/api/v1/marketing/events`, {
       method: 'POST',
       credentials: 'include',
       keepalive: true,
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify(payload),
-    }).catch(()=>undefined)
+    }).then(response => response.ok).catch(()=>false)
   } catch {
     // Tracking must never interrupt the commercial/product flow.
+    return Promise.resolve(false)
   }
+}
+
+export function trackEventOnce(
+  eventKey: string,
+  eventName: string,
+  properties: TrackProperties = {},
+  context: TrackContext = {},
+  _scope: TrackOnceScope = 'visitor',
+) {
+  if (typeof window === 'undefined') return
+  if (completedOnce.has(eventKey) || pendingOnce.has(eventKey)) return
+  pendingOnce.add(eventKey)
+  void trackEvent(eventName, properties, context).then(success => {
+    pendingOnce.delete(eventKey)
+    if (success) completedOnce.add(eventKey)
+  })
 }
