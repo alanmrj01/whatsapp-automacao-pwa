@@ -1,3 +1,5 @@
+import { api } from './api'
+
 type TrackContext = {
   businessId?: string | null
   userId?: string | null
@@ -60,10 +62,6 @@ function currentAttribution(): Record<string,string|number> {
   }
 }
 
-function apiBase() {
-  return (import.meta.env.VITE_API_BASE_URL?.trim() ?? '').replace(/\/$/,'')
-}
-
 export function trackEvent(
   eventName: string,
   properties: TrackProperties = {},
@@ -92,13 +90,11 @@ export function trackEvent(
         ...Object.fromEntries(Object.entries(properties).filter(([,value])=>value !== undefined)),
       },
     }
-    return fetch(`${apiBase()}/api/v1/marketing/events`, {
+    return api.request<{accepted:boolean}>('/marketing/events', {
       method: 'POST',
-      credentials: 'include',
       keepalive: true,
-      headers: {'Content-Type':'application/json'},
       body: JSON.stringify(payload),
-    }).then(response => response.ok).catch(()=>false)
+    }).then(response => response.accepted === true).catch(()=>false)
   } catch {
     // Tracking must never interrupt the commercial/product flow.
     return Promise.resolve(false)
