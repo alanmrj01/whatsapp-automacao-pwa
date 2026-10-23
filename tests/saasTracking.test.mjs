@@ -18,6 +18,8 @@ test('first-party tracking delegates durable identity to HttpOnly backend cookie
     assert.match(tracking, new RegExp(key))
   }
   assert.match(tracking, /trackEventOnce/)
+  assert.match(tracking, /import \{ api \} from '\.\/api'/)
+  assert.match(tracking, /api\.request<\{accepted:boolean\}>\('\/marketing\/events'/)
 })
 
 test('signup checkout and WhatsApp connection expose the core SaaS funnel events', () => {
