@@ -88,7 +88,7 @@ export function PlanPage() {
 
   if(activationFlow&&connection.isPending)return <div className="page-stack"><LoadingState /></div>
   if(activationFlow&&(connection.isError||!connection.data))return <div className="page-stack"><ErrorState onRetry={()=>void connection.refetch()} /></div>
-  if(activationFlow&&connection.data.status!=='connected')return <Navigate to="/app/whatsapp?from=activation" replace/>
+  if(activationFlow&&connection.data?.status!=='connected')return <Navigate to="/app/whatsapp?from=activation" replace/>
 
   return <div className="page-stack operational-page compact-page plan-page">
     <section className="operational-heading account-heading plan-heading">
