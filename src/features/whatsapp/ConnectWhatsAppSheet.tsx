@@ -70,7 +70,7 @@ export function ConnectWhatsAppSheet({ open, onClose, currentMode=null }: Connec
             <span className="choice-row__icon"><BriefcaseBusiness size={23} /></span>
             <span className="choice-row__copy">
               <strong>Continuar usando também o WhatsApp Business {currentMode==='coexistence'?'(atual)':''}</strong>
-              <small>Você acompanha as conversas no WhatsApp Business e usa a automação da Alovia em paralelo.</small>
+              <small>Você acompanha as conversas no WhatsApp Business e, com a Alovia ativada, usa a automação em paralelo.</small>
             </span>
             {currentMode==='coexistence'?<Check size={20} aria-hidden="true"/>:<ArrowRight size={20} aria-hidden="true" />}
           </button>

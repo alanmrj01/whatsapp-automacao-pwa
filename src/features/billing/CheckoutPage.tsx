@@ -386,7 +386,11 @@ export function CheckoutPage() {
       return nextCheckout
     } catch (caught) {
       const failureReason =
-        caught instanceof ApiError&&caught.status===401
+        caught instanceof ApiError
+          && caught.status===409
+          && caught.detail==='WhatsApp connection required before checkout'
+          ? 'whatsapp_not_connected'
+          : caught instanceof ApiError&&caught.status===401
           ? 'session_expired'
           : caught instanceof ApiError&&method==='pix_automatic'&&caught.detail==='Pix Automatic authorization is being reconciled'
             ? 'pix_automatic_reconciliation'
@@ -415,7 +419,13 @@ export function CheckoutPage() {
         businessId:trackingIdentity.current.businessId,
         userId:trackingIdentity.current.userId,
       })
-      if(caught instanceof ApiError&&caught.status===401) {
+      if(
+        caught instanceof ApiError
+        && caught.status===409
+        && caught.detail==='WhatsApp connection required before checkout'
+      ) {
+        setError('Conecte seu WhatsApp antes de ativar um plano.')
+      } else if(caught instanceof ApiError&&caught.status===401) {
         setError('Sua sessão expirou. Entre novamente para continuar.')
       } else if(
         caught instanceof ApiError&&

@@ -210,3 +210,37 @@ test('device notification surfaces only action-required Web Push events', () => 
   assert.match(worker,/\/app\/whatsapp/)
   assert.match(worker,/\/app\/mais\/plano/)
 })
+
+
+test('new prospects connect WhatsApp before payment while operational access stays gated', () => {
+  const entitlements=read('src/features/access/entitlements.ts')
+  const connection=read('src/features/whatsapp/useConnection.ts')
+  const signup=read('src/features/auth/SignupPage.tsx')
+  const page=read('src/features/whatsapp/WhatsAppPage.tsx')
+  const plan=read('src/features/billing/PlanPage.tsx')
+  const checkout=read('src/features/billing/CheckoutPage.tsx')
+  const router=read('src/app/router.tsx')
+
+  assert.match(entitlements,/isPreactivation/)
+  assert.match(connection,/canReadOperationalData \|\| entitlement\.isPreactivation/)
+  assert.match(signup,/preactivation_started/)
+  assert.match(signup,/\/app\/whatsapp\?from=activation/)
+  assert.match(page,/Escolher plano e ativar a Alovia/)
+  assert.match(page,/A automação permanece desligada até você ativar um plano/)
+  assert.match(plan,/WhatsApp conectado/)
+  assert.match(plan,/activation_paywall_viewed/)
+  assert.match(plan,/plan_selected/)
+  assert.match(checkout,/whatsapp_not_connected/)
+  assert.match(router,/allowedPreactivationRoute/)
+  assert.match(router,/\/app\/mais\/plano/)
+})
+
+test('former subscribers are not treated as new preactivation prospects', () => {
+  const entitlements=read('src/features/access/entitlements.ts')
+  const whatsapp=read('src/features/whatsapp/WhatsAppPage.tsx')
+
+  assert.match(entitlements,/isPreactivation = isFree && !hasOperationalHistory/)
+  assert.match(entitlements,/isReadOnlyRetained = isFree && hasOperationalHistory/)
+  assert.match(whatsapp,/Dados da conexão preservados/)
+  assert.match(whatsapp,/Reative uma assinatura para alterar ou reconectar o WhatsApp/)
+})
