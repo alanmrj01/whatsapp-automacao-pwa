@@ -1,5 +1,12 @@
 import { Check, ChevronLeft } from 'lucide-react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { ErrorState } from '../../components/ErrorState'
+import { LoadingState } from '../../components/LoadingState'
+import { trackEventOnce } from '../../lib/tracking'
+import { useEntitlements } from '../access/useEntitlements'
+import { useAuth } from '../auth/useAuth'
+import { useConnection } from '../whatsapp/useConnection'
 import { SubscriptionManagement } from './SubscriptionManagement'
 import {
   billingCycles,
@@ -22,6 +29,10 @@ function planCta(plan: PlanId) {
 
 export function PlanPage() {
   const navigate = useNavigate()
+  const {membership,user} = useAuth()
+  const entitlement = useEntitlements()
+  const connection = useConnection()
+  const activationFlow = entitlement.isPreactivation
   const [params,setParams] = useSearchParams()
   const cycleParam = params.get('cycle')
   const cycle: BillingCycle = isBillingCycle(cycleParam) ? cycleParam : defaultBillingCycle
@@ -33,6 +44,21 @@ export function PlanPage() {
     setParams(nextParams,{replace:true})
   }
 
+  useEffect(()=>{
+    if(!activationFlow || connection.data?.status!=='connected')return
+    trackEventOnce(
+      `activation_paywall_viewed:${membership?.business_id ?? 'unknown'}`,
+      'activation_paywall_viewed',
+      {funnel_stage:'activation_paywall',whatsapp_mode:connection.data.mode},
+      {
+        surface:'plan_selection',
+        businessId:membership?.business_id,
+        userId:user?.id,
+      },
+      'session',
+    )
+  },[activationFlow,connection.data?.mode,connection.data?.status,membership?.business_id,user?.id])
+
   function choosePlan(plan: PlanId) {
     if (!isPurchasablePlan(plan)) {
       const nextParams = new URLSearchParams(params)
@@ -41,16 +67,42 @@ export function PlanPage() {
       setParams(nextParams,{replace:true})
       return
     }
+    trackEventOnce(
+      `plan_selected:${membership?.business_id ?? 'unknown'}:${plan}:${cycle}`,
+      'plan_selected',
+      {
+        plan,
+        billing_cycle:cycle,
+        funnel_stage:'plan_selected',
+        activation_flow:activationFlow,
+      },
+      {
+        surface:'plan_selection',
+        businessId:membership?.business_id,
+        userId:user?.id,
+      },
+      'session',
+    )
     navigate(`/app/checkout?plan=${plan}&cycle=${cycle}`)
+  }
+
+  if(activationFlow) {
+    if(connection.isPending)return <div className="page-stack"><LoadingState /></div>
+    if(connection.isError||!connection.data)return <div className="page-stack"><ErrorState onRetry={()=>void connection.refetch()} /></div>
+    if(connection.data.status!=='connected')return <Navigate to="/app/whatsapp?from=activation" replace/>
   }
 
   return <div className="page-stack operational-page compact-page plan-page">
     <section className="operational-heading account-heading plan-heading">
       <div>
-        <Link className="account-back" to="/app/mais"><ChevronLeft size={18}/>Configurações</Link>
-        <span className="eyebrow">Assinatura</span>
-        <h1>Escolha seu plano</h1>
-        <p>Comece com o Basic. O Plus, pensado para operações em equipe, chega em breve.</p>
+        <Link className="account-back" to={activationFlow?'/app/whatsapp':'/app/mais'}>
+          <ChevronLeft size={18}/>{activationFlow?'WhatsApp':'Configurações'}
+        </Link>
+        <span className="eyebrow">{activationFlow?'WhatsApp conectado':'Assinatura'}</span>
+        <h1>{activationFlow?'Agora ative a Alovia':'Escolha seu plano'}</h1>
+        <p>{activationFlow
+          ? 'Seu WhatsApp já está conectado. Escolha o plano para liberar a automação e continuar a configuração da operação.'
+          : 'Comece com o Basic. O Plus, pensado para operações em equipe, chega em breve.'}</p>
       </div>
     </section>
 
@@ -112,6 +164,6 @@ export function PlanPage() {
     </section>
 
     <p className="plan-footnote">Você confere plano, período e valor novamente antes de pagar. Basic inclui 7 dias de garantia.</p>
-    <SubscriptionManagement />
+    {!activationFlow&&<SubscriptionManagement />}
   </div>
 }

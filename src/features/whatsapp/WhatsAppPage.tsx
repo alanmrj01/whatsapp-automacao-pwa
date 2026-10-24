@@ -24,7 +24,8 @@ export function WhatsAppPage() {
   const {membership} = useAuth()
   const entitlement = useEntitlements()
   const {openUpgrade} = useUpgradePrompt()
-  const demo = entitlement.usesDemoData
+  const preactivation = entitlement.isPreactivation && canConfigureWhatsApp(membership?.role)
+  const demo = entitlement.usesDemoData && !preactivation
   const readOnly = entitlement.isReadOnlyRetained
   const connection = useConnection()
   const disconnect = useDisconnectWhatsApp()
@@ -77,13 +78,13 @@ export function WhatsAppPage() {
   // A business review approval is not proof that a number supports coexistence.
   const coexistenceReviewReady=false
   const canConfigure = canConfigureWhatsApp(membership?.role)
-  const canConnect = entitlement.isPaid && canConfigure && !!connection.data
+  const canConnect = (entitlement.isPaid || preactivation) && canConfigure && !!connection.data
     && journey.requiresUserAction
     && journey.nextAction!=='review_meta_rejection'
     && (
     status === 'disconnected' || status === 'error' || status === 'pending'
   )
-  const canDisconnect = entitlement.isPaid && canConfigure && status==='connected'
+  const canDisconnect = (entitlement.isPaid || preactivation) && canConfigure && status==='connected'
   const savedBusinessPreparationStep=status==='disconnected'
     ? searchParams.get('preparacao')
     : null
@@ -151,6 +152,17 @@ export function WhatsAppPage() {
           {mode&&<div><dt>Forma de operação</dt><dd>{connectionModeLabels[mode]}</dd></div>}
           <div><dt>Situação</dt><dd>Conexão ativa</dd></div>
         </dl>}
+        {preactivation&&status==='connected'&&<div className="account-note">
+          <strong>Seu WhatsApp está pronto para usar com a Alovia</strong>
+          <span>A conexão foi concluída. A automação permanece desligada até você ativar um plano.</span>
+          <PrimaryButton
+            fullWidth
+            icon={<ArrowRight size={19}/>}
+            onClick={()=>navigate('/app/mais/plano?activation=1')}
+          >
+            Escolher plano e ativar a Alovia
+          </PrimaryButton>
+        </div>}
         {status!=='connected'&&<div className="account-note">
           <strong>{journey.title}</strong>
           <span>{metaReviewPending
@@ -166,16 +178,20 @@ export function WhatsAppPage() {
                     : 'Sua ação agora: continue a autorização oficial da Meta. Ao retornar, a Alovia valida o resultado automaticamente.'}</span>
         </div>}
         {awaitingCoexistence&&<div className="account-note">
-          <strong>{coexistenceReviewReady
-            ? 'Verifique a disponibilidade do uso conjunto'
-            : reviewStatus==='rejected'
-              ? 'Sua preferência está salva'
-              : 'Você já pode usar a Alovia enquanto aguarda'}</strong>
-          <span>{coexistenceReviewReady
-            ? 'A Meta concluiu uma revisão da conta. Sua conexão atual continua ativa até você confirmar a tentativa de uso conjunto com o WhatsApp Business.'
-            : reviewStatus==='rejected'
-              ? 'A revisão mais recente da Meta não foi aprovada. Isso não desliga seu atendimento atual pela Alovia; a preferência por usar também o WhatsApp Business continua registrada.'
-              : 'Seu número continua funcionando exclusivamente pela Alovia. Guardamos sua preferência por usar também o WhatsApp Business. A disponibilidade depende da Meta e não há prazo garantido; nenhuma mudança será feita sem sua confirmação.'}</span>
+          <strong>{preactivation
+            ? 'Seu número já está conectado'
+            : coexistenceReviewReady
+              ? 'Verifique a disponibilidade do uso conjunto'
+              : reviewStatus==='rejected'
+                ? 'Sua preferência está salva'
+                : 'Você já pode usar a Alovia enquanto aguarda'}</strong>
+          <span>{preactivation
+            ? 'A conexão técnica está pronta e sua preferência por usar também o WhatsApp Business ficou salva. A automação só entra em operação depois que você ativar um plano.'
+            : coexistenceReviewReady
+              ? 'A Meta concluiu uma revisão da conta. Sua conexão atual continua ativa até você confirmar a tentativa de uso conjunto com o WhatsApp Business.'
+              : reviewStatus==='rejected'
+                ? 'A revisão mais recente da Meta não foi aprovada. Isso não desliga seu atendimento atual pela Alovia; a preferência por usar também o WhatsApp Business continua registrada.'
+                : 'Seu número continua funcionando exclusivamente pela Alovia. Guardamos sua preferência por usar também o WhatsApp Business. A disponibilidade depende da Meta e não há prazo garantido; nenhuma mudança será feita sem sua confirmação.'}</span>
           {coexistenceReviewReady&&<PrimaryButton
             fullWidth
             icon={<ArrowRight size={19}/>}

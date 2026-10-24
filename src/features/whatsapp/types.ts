@@ -43,6 +43,7 @@ export type WhatsAppConnection = {
   mode: WhatsAppConnectionMode | null
   display_phone_number?: string
   error_reason?: WhatsAppConnectionErrorReason
+  provider_failure_code?: string
   onboarding_attempt_id?: string
   onboarding_attempt_state?: WhatsAppOnboardingAttemptState
   onboarding_last_stage?: string

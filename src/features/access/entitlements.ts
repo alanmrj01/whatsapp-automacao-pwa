@@ -17,12 +17,16 @@ export function entitlementsFor(membership?: EntitlementMembership) {
   const role = membership?.role
   const hasOperationalHistory = isPaid || membership?.has_had_operational_access === true
   const isReadOnlyRetained = isFree && hasOperationalHistory
+  const isPreactivation = isFree && !hasOperationalHistory
 
   return {
     isFree,
     isPaid,
     hasOperationalHistory,
     isReadOnlyRetained,
+    // New commercial prospects may connect WhatsApp before payment, but they
+    // still have no operational entitlement until a plan is activated.
+    isPreactivation,
     // Only a business that has never operated with real data receives fixtures.
     usesDemoData: isFree && !hasOperationalHistory,
     // Former subscribers/admin-granted tenants keep reading their own real data.
