@@ -107,12 +107,13 @@ function send(listeners, event, origin = 'https://www.facebook.com') {
   for (const listener of listeners) listener({origin, data:JSON.stringify(event)})
 }
 
-test('paid owner/admin inicia Meta; free e perfis de leitura nunca iniciam', () => {
+test('owner/admin inicia Meta antes do pagamento; perfis de leitura nunca iniciam', () => {
   assert.equal(canStartEmbeddedSignup('paid', 'owner'), true)
   assert.equal(canStartEmbeddedSignup('paid', 'admin'), true)
-  assert.equal(canStartEmbeddedSignup('free', 'owner'), false)
-  assert.equal(canStartEmbeddedSignup('paid', 'attendant'), false)
-  assert.equal(canStartEmbeddedSignup('paid', 'viewer'), false)
+  assert.equal(canStartEmbeddedSignup('free', 'owner'), true)
+  assert.equal(canStartEmbeddedSignup('free', 'admin'), true)
+  assert.equal(canStartEmbeddedSignup('free', 'attendant'), false)
+  assert.equal(canStartEmbeddedSignup('free', 'viewer'), false)
 })
 
 test('coexistence v4 usa apenas os parâmetros atuais e combina code com sessão Meta', async () => {

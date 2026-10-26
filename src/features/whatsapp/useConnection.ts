@@ -7,7 +7,8 @@ import type { WhatsAppConnection, WhatsAppConnectionMode } from './types'
 
 export function useConnection() {
   const {user,membership} = useAuth()
-  const canRead = entitlementsFor(membership).canReadOperationalData
+  const entitlement = entitlementsFor(membership)
+  const canRead = entitlement.canReadOperationalData || entitlement.isPreactivation
   return useQuery({
     queryKey:['whatsapp-connection',user?.id,membership?.business_id],
     queryFn:({signal})=>api.request<WhatsAppConnection>('/whatsapp/connection',{signal}),

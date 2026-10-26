@@ -93,10 +93,12 @@ export class EmbeddedSignupError extends Error {
 }
 
 export function canStartEmbeddedSignup(
-  accessMode: 'free' | 'paid' | undefined,
+  _accessMode: 'free' | 'paid' | undefined,
   role: 'owner' | 'admin' | 'attendant' | 'viewer' | undefined,
 ) {
-  return accessMode === 'paid' && (role === 'owner' || role === 'admin')
+  // Commercial prospects connect before checkout. Operational automation is
+  // still enforced server-side by the paid entitlement.
+  return role === 'owner' || role === 'admin'
 }
 
 export function launchMetaEmbeddedSignup(

@@ -26,6 +26,8 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const fromOnboarding = searchParams.get('from') === 'onboarding'
+  const preactivation = membership?.access_mode === 'free'
+    && membership?.has_had_operational_access !== true
   const [phase, setPhase] = useState<EmbeddedSignupPhase>('idle')
   const [message, setMessage] = useState<string | null>(null)
   const [connected, setConnected] = useState<WhatsAppConnection | null>(null)
@@ -82,6 +84,9 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
           reason: connection.pending_state ?? connection.journey_state ?? 'pending',
           next_action: connection.next_action ?? null,
           review_status: connection.review_status ?? null,
+          provider_failure_code: connection.provider_failure_code ?? null,
+          onboarding_attempt_state: connection.onboarding_attempt_state ?? null,
+          onboarding_last_stage: connection.onboarding_last_stage ?? null,
           mode: connection.mode,
           preferred_mode: connection.preferred_mode ?? null,
           from_onboarding: fromOnboarding,
@@ -100,6 +105,11 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
         'whatsapp_connection_failed',
         {
           reason: connection.error_reason ?? 'unknown',
+          provider_failure_code: connection.provider_failure_code ?? null,
+          onboarding_attempt_state: connection.onboarding_attempt_state ?? null,
+          onboarding_last_stage: connection.onboarding_last_stage ?? null,
+          next_action: connection.next_action ?? null,
+          review_status: connection.review_status ?? null,
           mode: connection.mode,
           from_onboarding: fromOnboarding,
         },
@@ -140,10 +150,15 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
   }, [applyServerConnection, liveConnection.data])
 
   useEffect(() => {
-    if (phase === 'success' && fromOnboarding) {
+    if (phase !== 'success') return
+    if (fromOnboarding) {
       navigate('/app/onboarding', {replace:true})
+      return
     }
-  }, [fromOnboarding, navigate, phase])
+    if (preactivation) {
+      navigate('/app/mais/plano?activation=1', {replace:true})
+    }
+  }, [fromOnboarding, navigate, phase, preactivation])
 
   const beginRedirectSignup = useCallback(async () => {
     if (!configuration.data) {
@@ -202,7 +217,7 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
   if (!allowed) {
     return (
       <PrimaryButton fullWidth disabled icon={<ShieldCheck size={18} />}>
-        Disponível nos pacotes pagos para administradores
+        Disponível para proprietários e administradores
       </PrimaryButton>
     )
   }

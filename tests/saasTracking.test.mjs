@@ -27,6 +27,8 @@ test('signup checkout and WhatsApp connection expose the core SaaS funnel events
   const checkout = read('src/features/billing/CheckoutPage.tsx')
   const checkoutReturn = read('src/features/billing/CheckoutReturnPage.tsx')
   const whatsapp = read('src/features/whatsapp/EmbeddedSignupButton.tsx')
+  const apiOnly = read('src/features/whatsapp/ApiOnlyEmbeddedSignupButton.tsx')
+  const plan = read('src/features/billing/PlanPage.tsx')
 
   assert.match(signup, /signup_completed/)
   assert.match(checkout, /checkout_started/)
@@ -44,6 +46,13 @@ test('signup checkout and WhatsApp connection expose the core SaaS funnel events
   assert.match(whatsapp, /whatsapp_connection_completed/)
   assert.match(whatsapp, /whatsapp_connection_failed/)
   assert.match(whatsapp, /whatsapp_connection_blocked/)
+  assert.match(apiOnly, /whatsapp_connection_started/)
+  assert.match(apiOnly, /whatsapp_connection_completed/)
+  assert.match(apiOnly, /whatsapp_connection_failed/)
+  assert.match(apiOnly, /trackEvent\(\s*'whatsapp_connection_started'/)
+  assert.match(apiOnly, /trackEvent\(\s*'whatsapp_connection_failed'/)
+  assert.match(plan, /activation_paywall_viewed/)
+  assert.match(plan, /plan_selected/)
 })
 
 test('commercial conversion and activation events carry business identity', () => {
@@ -55,6 +64,9 @@ test('commercial conversion and activation events carry business identity', () =
   assert.match(checkoutReturn, /businessId:\s*membership\?\.business_id/)
   assert.match(whatsapp, /businessId:\s*membership\?\.business_id/)
   assert.match(whatsapp, /funnel_stage:\s*'whatsapp_connected'/)
+  assert.match(whatsapp, /provider_failure_code/)
+  assert.match(whatsapp, /onboarding_attempt_state/)
+  assert.match(whatsapp, /onboarding_last_stage/)
   assert.match(checkout, /funnel_stage:\s*'subscription_paid'/)
 })
 

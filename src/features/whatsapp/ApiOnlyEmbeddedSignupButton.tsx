@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ExternalLink, RotateCw, ShieldCheck } from 'lucide-react'
 import { PrimaryButton } from '../../components/PrimaryButton'
 import { api } from '../../lib/api'
+import { trackEvent, trackEventOnce } from '../../lib/tracking'
 import { useAuth } from '../auth/useAuth'
 import {
   canStartEmbeddedSignup,
@@ -41,6 +42,8 @@ export function ApiOnlyEmbeddedSignupButton({
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const fromOnboarding = searchParams.get('from') === 'onboarding'
+  const preactivation = membership?.access_mode === 'free'
+    && membership?.has_had_operational_access !== true
   const keepCoexistencePreference = searchParams.get('fallback') === '1'
   const [phase, setPhase] = useState<EmbeddedSignupPhase>('idle')
   const [message, setMessage] = useState<string | null>(null)
@@ -125,6 +128,20 @@ export function ApiOnlyEmbeddedSignupButton({
         staleTime: 0,
       })
       if (connection.status === 'connected') {
+        trackEventOnce(
+          `whatsapp_connection_completed:${membership?.business_id ?? 'unknown'}:api_only`,
+          'whatsapp_connection_completed',
+          {
+            mode:'api_only',
+            funnel_stage:'whatsapp_connected',
+            from_onboarding:fromOnboarding,
+          },
+          {
+            surface:'whatsapp_onboarding',
+            businessId:membership?.business_id,
+            userId:user?.id,
+          },
+        )
         setConnected(connection)
         setResumeAvailable(false)
         setMessage(null)
@@ -134,7 +151,7 @@ export function ApiOnlyEmbeddedSignupButton({
     } catch {
       // A verificação da conexão não deve interromper uma tentativa retomável.
     }
-  }, [queryClient, queryKey])
+  }, [fromOnboarding, membership?.business_id, queryClient, queryKey, user?.id])
 
   useEffect(() => {
     if (!allowed || !confirmationReady || !configuration.data || !configurationKey) return
@@ -168,10 +185,15 @@ export function ApiOnlyEmbeddedSignupButton({
   }, [attemptKey])
 
   useEffect(() => {
-    if (phase === 'success' && fromOnboarding) {
+    if (phase !== 'success') return
+    if (fromOnboarding) {
       navigate('/app/onboarding', {replace:true})
+      return
     }
-  }, [fromOnboarding, navigate, phase])
+    if (preactivation) {
+      navigate('/app/mais/plano?activation=1', {replace:true})
+    }
+  }, [fromOnboarding, navigate, phase, preactivation])
 
   const run = useMemo(() => createEmbeddedSignupRunner({
     start: () => {
@@ -207,6 +229,21 @@ export function ApiOnlyEmbeddedSignupButton({
     onPhase: (nextPhase, error) => {
       setPhase(nextPhase)
       setMessage(error?.message ?? null)
+      if (nextPhase === 'error') {
+        trackEvent(
+          'whatsapp_connection_failed',
+          {
+            reason:error?.name ?? 'api_only_flow_error',
+            mode:'api_only',
+            from_onboarding:fromOnboarding,
+          },
+          {
+            surface:'whatsapp_onboarding',
+            businessId:membership?.business_id,
+            userId:user?.id,
+          },
+        )
+      }
       if (nextPhase === 'error' || nextPhase === 'success') setResumeAvailable(false)
     },
     onConnected: async (connection: WhatsAppConnection) => {
@@ -225,6 +262,20 @@ export function ApiOnlyEmbeddedSignupButton({
           // must not turn a successful WhatsApp connection into an error.
         }
       }
+      trackEventOnce(
+        `whatsapp_connection_completed:${membership?.business_id ?? 'unknown'}:api_only`,
+        'whatsapp_connection_completed',
+        {
+          mode:'api_only',
+          funnel_stage:'whatsapp_connected',
+          from_onboarding:fromOnboarding,
+        },
+        {
+          surface:'whatsapp_onboarding',
+          businessId:membership?.business_id,
+          userId:user?.id,
+        },
+      )
       setConnected(finalConnection)
       setRegistrationPin('')
       setResumeAvailable(false)
@@ -243,13 +294,17 @@ export function ApiOnlyEmbeddedSignupButton({
     reconcileConnection,
     registrationPin,
     reportObservation,
+    sdkAttempt,
     sdkReady,
+    membership?.business_id,
+    user?.id,
+    fromOnboarding,
   ])
 
   if (!allowed) {
     return (
       <PrimaryButton fullWidth disabled icon={<ShieldCheck size={18} />}>
-        Disponível nos pacotes pagos para administradores
+        Disponível para proprietários e administradores
       </PrimaryButton>
     )
   }
@@ -325,6 +380,18 @@ export function ApiOnlyEmbeddedSignupButton({
             setSdkAttempt(value => value + 1)
             return
           }
+          trackEvent(
+            'whatsapp_connection_started',
+            {
+              preferred_mode:'api_only',
+              from_onboarding:fromOnboarding,
+            },
+            {
+              surface:'whatsapp_onboarding',
+              businessId:membership?.business_id,
+              userId:user?.id,
+            },
+          )
           void run().catch(() => {})
         }}
       >
