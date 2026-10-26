@@ -73,17 +73,18 @@ export function SignupPage() {
         trackEventOnce(
           `preactivation_started:${createdUser.active_business_id}`,
           'preactivation_started',
-          {funnel_stage:'whatsapp_connection_required'},
+          {
+            funnel_stage:'demo_access_ready',
+            whatsapp_connection_available:true,
+          },
           {
             surface:'signup',
             businessId:createdUser.active_business_id,
             userId:createdUser.id,
           },
         )
-        navigate('/app/whatsapp?from=activation', {replace:true})
-      } else {
-        navigate(homeFor(createdUser), {replace:true})
       }
+      navigate(homeFor(createdUser), {replace:true})
     } catch (failure) {
       const transient = failure instanceof ApiError && (failure.status === 0 || failure.status >= 500)
       preserveAttempt = transient
