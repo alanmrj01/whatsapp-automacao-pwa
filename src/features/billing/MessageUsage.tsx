@@ -66,7 +66,7 @@ export function MessageUsageCard() {
   if(usage.isError||!data?.quota_applies||!data.limit)return null
 
   async function upgrade() {
-    if(busy)return
+    if(busy||!data)return
     setBusy(true)
     setError('')
     setMessage('')
