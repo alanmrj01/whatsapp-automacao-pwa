@@ -8,6 +8,7 @@ export type Plan = {
   monthlyPrice: number
   users: number
   automaticAttendances: number
+  monthlyMessageLimit: number
   features: string[]
 }
 
@@ -30,6 +31,7 @@ export const plans: Plan[] = [
     monthlyPrice:197,
     users:1,
     automaticAttendances:500,
+    monthlyMessageLimit:500,
     features:['1 WhatsApp','Assistente virtual completo','Conversas e agenda reais','Dashboard operacional'],
   },
   {
@@ -39,6 +41,7 @@ export const plans: Plan[] = [
     monthlyPrice:397,
     users:5,
     automaticAttendances:1500,
+    monthlyMessageLimit:900,
     features:['1 WhatsApp','Assistente virtual completo','Conversas e agenda reais','Gestão de equipe'],
   },
 ]
@@ -46,7 +49,7 @@ export const plans: Plan[] = [
 export const defaultBillingCycle: BillingCycle = 'quarterly'
 
 export function isPurchasablePlan(plan: PlanId) {
-  return plan === 'basic'
+  return plan === 'basic' || plan === 'plus'
 }
 
 function roundMoney(value: number) {
