@@ -63,14 +63,6 @@ function OnboardingGuard({children}:{children:ReactNode}) {
   const entitlement=useEntitlements()
   const setup=useSetupStatus()
   const {pathname}=useLocation()
-  if(entitlement.isPreactivation) {
-    const allowedPreactivationRoute = pathname === '/app/whatsapp'
-      || pathname.startsWith('/app/whatsapp/')
-      || pathname === '/app/mais/plano'
-    return allowedPreactivationRoute
-      ? children
-      : <Navigate to="/app/whatsapp?from=activation" replace/>
-  }
   if(!entitlement.isPaid)return children
   if(setup.isPending)return <div className="route-loading"><LoadingState/></div>
   if(setup.isError)return <div className="route-loading"><ErrorState onRetry={()=>void setup.refetch()}/></div>
