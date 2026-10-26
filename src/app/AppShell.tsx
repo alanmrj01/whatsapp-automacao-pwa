@@ -32,7 +32,7 @@ const titles: Record<string, string> = {
 export function AppShell() {
   const { pathname } = useLocation()
   const entitlement = useEntitlements()
-  const demo = entitlement.usesDemoData && !entitlement.isPreactivation
+  const demo = entitlement.usesDemoData
   const isConversationDetail = /^\/app\/conversas\/[^/]+$/.test(pathname)
   const isWhatsAppDetail = pathname.startsWith('/app/whatsapp/')
   const isSettingsDetail = pathname.startsWith('/app/mais/')
