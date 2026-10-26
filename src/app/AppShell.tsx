@@ -65,6 +65,7 @@ export function AppShell() {
           <div className="page-stack"><BusinessSelector /></div>
           {demo&&<DemoDataNotice />}
           {!demo&&<WhatsAppPendingBanner />}
+          {!demo&&<MessageQuotaBanner />}
           <Outlet />
         </main>
         <BottomNavigation />
