@@ -12,6 +12,7 @@ import { EmbeddedSignupButton } from '../features/whatsapp/EmbeddedSignupButton'
 import { deriveConnectionJourney } from '../features/whatsapp/connectionJourney'
 import { useEntitlements } from '../features/access/useEntitlements'
 import { DemoDataNotice } from '../features/access/DemoDataNotice'
+import { MessageQuotaBanner } from '../features/billing/MessageUsage'
 
 const titles: Record<string, string> = {
   '/app': 'Início',
@@ -46,6 +47,7 @@ export function AppShell() {
           <NotificationCenter backgroundOnly />
           {demo&&<DemoDataNotice />}
           {!demo&&<WhatsAppPendingBanner />}
+          {!demo&&<MessageQuotaBanner />}
           <Outlet />
           <ReengagementPrompt />
         </div>
