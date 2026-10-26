@@ -8,6 +8,7 @@ import { useEntitlements } from '../access/useEntitlements'
 import { useAuth } from '../auth/useAuth'
 import { useConnection } from '../whatsapp/useConnection'
 import { SubscriptionManagement } from './SubscriptionManagement'
+import { MessageUsageCard } from './MessageUsage'
 import {
   billingCycles,
   cyclePrice,
@@ -24,7 +25,7 @@ function isBillingCycle(value: string | null): value is BillingCycle {
 }
 
 function planCta(plan: PlanId) {
-  return plan === 'basic' ? 'Escolher Basic' : 'Disponível em breve'
+  return plan === 'basic' ? 'Escolher Basic' : 'Escolher Plus'
 }
 
 export function PlanPage() {
@@ -102,9 +103,11 @@ export function PlanPage() {
         <h1>{activationFlow?'Agora ative a Alovia':'Escolha seu plano'}</h1>
         <p>{activationFlow
           ? 'Seu WhatsApp já está conectado. Escolha o plano para liberar a automação e continuar a configuração da operação.'
-          : 'Comece com o Basic. O Plus, pensado para operações em equipe, chega em breve.'}</p>
+          : 'Acompanhe sua franquia mensal e compare os planos disponíveis.'}</p>
       </div>
     </section>
+
+    {!activationFlow&&entitlement.isPaid&&<MessageUsageCard />}
 
     <section className="billing-choice" aria-labelledby="billing-cycle-title">
       <div className="section-title-row billing-choice__heading">
@@ -133,15 +136,14 @@ export function PlanPage() {
       {plans.map(plan=>{
         const price = cyclePrice(plan,cycle)
         const cycleLabel = billingCycles.find(item=>item.id===cycle)?.label
-        const comingSoon = plan.id === 'plus'
-        return <article className={`plan-card plan-card--${plan.id}${comingSoon?' is-coming-soon':''}`} key={plan.id}>
+        const existingPaid = !activationFlow&&entitlement.isPaid
+        return <article className={`plan-card plan-card--${plan.id}`} key={plan.id}>
           <div className="plan-card__heading">
             <div>
               <span className="eyebrow">ALOVIA</span>
               <h2>{plan.name}</h2>
               <p>{plan.positioning}</p>
             </div>
-            {comingSoon&&<span className="plan-coming-soon-badge">Em breve</span>}
           </div>
 
           <div className="plan-price" aria-label={`Preço do plano ${plan.name} no período ${cycleLabel}`}>
@@ -151,14 +153,13 @@ export function PlanPage() {
 
           <ul className="plan-features">
             <li><Check size={17}/>{plan.users===1?'1 usuário':`Até ${plan.users} usuários`}</li>
-            <li><Check size={17}/>Até {plan.automaticAttendances.toLocaleString('pt-BR')} atendimentos automáticos/mês</li>
+            <li><Check size={17}/>Até {plan.monthlyMessages.toLocaleString('pt-BR')} mensagens enviadas pela Alovia/mês</li>
             {plan.features.map(feature=><li key={feature}><Check size={17}/>{feature}</li>)}
           </ul>
 
-          <button className="primary-button plan-card__cta" type="button" disabled={comingSoon} onClick={()=>choosePlan(plan.id)}>
-            {planCta(plan.id)}
+          <button className="primary-button plan-card__cta" type="button" disabled={existingPaid} onClick={()=>choosePlan(plan.id)}>
+            {existingPaid?'Use a gestão de franquia acima':planCta(plan.id)}
           </button>
-          {comingSoon&&<p className="plan-coming-soon" role="status">O plano Plus estará disponível em breve. Para começar agora, escolha o plano Basic.</p>}
         </article>
       })}
     </section>

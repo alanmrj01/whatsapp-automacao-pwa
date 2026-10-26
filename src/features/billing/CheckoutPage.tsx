@@ -1137,7 +1137,7 @@ export function CheckoutPage() {
           <span className="eyebrow">Resumo do pedido</span>
           <div className="checkout-order-title"><div><strong>ALOVIA {plan.name}</strong><span>{plan.positioning}</span></div><span>{cycle?.label}</span></div>
           <div className="checkout-order-price"><strong>{formatBRL(price.total)}</strong><span>{cycleParam==='monthly'?'por mês':cycleParam==='quarterly'?'a cada 3 meses':'por ano'}</span></div>
-          <ul><li><Check size={16}/>Atendimento e agendamento automático integrados</li><li><Check size={16}/>Até 2 técnicos</li><li><Check size={16}/>{paymentMethod==='pix'?'Renovação por novo Pix a cada ciclo':'Renovação automática'}</li></ul>
+          <ul><li><Check size={16}/>Atendimento e agendamento automático integrados</li><li><Check size={16}/>Até {plan.monthlyMessages.toLocaleString('pt-BR')} mensagens enviadas pela Alovia/mês</li><li><Check size={16}/>{plan.users===1?'1 usuário':`Até ${plan.users} usuários`}</li><li><Check size={16}/>{paymentMethod==='pix'?'Renovação por novo Pix a cada ciclo':'Renovação automática'}</li></ul>
           <p className="checkout-order-payment">Pagamento: <strong>{paymentMethod==='pix_automatic'?'Pix Automático':paymentMethod==='pix'?'Pix':'Cartão de crédito'}</strong></p>
           {profile?.business_name&&<p className="checkout-order-business">Assinatura para <strong>{profile.business_name}</strong></p>}
         </section>
