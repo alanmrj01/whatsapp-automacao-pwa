@@ -24,7 +24,7 @@ test('paid tenants see quota warnings and a guarded Plus upgrade path', () => {
 
   assert.match(hook,/\/billing\/usage/)
   assert.match(usage,/ratio\(data\.used,data\.limit\) < 0\.8/)
-  assert.match(usage,/message_quota_exhausted_viewed/)
+  assert.match(usage,/`message_quota_\$\{state\}_viewed`/)
   assert.match(usage,/message_quota_upgrade_clicked/)
   assert.match(usage,/\/billing\/subscription\/upgrade/)
   assert.match(usage,/Migrar para Plus · 900 mensagens\/mês/)
