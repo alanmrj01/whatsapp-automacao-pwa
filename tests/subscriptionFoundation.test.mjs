@@ -42,6 +42,8 @@ test('commercial catalog uses Basic and Plus with quarterly as default', () => {
   assert.equal(isPurchasablePlan('plus'),false)
   assert.equal(basic?.monthlyMessageLimit,600)
   assert.equal(plus?.monthlyMessageLimit,1000)
+  assert.equal('automaticAttendances' in basic,false)
+  assert.equal('automaticAttendances' in plus,false)
 })
 
 test('Basic is purchasable while planned Plus communicates its future allowances', () => {
@@ -56,6 +58,7 @@ test('Basic is purchasable while planned Plus communicates its future allowances
   assert.match(plan,/disabled=\{comingSoon\}/)
   assert.match(plan,/monthlyMessageLimit/)
   assert.match(plan,/mensagens de serviço \+ utilidade/)
+  assert.doesNotMatch(plan,/atendimentos automáticos\/mês/)
   const catalog = read('src/features/billing/planCatalog.ts')
   assert.match(catalog,/monthlyMessageLimit:1000/)
   assert.match(catalog,/Até 300 mensagens de utilidade\/mês/)
