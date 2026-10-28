@@ -65,20 +65,29 @@ test('paid components stay on the paid side of every entitlement route', () => {
   assert.match(router,/if\(entitlement\.isPaid\)return paid/)
 })
 
-test('commercial copy exposes Basic and Plus with explicit message allowances', () => {
+test('commercial copy matches the Basic MVP and planned Plus offer', () => {
   const prompt=read('src/features/access/UpgradePrompt.tsx')
   const page=read('src/features/billing/PlanPage.tsx')
   const catalog=read('src/features/billing/planCatalog.ts')
-  assert.match(prompt,/R\$ 197\/mês no plano mensal · 7 dias de garantia/)
-  assert.match(prompt,/Trimestral e anual têm condições de economia/)
-  assert.match(page,/Escolher Basic/)
-  assert.match(page,/Escolher Plus/)
-  assert.match(page,/monthlyMessageLimit/)
-  assert.doesNotMatch(page,/Em breve/)
-  assert.match(catalog,/monthlyMessageLimit:500/)
-  assert.match(catalog,/monthlyMessageLimit:900/)
-  assert.match(catalog,/return plan === 'basic' \|\| plan === 'plus'/)
-  assert.match(catalog,/badge:'Recomendado'/)
-  assert.match(catalog,/badge:'Maior economia'/)
-  assert.doesNotMatch(`${prompt}${page}${catalog}`,/teste grátis por 7 dias|Mais popular/i)
+  const landing=read('src/features/public/PublicLandingPage.tsx')
+  const coexistence=read('src/features/whatsapp/EmbeddedSignupButton.tsx')
+  const apiOnly=read('src/features/whatsapp/ApiOnlyEmbeddedSignupButton.tsx')
+
+  assert.match(prompt,/600 mensagens de serviço/)
+  assert.match(page,/Em breve/)
+  assert.match(catalog,/monthlyMessageLimit:600/)
+  assert.match(catalog,/monthlyMessageLimit:1000/)
+  assert.match(catalog,/Até 300 mensagens de utilidade\/mês/)
+  assert.match(catalog,/return plan === 'basic'/)
+
+  assert.match(landing,/Até 600 mensagens de serviço por mês/)
+  assert.match(landing,/Até 1\.000 mensagens por mês no total/)
+  assert.match(landing,/Até 300 mensagens de utilidade/)
+  assert.match(landing,/Lembretes de limpeza e retomada de atendimentos parados/)
+
+  for (const signup of [coexistence,apiOnly]) {
+    assert.match(signup,/Adicionar forma de pagamento/)
+    assert.match(signup,/Toque em “Concluir”/)
+    assert.match(signup,/não é o pagamento da Alovia/)
+  }
 })
