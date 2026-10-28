@@ -1,4 +1,4 @@
-import { ArrowRight, CalendarClock, LockKeyhole, MessageCircleMore, Snowflake, Unplug, Wrench } from 'lucide-react'
+import { ArrowRight, LockKeyhole, MessageCircleMore, Unplug } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PrimaryButton } from '../../components/PrimaryButton'
@@ -24,8 +24,7 @@ export function WhatsAppPage() {
   const {membership} = useAuth()
   const entitlement = useEntitlements()
   const {openUpgrade} = useUpgradePrompt()
-  const preactivation = entitlement.isPreactivation && canConfigureWhatsApp(membership?.role)
-  const demo = entitlement.usesDemoData && !preactivation
+  const preactivation = entitlement.isPreactivation
   const readOnly = entitlement.isReadOnlyRetained
   const connection = useConnection()
   const disconnect = useDisconnectWhatsApp()
@@ -95,38 +94,6 @@ export function WhatsAppPage() {
     smartContinuationHandled.current=true
     continueConnection(status,mode,journey.nextAction)
   },[canConnect,connection.data,connection.isError,connection.isPending,continueConnection,journey.nextAction,mode,searchParams,status])
-
-  if (demo) {
-    return (
-      <div className="page-stack whatsapp-page">
-        <section className="connection-card connection-card--alovia">
-          <div className="connection-card__illustration" aria-hidden="true">
-            <MessageCircleMore size={34} />
-            <span className="connection-card__indicator" />
-          </div>
-          <span className="eyebrow">Canal principal de atendimento</span>
-          <h1>WhatsApp</h1>
-          <StatusBadge tone="info">Modo demonstração</StatusBadge>
-          <p>Veja como o ALOVIA organiza pedidos, conversas e agendamentos. A conexão oficial está disponível com assinatura.</p>
-          <PrimaryButton fullWidth icon={<ArrowRight size={19}/>} onClick={()=>openUpgrade('Conectar o WhatsApp')}>
-            Conectar WhatsApp
-          </PrimaryButton>
-        </section>
-
-        <section className="alovia-flow" aria-labelledby="alovia-flow-title">
-          <div className="alovia-flow__heading">
-            <span className="alovia-flow__mark"><Snowflake size={18}/></span>
-            <div><span className="eyebrow">O diferencial da Alovia</span><h2 id="alovia-flow-title">Do pedido à visita técnica</h2></div>
-          </div>
-          <div className="alovia-flow__steps">
-            <div><span><MessageCircleMore size={18}/></span><strong>1. Entende a demanda</strong><p>Organiza o contato por tipo de serviço e necessidade do cliente.</p></div>
-            <div><span><Wrench size={18}/></span><strong>2. Estrutura o atendimento</strong><p>Relaciona serviço, equipamento, endereço e informações úteis para a equipe.</p></div>
-            <div><span><CalendarClock size={18}/></span><strong>3. Leva para a agenda</strong><p>Direciona o próximo passo para a operação técnica, não apenas para uma conversa.</p></div>
-          </div>
-        </section>
-      </div>
-    )
-  }
 
   if (connection.isPending) return <div className="page-stack whatsapp-page"><section className="operational-heading"><div><span className="eyebrow">Canal principal</span><h1>WhatsApp</h1></div></section><LoadingState /></div>
   if (connection.isError) return <div className="page-stack whatsapp-page"><section className="operational-heading"><div><span className="eyebrow">Canal principal</span><h1>WhatsApp</h1></div></section><ErrorState onRetry={()=>void connection.refetch()} /></div>
