@@ -350,6 +350,10 @@ export function ApiOnlyEmbeddedSignupButton({
             : 'Escolha um PIN de 6 dígitos para proteger a conexão deste número. Guarde-o em local seguro.'}
         </small>
       </label>
+      <div className="account-note">
+        <strong>Na etapa final da Meta</strong>
+        <span>Se aparecer “Adicionar forma de pagamento”, não é o pagamento da Alovia e não é necessário agora. Toque em “Concluir” para finalizar a conexão e voltar à Alovia.</span>
+      </div>
       <PrimaryButton
         fullWidth
         disabled={
