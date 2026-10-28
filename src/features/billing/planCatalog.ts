@@ -7,7 +7,6 @@ export type Plan = {
   positioning: string
   monthlyPrice: number
   users: number
-  automaticAttendances: number
   monthlyMessageLimit: number
   features: string[]
 }
@@ -30,7 +29,6 @@ export const plans: Plan[] = [
     positioning:'Para quem toca a operação de perto.',
     monthlyPrice:197,
     users:1,
-    automaticAttendances:500,
     monthlyMessageLimit:600,
     features:['1 WhatsApp','Atendimento automático quando o cliente chama','Conversas e agenda reais','Dashboard operacional'],
   },
@@ -40,7 +38,6 @@ export const plans: Plan[] = [
     positioning:'Para empresas que já trabalham em equipe.',
     monthlyPrice:397,
     users:5,
-    automaticAttendances:1500,
     monthlyMessageLimit:1000,
     features:['1 WhatsApp','Tudo do Basic','Até 300 mensagens de utilidade/mês','Lembretes de limpeza','Retomada de atendimentos parados','Gestão de equipe'],
   },
