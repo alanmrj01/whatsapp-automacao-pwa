@@ -222,12 +222,12 @@ export function PublicLandingPage() {
         <section className="public-hero" data-track-section="hero">
           <div className="public-container public-hero__grid">
             <div className="public-hero__copy">
-              <span className="public-pill"><Snowflake /> Feito para Refrigeiristas</span>
+              <span className="public-pill"><Snowflake /> Feito para Refrigeristas</span>
               <h1>Enquanto você está no serviço, outro cliente pode estar esperando no WhatsApp</h1>
               <p>Enquanto você cuida do serviço, a Alovia responde, coleta os dados e encaminha o agendamento — sem deixar o próximo cliente esfriar.</p>
-              <TrackedLink source="hero" className="public-button">Experimente a Alovia grátis <ArrowRight /></TrackedLink>
+              <TrackedLink source="hero" className="public-button">Conheça a Alovia grátis <ArrowRight /></TrackedLink>
               <div className="public-proof-row" aria-label="Condições do teste">
-                <span><CheckCircle2 /> Teste grátis</span>
+                <span><CheckCircle2 /> Modo demonstração grátis</span>
                 <span><BarChart3 /> Dados demonstrativos</span>
                 <span><CreditCard /> Sem cartão</span>
               </div>
@@ -308,13 +308,49 @@ export function PublicLandingPage() {
           </div>
         </section>
 
+        <section className="public-section public-practical" data-track-section="plans">
+          <div className="public-container">
+            <h2>Planos pensados para o volume da sua operação</h2>
+            <p className="public-section__lead">No lançamento, o Basic atende quando o cliente chama. O Plus acrescentará mensagens proativas de utilidade depois que essa etapa estiver pronta.</p>
+            <div className="public-flow">
+              <article>
+                <span className="public-step">Basic</span>
+                <h3>R$ 197/mês</h3>
+                <ul>
+                  <li><CheckCircle2 /> Até 600 mensagens de serviço por mês</li>
+                  <li><MessageCircle /> Atendimento automático iniciado pelo cliente</li>
+                  <li><CalendarCheck2 /> Conversas e agendamentos organizados</li>
+                </ul>
+              </article>
+              <article>
+                <span className="public-step">Plus</span>
+                <h3>R$ 397/mês · em breve</h3>
+                <ul>
+                  <li><CheckCircle2 /> Até 1.000 mensagens por mês no total</li>
+                  <li><MessageCircle /> Até 300 mensagens de utilidade dentro da franquia</li>
+                  <li><Snowflake /> Lembretes de limpeza e retomada de atendimentos parados</li>
+                </ul>
+              </article>
+              <article>
+                <span className="public-step">Franquia</span>
+                <h3>Você acompanha o uso</h3>
+                <ul>
+                  <li><CheckCircle2 /> Mensagens recebidas não consomem a franquia</li>
+                  <li><BarChart3 /> O consumo fica visível na conta</li>
+                  <li><CalendarCheck2 /> A franquia é renovada mensalmente</li>
+                </ul>
+              </article>
+            </div>
+          </div>
+        </section>
+
         <section className="public-section public-final" data-track-section="final">
           <div className="public-container">
             <div className="public-final__grid">
               <div className="public-final__copy">
                 <h2>Seu atendimento pode continuar enquanto você está no serviço.</h2>
                 <p>A Alovia mantém a conversa avançando e deixa o agendamento organizado enquanto você conclui o serviço.</p>
-                <TrackedLink source="final" className="public-button">Experimente grátis <ArrowRight /></TrackedLink>
+                <TrackedLink source="final" className="public-button">Criar conta grátis <ArrowRight /></TrackedLink>
               </div>
               <div className="public-final__scene">
                 <img src={technicianPhoto} alt="Refrigerista trabalhando" width="1672" height="941" loading="lazy" />

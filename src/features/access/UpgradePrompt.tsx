@@ -25,8 +25,8 @@ export function UpgradePromptProvider({ children }: { children: ReactNode }) {
         <div className="upgrade-prompt upgrade-prompt--compact">
           <p>Use esta função com os dados reais da sua empresa.</p>
           <div className="upgrade-prompt__offer">
-            <strong>Basic: R$ 197/mês no plano mensal · 7 dias de garantia.</strong>
-            <span>Trimestral e anual têm condições de economia.</span>
+            <strong>Basic: R$ 197/mês no plano mensal · até 600 mensagens de serviço por mês.</strong>
+            <span>Atendimento automático quando o cliente chama · 7 dias de garantia.</span>
           </div>
           <div className="upgrade-prompt__actions">
             <button className="primary-button" type="button" onClick={viewPlans}>Ver planos</button>

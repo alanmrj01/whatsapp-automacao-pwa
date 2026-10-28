@@ -10,13 +10,16 @@ test('root is the approved refrigeration landing journey', () => {
 
   assert.match(router, /path="\/" element={<PublicLandingPage \/>}/)
   assert.doesNotMatch(router, /path="\/" element={<Navigate to="\/app"/)
-  assert.match(landing, /Feito para Refrigeiristas/)
+  assert.match(landing, /Feito para Refrigeristas/)
   assert.match(landing, /Enquanto você está no serviço, outro cliente pode estar esperando no WhatsApp/)
   assert.match(landing, /Enquanto você cuida do serviço, a Alovia responde, coleta os dados e encaminha o agendamento/)
   assert.match(landing, /Como a Alovia atende enquanto você está no serviço/)
   assert.match(landing, /Conheça na prática como seus clientes serão atendidos/)
-  assert.match(landing, /Experimente a Alovia grátis/)
+  assert.match(landing, /Conheça a Alovia grátis/)
   assert.match(landing, /Criar conta grátis/)
+  assert.match(landing, /Até 600 mensagens de serviço por mês/)
+  assert.match(landing, /Até 1\.000 mensagens por mês no total/)
+  assert.match(landing, /Até 300 mensagens de utilidade/)
   assert.match(landing, /to="\/login"/)
 })
 

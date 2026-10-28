@@ -31,8 +31,8 @@ export const plans: Plan[] = [
     monthlyPrice:197,
     users:1,
     automaticAttendances:500,
-    monthlyMessageLimit:500,
-    features:['1 WhatsApp','Assistente virtual completo','Conversas e agenda reais','Dashboard operacional'],
+    monthlyMessageLimit:600,
+    features:['1 WhatsApp','Atendimento automático quando o cliente chama','Conversas e agenda reais','Dashboard operacional'],
   },
   {
     id:'plus',
@@ -41,15 +41,15 @@ export const plans: Plan[] = [
     monthlyPrice:397,
     users:5,
     automaticAttendances:1500,
-    monthlyMessageLimit:900,
-    features:['1 WhatsApp','Assistente virtual completo','Conversas e agenda reais','Gestão de equipe'],
+    monthlyMessageLimit:1000,
+    features:['1 WhatsApp','Tudo do Basic','Até 300 mensagens de utilidade/mês','Lembretes de limpeza','Retomada de atendimentos parados','Gestão de equipe'],
   },
 ]
 
 export const defaultBillingCycle: BillingCycle = 'quarterly'
 
 export function isPurchasablePlan(plan: PlanId) {
-  return plan === 'basic' || plan === 'plus'
+  return plan === 'basic'
 }
 
 function roundMoney(value: number) {

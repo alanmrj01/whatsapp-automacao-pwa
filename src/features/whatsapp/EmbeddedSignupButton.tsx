@@ -243,6 +243,10 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
       {autoStart && phase === 'idle' && !preparing && !configuration.isError && (
         <p role="status">Conexão preparada. Toque abaixo para abrir a autorização da Meta.</p>
       )}
+      <div className="account-note">
+        <strong>Na etapa final da Meta</strong>
+        <span>Se aparecer “Adicionar forma de pagamento”, não é o pagamento da Alovia e não é necessário agora. Toque em “Concluir” para finalizar a conexão e voltar à Alovia.</span>
+      </div>
       <PrimaryButton
         fullWidth
         disabled={busy || preparing || phase === 'success'}
