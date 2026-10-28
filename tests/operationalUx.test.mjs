@@ -69,14 +69,13 @@ test('company hours are configured independently from technicians and support we
   assert.match(operations,/\/business-hours/)
 })
 
-test('paid WhatsApp connection supports explicit disconnect without keeping marketing content', () => {
+test('paid WhatsApp connection supports explicit disconnect while demo education stays gated', () => {
   const whatsapp = read('src/features/whatsapp/WhatsAppPage.tsx')
   const connection = read('src/features/whatsapp/useConnection.ts')
   assert.match(whatsapp,/Desconectar WhatsApp/)
   assert.match(whatsapp,/Confirmar desconexão/)
   assert.match(connection,/\/whatsapp\/disconnect/)
-  const paidSection = whatsapp.slice(whatsapp.indexOf("if (connection.isPending)"))
-  assert.doesNotMatch(paidSection,/O diferencial da Alovia/)
+  assert.match(whatsapp,/entitlement\.usesDemoData&&<section className="alovia-flow"/)
 })
 
 test('materials onboarding supports an explicit no-separate-charge decision and simple units', () => {

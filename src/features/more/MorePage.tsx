@@ -18,7 +18,7 @@ export function MorePage(){
   const whatsappPending=paid&&setup.data?.onboarding_completed===true&&!whatsappReady
   const nonWhatsAppBlockingReasons=setup.data?.blocking_reasons.filter(reason=>!/WhatsApp/i.test(reason))??[]
   const needsReview=paid&&setup.data?.onboarding_completed===true&&nonWhatsAppBlockingReasons.length>0
-  const connectionLabel=state==='FREE_DEMO'?'Disponível com assinatura':connection.isPending?'Consultando':connection.isError||connection.data?.status==='error'?'Atenção necessária':connection.data?.status==='pending'?'Conectando':whatsappReady?'Conectado':'Não conectado'
+  const connectionLabel=connection.isPending?'Consultando':connection.isError||connection.data?.status==='error'?'Atenção necessária':connection.data?.status==='pending'?'Conectando':whatsappReady?'Conectado':'Não conectado'
   const planLabel=paid?'Acesso liberado':entitlement.isReadOnlyRetained?'Acesso pausado':'Gratuito'
   const gated=(label:string)=>()=>openUpgrade(label)
 

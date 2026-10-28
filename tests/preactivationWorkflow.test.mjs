@@ -9,6 +9,8 @@ test('new prospects keep demo access while WhatsApp connection remains available
   const router=read('src/app/router.tsx')
   const shell=read('src/app/AppShell.tsx')
   const whatsapp=read('src/features/whatsapp/WhatsAppPage.tsx')
+  const dashboard=read('src/features/dashboard/DashboardPage.tsx')
+  const more=read('src/features/more/MorePage.tsx')
   const plan=read('src/features/billing/PlanPage.tsx')
 
   assert.match(signup,/navigate\(homeFor\(createdUser\)/)
@@ -23,8 +25,11 @@ test('new prospects keep demo access while WhatsApp connection remains available
   assert.doesNotMatch(shell,/usesDemoData && !entitlement\.isPreactivation/)
 
   assert.match(whatsapp,/const preactivation = entitlement\.isPreactivation/)
-  assert.match(whatsapp,/const demo = entitlement\.usesDemoData && !preactivation/)
+  assert.doesNotMatch(whatsapp,/A conexão oficial está disponível com assinatura/)
   assert.match(whatsapp,/entitlement\.isPaid \|\| preactivation/)
+  assert.doesNotMatch(dashboard,/openUpgrade\('Conectar o WhatsApp'\)/)
+  assert.match(dashboard,/to="\/app\/whatsapp"/)
+  assert.doesNotMatch(more,/FREE_DEMO'\?'Disponível com assinatura'/)
   assert.match(whatsapp,/status==='connected'/)
   assert.match(whatsapp,/Escolher plano e ativar a Alovia/)
 

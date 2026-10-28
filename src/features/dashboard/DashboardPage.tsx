@@ -41,9 +41,8 @@ export function DashboardPage() {
   const appointments = demo ? demoAppointments.filter(item=>item.date===demoToday).slice(0,3) : dashboard.data?.upcoming_appointments??[]
   const timezone=demo?undefined:business.data?.timezone
   const date = new Intl.DateTimeFormat('pt-BR',{weekday:'long',day:'numeric',month:'long',timeZone:timezone}).format(new Date())
-  const whatsappStatus = demo ? 'demo' : connection.isError ? 'error' : connection.isPending ? 'loading' : connection.data?.status??'disconnected'
+  const whatsappStatus = connection.isError ? 'error' : connection.isPending ? 'loading' : connection.data?.status??'disconnected'
   const whatsappPresentation = {
-    demo:{title:'Conheça o fluxo conectado',label:'Demonstração',tone:'info' as const,description:'Veja como o WhatsApp organiza conversas e agendamentos antes de ativar a operação.'},
     loading:{title:'Atualizando a conexão',label:'Consultando',tone:'neutral' as const,description:'Atualizando o estado da conexão da empresa.'},
     disconnected:{title:'Conecte o canal da empresa',label:'Não conectado',tone:'neutral' as const,description:'Conecte o WhatsApp Business oficial para começar a receber atendimentos.'},
     pending:{title:'Autorização em andamento',label:'Conectando',tone:'warning' as const,description:'A autorização está sendo concluída. Você pode acompanhar o status sem interromper o processo.'},
@@ -61,9 +60,7 @@ export function DashboardPage() {
       <span className="whatsapp-summary__icon"><MessageCircleMore size={22}/></span>
       <div><span className="eyebrow">WhatsApp</span><h2 id="whatsapp-summary-title">{whatsappPresentation.title}</h2><p>{whatsappPresentation.description}</p></div>
       <StatusBadge tone={whatsappPresentation.tone}>{whatsappPresentation.label}</StatusBadge>
-      {demo
-        ? <button className="compact-button" type="button" onClick={()=>openUpgrade('Conectar o WhatsApp')}>Conectar WhatsApp</button>
-        : <Link className="compact-button" to="/app/whatsapp">{whatsappStatus==='disconnected'?'Conectar':whatsappStatus==='error'?'Revisar':'Ver conexão'}</Link>}
+      <Link className="compact-button" to="/app/whatsapp">{whatsappStatus==='disconnected'?'Conectar':whatsappStatus==='error'?'Revisar':'Ver conexão'}</Link>
     </section>
 
     {needsReview&&<section className="setup-callout setup-callout--warning" role="status">
