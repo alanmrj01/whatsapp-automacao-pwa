@@ -20,6 +20,7 @@ test('real conversations use a full paid route with human reply controls', () =>
   assert.match(detail,/conversation-contact-name-form/)
   assert.match(detail,/Assistente nesta conversa/)
   assert.match(detail,/Respostas automáticas permanentes/)
+  assert.match(detail,/customer_whatsapp_id\?\?conversation\.customer_phone/)
   assert.match(detail,/Nunca responder automaticamente/)
   assert.match(detail,/Agendar/)
   assert.match(detail,/janela de atendimento está encerrada/i)
