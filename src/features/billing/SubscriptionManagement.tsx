@@ -99,33 +99,6 @@ export function SubscriptionManagement() {
     void syncSession().catch(()=>undefined)
   },[refundCompleted,syncSession])
 
-  async function upgradeToPlus() {
-    if (billingBusy) return
-    setBillingBusy(true)
-    setBillingError('')
-    setBillingSuccess('')
-    try {
-      const updated=await api.request<SubscriptionStatus>(
-        '/billing/subscription/upgrade',
-        {method:'POST',body:JSON.stringify({target_plan:'plus'})},
-      )
-      setSubscription(updated)
-      setUsage(await api.request<MessageUsage>('/billing/usage'))
-      setBillingSuccess('Upgrade para o Plus confirmado. Sua franquia mensal agora é de 900 mensagens.')
-    } catch(failure) {
-      const detail=failure instanceof ApiError?failure.detail:undefined
-      setBillingError(
-        failure instanceof ApiError&&failure.status===409&&detail==='Upgrade is available at renewal for this billing cycle'
-          ? 'Neste ciclo, o upgrade é feito na renovação. Você pode aguardar a renovação da franquia mensal.'
-          : failure instanceof ApiError&&failure.status===409&&detail==='Upgrade is available at renewal for this payment method'
-            ? 'Com esta forma de pagamento, a mudança para o Plus acontece na renovação. Você pode aguardar a nova franquia mensal.'
-            : 'Não foi possível fazer o upgrade agora. Tente novamente em alguns instantes.',
-      )
-    } finally {
-      setBillingBusy(false)
-    }
-  }
-
   async function requestBillingAction(action:'refund'|'cancel') {
     if (billingBusy) return
     setBillingBusy(true)
@@ -165,11 +138,10 @@ export function SubscriptionManagement() {
         <strong>Mensagens do mês: {usage.used.toLocaleString('pt-BR')} de {usage.limit.toLocaleString('pt-BR')}</strong>
         <span>{usage.exhausted
           ? usage.plan==='basic'
-            ? 'Sua franquia do Basic chegou ao limite. Os novos envios ficam pausados até você migrar para o Plus ou até a renovação mensal.'
+            ? 'Sua franquia do Basic chegou ao limite. Os novos envios ficam pausados até a renovação mensal. O Plus, com mensagens proativas, será liberado após o lançamento.'
             : 'Sua franquia do Plus chegou ao limite. Os novos envios ficam pausados até a renovação mensal.'
           : `Restam ${(usage.remaining??0).toLocaleString('pt-BR')} mensagens enviadas pela Alovia neste mês.`}</span>
         {usageResetsAt&&<small>A franquia renova em {usageResetsAt}.</small>}
-        {usage.exhausted&&usage.upgrade_plan==='plus'&&<button className="primary-button account-financial-action" type="button" disabled={billingBusy} onClick={()=>void upgradeToPlus()}>{billingBusy?'Atualizando…':'Migrar para o Plus · 900 mensagens/mês'}</button>}
       </div>}
       {subscription.guarantee_eligible&&guaranteeUntil&&!refundWaiting&&<div className="account-guarantee-state is-active">
         <strong>Garantia até {guaranteeUntil}</strong>
