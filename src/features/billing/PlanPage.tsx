@@ -152,7 +152,6 @@ export function PlanPage() {
           <ul className="plan-features">
             <li><Check size={17}/>{plan.users===1?'1 usuário':`Até ${plan.users} usuários`}</li>
             <li><Check size={17}/>Até {plan.monthlyMessageLimit.toLocaleString('pt-BR')} {plan.id==='basic'?'mensagens de serviço':'mensagens de serviço + utilidade'}/mês</li>
-            <li><Check size={17}/>Até {plan.automaticAttendances.toLocaleString('pt-BR')} atendimentos automáticos/mês</li>
             {plan.features.map(feature=><li key={feature}><Check size={17}/>{feature}</li>)}
           </ul>
 
