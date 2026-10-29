@@ -68,6 +68,11 @@ test('app and admin areas remain protected', () => {
 })
 
 
+test('Vimeo VSL does not request encrypted-media permission', () => {
+  const landing = read('src/features/public/PublicLandingPage.tsx')
+  assert.doesNotMatch(landing, /encrypted-media/)
+})
+
 test('netlify CSP allows the Vimeo VSL frame', () => {
   const netlify = read('netlify.toml')
   assert.match(netlify, /frame-src[^\n]*https:\/\/player\.vimeo\.com/)
