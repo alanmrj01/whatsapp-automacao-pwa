@@ -141,3 +141,12 @@ test('pending subscription cancellation stays retryable and refreshes while unre
   assert.match(source,/\/billing\/subscription\/cancel-request/)
 })
 
+test('refund copy promises processing, not provider completion, within 24 hours', () => {
+  const source = read('src/features/billing/SubscriptionManagement.tsx')
+  assert.match(source,/Processaremos sua solicitação de reembolso em até 24 horas/)
+  assert.match(source,/confirmação da devolução depende do processamento do meio de pagamento/)
+  assert.match(source,/Prazo de processamento da solicitação/)
+  assert.doesNotMatch(source,/Seu reembolso será concluído em até 24 horas/)
+  assert.doesNotMatch(source,/reembolso será concluído em até 24 horas/)
+})
+
