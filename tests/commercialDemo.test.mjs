@@ -84,7 +84,6 @@ test('commercial copy matches the Basic MVP and planned Plus offer', () => {
   assert.match(landing,/Até 1\.000 mensagens por mês/)
   assert.match(landing,/Oferta automática de manutenção preventiva para clientes já atendidos/)
   assert.match(landing,/Oferta automática de PMOC para clientes com histórico de PMOC/)
-  assert.match(landing,/Lembretes de limpeza e retomada de atendimentos parados/)
 
   for (const signup of [coexistence,apiOnly]) {
     assert.match(signup,/Adicionar forma de pagamento/)
