@@ -119,7 +119,7 @@ function RealConversationList({items,timezone}:{items:Conversation[];timezone:st
       {bulk.isError&&<p className="form-error" role="alert">Não foi possível aplicar a ação às conversas selecionadas.</p>}
     </div>
 
-    <section className="conversation-list" aria-live="polite">
+    <section className={menuId ? "conversation-list has-open-menu" : "conversation-list"} aria-live="polite">
       {items.map(item=><article className={`conversation-row ${item.priority?'is-priority':''} ${item.pinned?'is-pinned':''} ${selectionMode?'is-selecting':''}`} key={item.id}>
         {selectionMode&&<button className="conversation-selection-toggle" type="button" aria-label={selectedIds.has(item.id)?`Desmarcar ${item.customer_name}`:`Selecionar ${item.customer_name}`} onClick={()=>toggleSelected(item.id)}>{selectedIds.has(item.id)?<CheckSquare size={22}/>:<Square size={22}/>}</button>}
         <div className="conversation-avatar" aria-hidden="true">{item.customer_name.split(' ').map(value=>value[0]).join('').slice(0,2)}</div>

@@ -79,3 +79,11 @@ test('conversation renders images audio and video with authenticated media loadi
   assert.match(css,/\.conversation-media--audio/)
 })
 
+test('conversation contextual menu escapes list clipping only while open', () => {
+  const list = read('src/features/conversations/ConversationsPage.tsx')
+  const css = read('src/styles/operational-app.css')
+
+  assert.match(list,/menuId \? "conversation-list has-open-menu" : "conversation-list"/)
+  assert.match(css,/\.conversation-list\.has-open-menu \{[\s\S]*overflow:\s*visible/)
+  assert.match(css,/\.conversation-list\.has-open-menu \{[\s\S]*z-index:\s*20/)
+})
