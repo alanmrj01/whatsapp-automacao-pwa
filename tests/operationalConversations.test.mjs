@@ -90,6 +90,16 @@ test('conversation inbox exposes pin, read state and safe logical deletion', () 
   assert.match(api,/method:'DELETE'/)
 })
 
+test('appointment details shortcut directly to the related conversation', () => {
+  const agenda = read('src/features/appointments/AgendaPage.tsx')
+  const types = read('src/features/operations/types.ts')
+
+  assert.match(types,/conversation_id\?:string\|null/)
+  assert.match(agenda,/activeAppointment\?\.conversation_id/)
+  assert.match(agenda,/to=\{\`\/app\/conversas\/\$\{activeAppointment\.conversation_id\}\`\}/)
+  assert.match(agenda,/Ver conversa/)
+})
+
 test('conversation contact panel shortcuts appointment creation with the current customer', () => {
   const detail = read('src/features/conversations/ConversationDetailPage.tsx')
   const agenda = read('src/features/appointments/AgendaPage.tsx')
