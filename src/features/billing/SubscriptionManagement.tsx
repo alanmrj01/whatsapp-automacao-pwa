@@ -89,10 +89,10 @@ export function SubscriptionManagement() {
   const canRequestCancellation=!!subscription&&!subscription.guarantee_eligible&&!refundWaiting&&!refundCompleted&&!subscription.cancellation_requested_at&&(subscription.status==='active'||subscription.status==='past_due')
 
   useEffect(()=>{
-    if(!refundWaiting)return
+    if(!refundWaiting&&!cancellationPending)return
     const timer=window.setInterval(()=>void loadSubscription(true),10_000)
     return()=>window.clearInterval(timer)
-  },[loadSubscription,refundWaiting])
+  },[cancellationPending,loadSubscription,refundWaiting])
 
   useEffect(()=>{
     if(!refundCompleted)return
@@ -121,8 +121,11 @@ export function SubscriptionManagement() {
           ? 'O prazo da garantia de 7 dias já terminou.'
           : failure instanceof ApiError&&failure.status===409&&detail==='Payment reference requires support review'
             ? 'Não foi possível confirmar com segurança o pagamento original. A solicitação precisa de revisão do suporte antes de qualquer estorno.'
-            : 'Não foi possível registrar a solicitação agora. Tente novamente em alguns instantes.',
+            : action==='cancel'&&failure instanceof ApiError&&failure.status===502
+              ? 'Ainda não foi possível confirmar o cancelamento no provedor. Você pode tentar novamente com segurança.'
+              : 'Não foi possível registrar a solicitação agora. Tente novamente em alguns instantes.',
       )
+      if(action==='cancel')void loadSubscription(true)
     } finally {
       setBillingBusy(false)
     }
@@ -170,6 +173,7 @@ export function SubscriptionManagement() {
       </div>}
       {subscription.guarantee_eligible&&!refundWaiting&&!refundCompleted&&!subscription.cancellation_requested_at&&<button className="secondary-button account-financial-action" type="button" disabled={billingBusy} onClick={()=>setConfirmation('refund')}>Solicitar cancelamento e reembolso</button>}
       {canRequestCancellation&&<button className="secondary-button account-financial-action" type="button" disabled={billingBusy} onClick={()=>setConfirmation('cancel')}>Solicitar cancelamento</button>}
+      {cancellationPending&&<button className="secondary-button account-financial-action" type="button" disabled={billingBusy} onClick={()=>setConfirmation('cancel')}>Tentar cancelar novamente</button>}
       {confirmation==='refund'&&<div className="account-financial-confirmation" role="alertdialog" aria-label="Confirmar solicitação de reembolso">
         <strong>Confirmar cancelamento e devolução?</strong>
         <p>Você está solicitando o cancelamento e a devolução integral dentro da garantia de 7 dias. Após a solicitação, o reembolso será concluído em até 24 horas.</p>
