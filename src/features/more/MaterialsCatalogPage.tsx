@@ -69,6 +69,7 @@ export function MaterialsCatalogPage(){
   const [statusFilter,setStatusFilter]=useState<'all'|'active'|'inactive'>('all')
   const [saveState,setSaveState]=useState<'idle'|'saving'|'saved'|'error'>('idle')
   const hydrated=useRef(false)
+  const baselines=useRef<Record<string,Draft>>({})
 
   const activeMaterials=useMemo(
     ()=>items.data?.items.filter(item=>(item.kind==='material'||item.preset_key==='condenser-bracket')&&item.active)??[],
@@ -134,7 +135,19 @@ export function MaterialsCatalogPage(){
 
   useEffect(()=>{
     if(!items.data)return
-    setDrafts(Object.fromEntries(items.data.items.map(item=>[item.id,toDraft(item)])))
+    const incoming=Object.fromEntries(items.data.items.map(item=>[item.id,toDraft(item)]))
+    setDrafts(current=>{
+      if(!hydrated.current)return incoming
+      const previous=baselines.current
+      return Object.fromEntries(items.data.items.map(item=>{
+        const serverDraft=incoming[item.id]
+        const currentDraft=current[item.id]
+        const previousBaseline=previous[item.id]
+        const locallyDirty=!!currentDraft&&!!previousBaseline&&draftChanged(currentDraft,previousBaseline)
+        return [item.id,locallyDirty?currentDraft:serverDraft]
+      }))
+    })
+    baselines.current=incoming
     hydrated.current=true
   },[items.data])
 
@@ -161,15 +174,14 @@ export function MaterialsCatalogPage(){
     }
   }
 
-  const materialDraftInvalid=(id:string)=>materialInvalid(drafts[id])
-  const equipmentDraftInvalid=(id:string)=>equipmentInvalid(drafts[id])
-  const catalogInvalid=
-    activeMaterials.some(item=>materialDraftInvalid(item.id))||
-    equipmentReferences.some(item=>equipmentDraftInvalid(item.id))
-  const hasChanges=items.data?.items.some(item=>{
-    const draft=drafts[item.id]
-    return !!draft&&draftChanged(draft,toDraft(item))
-  })??false
+  const baselineFor=(item:CatalogItem)=>baselines.current[item.id]??toDraft(item)
+  const itemChanged=(item:CatalogItem)=>draftChanged(drafts[item.id],baselineFor(item))
+  const changedMaterials=activeMaterials.filter(item=>itemChanged(item))
+  const changedEquipment=equipmentReferences.filter(item=>itemChanged(item))
+  const changedInvalid=
+    changedMaterials.some(item=>materialInvalid(drafts[item.id]))||
+    changedEquipment.some(item=>equipmentInvalid(drafts[item.id]))
+  const hasChanges=changedMaterials.length>0||changedEquipment.length>0
 
   const optedOut=business.data?.materials_catalog_reviewed===true&&!activeMaterials.length
 
@@ -224,13 +236,12 @@ export function MaterialsCatalogPage(){
 
   const save=async()=>{
     setSaveAttempted(true)
-    if(catalogInvalid)return
+    if(changedInvalid)return
     setSaveState('saving')
     try{
-      for(const item of activeMaterials){
+      for(const item of changedMaterials){
         const draft=drafts[item.id]
-        if(!draftChanged(draft,toDraft(item)))continue
-        await update.mutateAsync({
+        const saved=await update.mutateAsync({
           id:item.id,
           values:{
             kind:'material',
@@ -241,11 +252,11 @@ export function MaterialsCatalogPage(){
             active:true,
           },
         })
+        baselines.current[item.id]=toDraft(saved)
       }
-      for(const item of equipmentReferences){
+      for(const item of changedEquipment){
         const draft=drafts[item.id]
-        if(!draftChanged(draft,toDraft(item)))continue
-        await update.mutateAsync({
+        const saved=await update.mutateAsync({
           id:item.id,
           values:{
             kind:'equipment',
@@ -259,6 +270,7 @@ export function MaterialsCatalogPage(){
             active:draft.active,
           },
         })
+        baselines.current[item.id]=toDraft(saved)
       }
       if(!business.data?.materials_catalog_reviewed){
         await updateBusiness.mutateAsync({materials_catalog_reviewed:true})
@@ -271,7 +283,7 @@ export function MaterialsCatalogPage(){
   }
 
   useEffect(()=>{
-    if(!hydrated.current||!canEdit||!hasChanges||catalogInvalid)return
+    if(!hydrated.current||!canEdit||!hasChanges||changedInvalid)return
     setSaveState('saving')
     const timer=window.setTimeout(()=>{void save()},1200)
     return ()=>window.clearTimeout(timer)
@@ -291,7 +303,7 @@ export function MaterialsCatalogPage(){
           type="button"
           aria-label="Salvar catálogo"
           title="Salvar catálogo"
-          disabled={update.isPending||updateBusiness.isPending||catalogInvalid}
+          disabled={update.isPending||updateBusiness.isPending}
           onClick={()=>void save()}
         ><Save size={21}/></button>}
         <InfoHelp title="Catálogo da empresa">Materiais cobrados e equipamentos de referência têm regras separadas. A recomendação usa somente equipamentos técnicos ativos da sua empresa.</InfoHelp>
@@ -412,10 +424,10 @@ export function MaterialsCatalogPage(){
       </div>
     </section>
 
-    {saveAttempted&&catalogInvalid&&<p className="form-error" role="alert">Revise os campos destacados antes de salvar.</p>}
+    {saveAttempted&&changedInvalid&&<p className="form-error" role="alert">Revise os campos destacados antes de salvar.</p>}
     {imageUploadError&&<p className="form-error" role="alert">{imageUploadError}</p>}
     {(create.isError||update.isError||uploadImage.isError||remove.isError||updateBusiness.isError)&&<MutationError/>}
-    {(update.isSuccess||updateBusiness.isSuccess)&&!catalogInvalid&&<p className="form-success">Catálogo salvo.</p>}
+    {(update.isSuccess||updateBusiness.isSuccess)&&!changedInvalid&&<p className="form-success">Catálogo salvo.</p>}
   </Shell>
 }
 
