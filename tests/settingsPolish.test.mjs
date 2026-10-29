@@ -56,3 +56,24 @@ test('ALOVIA contact source lists every current conversation contact in a collap
   assert.match(automation,/value=\{item\.whatsappId\}/)
   assert.match(automation,/Esta lista mostra os contatos das conversas existentes no ALOVIA\./)
 })
+
+test('catalog autosave persists valid changed items without unrelated invalid cards blocking it',()=>{
+  const catalog=read('src/features/more/MaterialsCatalogPage.tsx')
+
+  assert.match(catalog,/const changedMaterials=activeMaterials\.filter\(item=>itemChanged\(item\)\)/)
+  assert.match(catalog,/const changedEquipment=equipmentReferences\.filter\(item=>itemChanged\(item\)\)/)
+  assert.match(catalog,/const changedInvalid=/)
+  assert.match(catalog,/for\(const item of changedMaterials\)/)
+  assert.match(catalog,/for\(const item of changedEquipment\)/)
+  assert.match(catalog,/if\(!hydrated\.current\|\|!canEdit\|\|!hasChanges\|\|changedInvalid\)return/)
+  assert.doesNotMatch(catalog,/disabled=\{update\.isPending\|\|updateBusiness\.isPending\|\|catalogInvalid\}/)
+})
+
+test('catalog refetch preserves dirty drafts and saved responses advance their baseline',()=>{
+  const catalog=read('src/features/more/MaterialsCatalogPage.tsx')
+
+  assert.match(catalog,/const baselines=useRef<Record<string,Draft>>\(\{\}\)/)
+  assert.match(catalog,/const locallyDirty=.*draftChanged\(currentDraft,previousBaseline\)/)
+  assert.match(catalog,/return \[item\.id,locallyDirty\?currentDraft:serverDraft\]/)
+  assert.match(catalog,/baselines\.current\[item\.id\]=toDraft\(saved\)/)
+})
