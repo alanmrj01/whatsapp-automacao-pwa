@@ -20,7 +20,7 @@ import {
   UserRound,
   Wrench,
 } from 'lucide-react'
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { BrandMark } from '../../components/BrandMark'
 import { trackEvent } from '../../lib/tracking'
@@ -71,18 +71,38 @@ function PhonePreview() {
 }
 
 function VideoPreview() {
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const [started, setStarted] = useState(false)
+
+  const startVideo = () => {
+    if (started) return
+    setStarted(true)
+    trackEvent('landing_vsl_play_intent', {}, { surface: 'landing' })
+    iframeRef.current?.contentWindow?.postMessage({ method: 'play' }, 'https://player.vimeo.com')
+  }
+
   return (
-    <button
-      type="button"
-      className="public-video"
-      aria-label="Assistir demonstração da Alovia"
-      onClick={() => trackEvent('landing_vsl_play_intent', {}, { surface: 'landing' })}
-    >
-      <img src={technicianPhoto} alt="" width="1672" height="941" fetchPriority="high" />
-      <span className="public-video__shade" aria-hidden="true" />
-      <span className="public-video__play"><Play fill="currentColor" /></span>
-      <span className="public-video__duration">2:18</span>
-    </button>
+    <div className="public-video" aria-label="Assistir demonstração da Alovia">
+      <iframe
+        ref={iframeRef}
+        src="https://player.vimeo.com/video/1240828681?badge=0&autopause=0&player_id=0&app_id=58479"
+        title="Alovia"
+        frameBorder="0"
+        allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
+        referrerPolicy="strict-origin-when-cross-origin"
+        allowFullScreen
+      />
+      {!started && (
+        <button
+          type="button"
+          className="public-video__start"
+          aria-label="Reproduzir vídeo da Alovia"
+          onClick={startVideo}
+        >
+          <span className="public-video__play" aria-hidden="true"><Play fill="currentColor" /></span>
+        </button>
+      )}
+    </div>
   )
 }
 
