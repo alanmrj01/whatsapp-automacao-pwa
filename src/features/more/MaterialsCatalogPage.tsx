@@ -181,10 +181,13 @@ export function MaterialsCatalogPage(){
     const draft=drafts[item.id]
     return !!draft&&draftChanged(draft,toDraft(item))
   })
+  const validChangedMaterials=changedMaterials.filter(item=>!materialDraftInvalid(item.id))
+  const validChangedEquipment=changedEquipment.filter(item=>!equipmentDraftInvalid(item.id))
   const catalogInvalid=
-    changedMaterials.some(item=>materialDraftInvalid(item.id))||
-    changedEquipment.some(item=>equipmentDraftInvalid(item.id))
+    validChangedMaterials.length!==changedMaterials.length||
+    validChangedEquipment.length!==changedEquipment.length
   const hasChanges=changedMaterials.length>0||changedEquipment.length>0
+  const hasSavableChanges=validChangedMaterials.length>0||validChangedEquipment.length>0
 
   const optedOut=business.data?.materials_catalog_reviewed===true&&!activeMaterials.length
 
@@ -237,12 +240,16 @@ export function MaterialsCatalogPage(){
     setAddAttempted(false)
   }
 
-  const save=async()=>{
-    setSaveAttempted(true)
-    if(catalogInvalid)return
+  const save=async(manual=false)=>{
+    if(manual)setSaveAttempted(true)
+    if(!hasChanges)return
+    if(!hasSavableChanges){
+      if(manual)setSaveState('error')
+      return
+    }
     setSaveState('saving')
     try{
-      for(const item of changedMaterials){
+      for(const item of validChangedMaterials){
         const draft=drafts[item.id]
         await update.mutateAsync({
           id:item.id,
@@ -256,7 +263,7 @@ export function MaterialsCatalogPage(){
           },
         })
       }
-      for(const item of changedEquipment){
+      for(const item of validChangedEquipment){
         const draft=drafts[item.id]
         await update.mutateAsync({
           id:item.id,
@@ -276,16 +283,16 @@ export function MaterialsCatalogPage(){
       if(!business.data?.materials_catalog_reviewed){
         await updateBusiness.mutateAsync({materials_catalog_reviewed:true})
       }
-      setSaveAttempted(false)
-      setSaveState('saved')
+      setSaveAttempted(catalogInvalid)
+      setSaveState(catalogInvalid?'error':'saved')
     }catch{
       setSaveState('error')
     }
   }
 
   useEffect(()=>{
-    if(!hydrated.current||!canEdit||!hasChanges||catalogInvalid)return
-    const timer=window.setTimeout(()=>{void save()},1200)
+    if(!hydrated.current||!canEdit||!hasSavableChanges)return
+    const timer=window.setTimeout(()=>{void save(false)},1200)
     return ()=>window.clearTimeout(timer)
   // Autosave is intentionally driven only by editable catalog drafts.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -303,8 +310,8 @@ export function MaterialsCatalogPage(){
           type="button"
           aria-label="Salvar catálogo"
           title="Salvar catálogo"
-          disabled={update.isPending||updateBusiness.isPending||catalogInvalid}
-          onClick={()=>void save()}
+          disabled={update.isPending||updateBusiness.isPending||!hasChanges}
+          onClick={()=>void save(true)}
         ><Save size={21}/></button>}
         <InfoHelp title="Catálogo da empresa">Materiais cobrados e equipamentos de referência têm regras separadas. A recomendação usa somente equipamentos técnicos ativos da sua empresa.</InfoHelp>
       </div>
@@ -345,11 +352,11 @@ export function MaterialsCatalogPage(){
           const draft=drafts[item.id]??toDraft(item)
           const invalidName=draft.name.trim().length<2,invalidPrice=parseMoney(draft.price)===null,invalidUnit=!draft.unit
           return <article className="catalog-table-row catalog-table-row--material" key={item.id}>
-            <div><RequiredLabel>Item</RequiredLabel><input aria-label="Nome" className={saveAttempted&&invalidName?'field-invalid':''} value={draft.name} disabled={!canEdit} onChange={event=>setSaveState('idle');setDrafts(current=>({...current,[item.id]:{...draft,name:event.target.value}}))}/><span className="catalog-kind">Material</span>{saveAttempted&&invalidName&&<small className="field-error">Informe o nome do item.</small>}</div>
-            <div><span className="field-label-row"><span>Descrição</span><span className="optional-label">Opcional</span></span><input aria-label="Descrição" value={draft.description} disabled={!canEdit} onChange={event=>setSaveState('idle');setDrafts(current=>({...current,[item.id]:{...draft,description:event.target.value}}))}/></div>
+            <div><RequiredLabel>Item</RequiredLabel><input aria-label="Nome" className={saveAttempted&&invalidName?'field-invalid':''} value={draft.name} disabled={!canEdit} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,name:event.target.value}}))}/><span className="catalog-kind">Material</span>{saveAttempted&&invalidName&&<small className="field-error">Informe o nome do item.</small>}</div>
+            <div><span className="field-label-row"><span>Descrição</span><span className="optional-label">Opcional</span></span><input aria-label="Descrição" value={draft.description} disabled={!canEdit} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,description:event.target.value}}))}/></div>
             <div className="catalog-material-fields">
-              <label><RequiredLabel>Preço (R$)</RequiredLabel><input aria-label="Preço" className={saveAttempted&&invalidPrice?'field-invalid':''} inputMode="decimal" value={draft.price} disabled={!canEdit} onChange={event=>setSaveState('idle');setDrafts(current=>({...current,[item.id]:{...draft,price:event.target.value}}))} placeholder="0,00"/>{saveAttempted&&invalidPrice&&<small className="field-error">Informe o preço.</small>}</label>
-              <label><RequiredLabel>Unidade</RequiredLabel><select aria-label="Unidade" className={saveAttempted&&invalidUnit?'field-invalid':''} value={draft.unit} disabled={!canEdit} onChange={event=>setSaveState('idle');setDrafts(current=>({...current,[item.id]:{...draft,unit:event.target.value}}))}>{unitOptions.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select>{saveAttempted&&invalidUnit&&<small className="field-error">Selecione a unidade.</small>}</label>
+              <label><RequiredLabel>Preço (R$)</RequiredLabel><input aria-label="Preço" className={saveAttempted&&invalidPrice?'field-invalid':''} inputMode="decimal" value={draft.price} disabled={!canEdit} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,price:event.target.value}}))} placeholder="0,00"/>{saveAttempted&&invalidPrice&&<small className="field-error">Informe o preço.</small>}</label>
+              <label><RequiredLabel>Unidade</RequiredLabel><select aria-label="Unidade" className={saveAttempted&&invalidUnit?'field-invalid':''} value={draft.unit} disabled={!canEdit} onChange={event=>setDrafts(current=>({...current,[item.id]:{...draft,unit:event.target.value}}))}>{unitOptions.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select>{saveAttempted&&invalidUnit&&<small className="field-error">Selecione a unidade.</small>}</label>
             </div>
             {canEdit&&<button className="catalog-icon-danger" type="button" aria-label={`Excluir ${item.name}`} disabled={remove.isPending} onClick={()=>remove.mutate(item.id)}><Trash2 size={17}/></button>}
           </article>
