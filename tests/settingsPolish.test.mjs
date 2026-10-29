@@ -56,3 +56,34 @@ test('ALOVIA contact source lists every current conversation contact in a collap
   assert.match(automation,/value=\{item\.whatsappId\}/)
   assert.match(automation,/Esta lista mostra os contatos das conversas existentes no ALOVIA\./)
 })
+
+test('catalog autosave validates only edited items and preserves dirty drafts across refetches',()=>{
+  const catalog=read('src/features/more/MaterialsCatalogPage.tsx')
+
+  assert.match(catalog,/const serverDrafts=useRef<Record<string,Draft>>\(\{\}\)/)
+  assert.match(catalog,/const hasUnsavedLocalEdit=/)
+  assert.match(catalog,/draftChanged\(currentDraft,previousDraft\)/)
+  assert.match(catalog,/hasUnsavedLocalEdit\?currentDraft:incoming\[item\.id\]/)
+
+  assert.match(catalog,/const changedMaterials=activeMaterials\.filter/)
+  assert.match(catalog,/const changedEquipment=equipmentReferences\.filter/)
+  assert.match(catalog,/const validChangedMaterials=changedMaterials\.filter/)
+  assert.match(catalog,/const validChangedEquipment=changedEquipment\.filter/)
+  assert.match(catalog,/const hasSavableChanges=validChangedMaterials\.length>0\|\|validChangedEquipment\.length>0/)
+  assert.doesNotMatch(catalog,/activeMaterials\.some\(item=>materialDraftInvalid\(item\.id\)\)\|\|\s*equipmentReferences\.some/)
+
+  assert.match(catalog,/if\(!hydrated\.current\|\|!canEdit\|\|!hasSavableChanges\)return/)
+  assert.match(catalog,/window\.setTimeout\(\(\)=>\{void save\(false\)\},1200\)/)
+  assert.match(catalog,/for\(const item of validChangedMaterials\)/)
+  assert.match(catalog,/for\(const item of validChangedEquipment\)/)
+})
+
+test('catalog floppy save remains actionable and explicitly triggers a manual save',()=>{
+  const catalog=read('src/features/more/MaterialsCatalogPage.tsx')
+
+  assert.match(catalog,/aria-label="Salvar catálogo"/)
+  assert.match(catalog,/disabled=\{update\.isPending\|\|updateBusiness\.isPending\|\|!hasChanges\}/)
+  assert.match(catalog,/onClick=\{\(\)=>void save\(true\)\}/)
+  assert.match(catalog,/if\(manual\)setSaveAttempted\(true\)/)
+  assert.match(catalog,/if\(!hasSavableChanges\)\{[\s\S]*if\(manual\)setSaveState\('error'\)/)
+})
