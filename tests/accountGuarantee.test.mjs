@@ -26,7 +26,7 @@ test('refund status uses protected endpoints, a 24-hour customer notice and sess
   assert.match(billing,/\/billing\/subscription\/cancel-request/)
   assert.match(billing,/refund_deadline_at/)
   assert.match(billing,/Solicitação de reembolso recebida/)
-  assert.match(billing,/Seu reembolso será concluído em até 24 horas\./)
+  assert.match(billing,/Processaremos sua solicitação de reembolso em até 24 horas/)
   assert.match(billing,/sua conta voltará automaticamente ao modo gratuito/)
   assert.match(billing,/window\.setInterval\(\(\)=>void loadSubscription\(true\),10_000\)/)
   assert.match(billing,/void syncSession\(\)\.catch/)
