@@ -450,7 +450,9 @@ test('required markers stay compact and catalog saves reject incomplete visible 
 
   assert.match(services,/if\(catalogInvalid\)return/)
   assert.match(services,/<RequiredLabel>Serviço<\/RequiredLabel>/)
-  assert.match(materials,/if\(catalogInvalid\)return/)
+  assert.match(materials,/const validChangedMaterials=changedMaterials\.filter/)
+  assert.match(materials,/const validChangedEquipment=changedEquipment\.filter/)
+  assert.match(materials,/if\(!hasSavableChanges\)/)
   assert.match(materials,/optional-label/)
   assert.doesNotMatch(materials,/<RequiredLabel>Descrição<\/RequiredLabel>/)
 })
@@ -568,17 +570,19 @@ test('equipment status badge stays intact on narrow mobile cards', () => {
   assert.match(css,/\.equipment-status\{[^}]*flex:0 0 auto/)
 })
 
-test('equipment and materials catalog combines top save icon with debounced autosave', () => {
+test('equipment and materials catalog combines top save icon with item-scoped debounced autosave', () => {
   const catalog = read('src/features/more/MaterialsCatalogPage.tsx')
 
   assert.match(catalog,/className="catalog-save-button"/)
   assert.match(catalog,/aria-label="Salvar catálogo"/)
   assert.match(catalog,/<Save size=\{21\}\/>/)
   assert.match(catalog,/Salvamento automático…/)
-  assert.match(catalog,/setTimeout\(\(\)=>\{void save\(\)\},1200\)/)
+  assert.match(catalog,/setTimeout\(\(\)=>\{void save\(false\)\},1200\)/)
   assert.match(catalog,/hasChanges/)
+  assert.match(catalog,/hasSavableChanges/)
   assert.match(catalog,/draftChanged/)
-  assert.match(catalog,/if\(!hydrated\.current\|\|!canEdit\|\|!hasChanges\|\|catalogInvalid\)return/)
+  assert.match(catalog,/if\(!hydrated\.current\|\|!canEdit\|\|!hasSavableChanges\)return/)
+  assert.match(catalog,/onClick=\{\(\)=>void save\(true\)\}/)
 })
 
 
