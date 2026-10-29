@@ -6,6 +6,7 @@ export type Appointment = {
   customer_id:string
   customer_name:string
   customer_phone:string|null
+  conversation_id?:string|null
   service_id:string
   service_name:string
   employee_id:string
