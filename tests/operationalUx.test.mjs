@@ -450,7 +450,7 @@ test('required markers stay compact and catalog saves reject incomplete visible 
 
   assert.match(services,/if\(catalogInvalid\)return/)
   assert.match(services,/<RequiredLabel>Serviço<\/RequiredLabel>/)
-  assert.match(materials,/if\(catalogInvalid\)return/)
+  assert.match(materials,/if\(changedInvalid\)return/)
   assert.match(materials,/optional-label/)
   assert.doesNotMatch(materials,/<RequiredLabel>Descrição<\/RequiredLabel>/)
 })
@@ -578,7 +578,7 @@ test('equipment and materials catalog combines top save icon with debounced auto
   assert.match(catalog,/setTimeout\(\(\)=>\{void save\(\)\},1200\)/)
   assert.match(catalog,/hasChanges/)
   assert.match(catalog,/draftChanged/)
-  assert.match(catalog,/if\(!hydrated\.current\|\|!canEdit\|\|!hasChanges\|\|catalogInvalid\)return/)
+  assert.match(catalog,/if\(!hydrated\.current\|\|!canEdit\|\|!hasChanges\|\|changedInvalid\)return/)
 })
 
 
