@@ -67,6 +67,12 @@ test('app and admin areas remain protected', () => {
   assert.match(router, /path="\/criar-conta" element={<SignupPage \/>}/)
 })
 
+
+test('netlify CSP allows the Vimeo VSL frame', () => {
+  const netlify = read('netlify.toml')
+  assert.match(netlify, /frame-src[^\n]*https:\/\/player\.vimeo\.com/)
+})
+
 test('public page keeps semantic headings and mobile-first controls', () => {
   const landing = read('src/features/public/PublicLandingPage.tsx')
   const styles = read('src/styles/public-landing.css')
