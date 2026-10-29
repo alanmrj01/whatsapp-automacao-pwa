@@ -276,25 +276,38 @@
 .public-vsl__shell h2 { margin-bottom: 9px; font-size: clamp(1.22rem, 5.2vw, 1.55rem); }
 .public-video {
   position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 8.6;
-  padding: 0;
+  width: min(100%, 430px);
+  aspect-ratio: 9 / 16;
+  margin: 0 auto;
   display: block;
   overflow: hidden;
-  border: 0;
   border-radius: 11px;
-  background: #bfd7ef;
+  background: #0b1d31;
+}
+.public-video > iframe {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: 0;
+}
+.public-video__start {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
   cursor: pointer;
 }
-.public-video > img { width: 100%; height: 100%; display: block; object-fit: cover; object-position: center 45%; }
-.public-video__shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgb(4 33 70 / 2%), rgb(4 33 70 / 18%)); }
 .public-video__play {
   position: absolute;
   z-index: 2;
   top: 50%;
   left: 50%;
-  width: 46px;
-  height: 46px;
+  width: 54px;
+  height: 54px;
   display: grid;
   place-items: center;
   border-radius: 50%;
@@ -303,8 +316,7 @@
   box-shadow: 0 8px 18px rgb(4 91 194 / 26%);
   transform: translate(-50%, -50%);
 }
-.public-video__play svg { width: 20px; height: 20px; margin-left: 3px; }
-.public-video__duration { position: absolute; z-index: 2; right: 7px; bottom: 7px; padding: 3px 6px; border-radius: 5px; color: #fff; background: rgb(5 18 35 / 82%); font-size: .58rem; font-weight: 800; }
+.public-video__play svg { width: 22px; height: 22px; margin-left: 3px; }
 
 .public-practical { padding-top: 28px; }
 .public-flow { margin-top: 14px; display: grid; gap: 10px; }
@@ -502,7 +514,6 @@
   .public-static-composition { padding: 2px 0 24px; }
   .public-vsl__shell { padding: 14px; }
   .public-vsl__shell h2 { margin-bottom: 11px; font-size: clamp(1.25rem, 1.7vw, 1.52rem); }
-  .public-video { aspect-ratio: 16 / 9; }
   .public-practical { padding: 28px 0 24px; }
   .public-flow { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
   .public-flow article { min-height: 226px; padding: 13px; }
