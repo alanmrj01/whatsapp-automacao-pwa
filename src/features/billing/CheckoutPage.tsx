@@ -1010,7 +1010,7 @@ export function CheckoutPage() {
         <div className="native-checkout-intro">
           <span className="eyebrow">Finalize sua assinatura</span>
           <h1>Seu atendimento automático começa aqui.</h1>
-          <p>Revise seus dados e conclua o pagamento. A renovação do plano é automática.</p>
+          <p>Revise seus dados e conclua o pagamento.</p>
         </div>
 
         <section className="checkout-guarantee-card" aria-label="Garantia de 7 dias">
@@ -1031,7 +1031,7 @@ export function CheckoutPage() {
             {profile.pix_available&&<label className={`checkout-method-option${paymentMethod==='pix'?' is-selected':''}`}>
               <input type="radio" name="payment-method" value="pix" checked={paymentMethod==='pix'} disabled={checkoutLoading||cancelingPix} onChange={()=>void changePaymentMethod('pix')}/>
               <span className="checkout-method-icon"><QrCode size={22}/></span>
-              <span className="checkout-method-copy"><span className="checkout-method-title"><strong>Pix</strong><small>Recomendado</small></span><span>Pague agora por Pix. Nas próximas renovações, geraremos um novo Pix para pagamento.</span></span>
+              <span className="checkout-method-copy"><span className="checkout-method-title"><strong>Pix</strong><small>Recomendado</small></span><span>Pague agora por Pix. Na renovação, você poderá gerar um novo Pix para continuar.</span></span>
             </label>}
             {PIX_AUTOMATIC_ENABLED&&profile.pix_automatic_available&&<label className={`checkout-method-option${paymentMethod==='pix_automatic'?' is-selected':''}`}>
               <input type="radio" name="payment-method" value="pix_automatic" checked={paymentMethod==='pix_automatic'} disabled={checkoutLoading||cancelingPix} onChange={()=>void changePaymentMethod('pix_automatic')}/>
@@ -1079,7 +1079,7 @@ export function CheckoutPage() {
           <section className={`native-checkout-card checkout-accordion-card${openStep===2?' is-open':''}`}>
             <button className="checkout-section-toggle" type="button" aria-expanded={openStep===2} aria-controls="checkout-payment-fields" disabled={!identificationComplete} onClick={()=>identificationComplete&&setOpenStep(2)}>
               <span className="checkout-step-number">2</span>
-              <span className="checkout-step-copy"><strong>{paymentMethod==='pix_automatic'?'Pix Automático':paymentMethod==='pix'?'Pix':'Cartão de crédito'}</strong><small>{identificationComplete?paymentMethod==='pix_automatic'?'Pague o primeiro Pix e autorize as próximas renovações automaticamente.':paymentMethod==='pix'?'Pague agora por Pix. Nas renovações, um novo Pix será gerado.':NATIVE_CARD_CHECKOUT_ENABLED?'Cobrança recorrente processada pelo Asaas.':'Você será redirecionado para o ambiente seguro do Asaas.':'Conclua a identificação primeiro'}</small></span>
+              <span className="checkout-step-copy"><strong>{paymentMethod==='pix_automatic'?'Pix Automático':paymentMethod==='pix'?'Pix':'Cartão de crédito'}</strong><small>{identificationComplete?paymentMethod==='pix_automatic'?'Pague o primeiro Pix e autorize as próximas renovações automaticamente.':paymentMethod==='pix'?'Pague agora por Pix. Na renovação, gere um novo Pix para continuar.':NATIVE_CARD_CHECKOUT_ENABLED?'Cobrança recorrente processada pelo Asaas.':'Você será redirecionado para o ambiente seguro do Asaas.':'Conclua a identificação primeiro'}</small></span>
               {openStep===2?<ChevronUp size={20}/>:<ChevronDown size={20}/>}
             </button>
 
@@ -1137,7 +1137,7 @@ export function CheckoutPage() {
           <span className="eyebrow">Resumo do pedido</span>
           <div className="checkout-order-title"><div><strong>ALOVIA {plan.name}</strong><span>{plan.positioning}</span></div><span>{cycle?.label}</span></div>
           <div className="checkout-order-price"><strong>{formatBRL(price.total)}</strong><span>{cycleParam==='monthly'?'por mês':cycleParam==='quarterly'?'a cada 3 meses':'por ano'}</span></div>
-          <ul><li><Check size={16}/>Atendimento e agendamento automático integrados</li><li><Check size={16}/>Até 2 técnicos</li><li><Check size={16}/>{paymentMethod==='pix'?'Renovação por novo Pix a cada ciclo':'Renovação automática'}</li></ul>
+          <ul><li><Check size={16}/>Atendimento e agendamento automático integrados</li><li><Check size={16}/>Até 2 técnicos</li><li><Check size={16}/>{paymentMethod==='pix'?'Renovação manual por Pix a cada ciclo':'Renovação automática'}</li></ul>
           <p className="checkout-order-payment">Pagamento: <strong>{paymentMethod==='pix_automatic'?'Pix Automático':paymentMethod==='pix'?'Pix':'Cartão de crédito'}</strong></p>
           {profile?.business_name&&<p className="checkout-order-business">Assinatura para <strong>{profile.business_name}</strong></p>}
         </section>
@@ -1226,13 +1226,13 @@ function PixPaymentContent(props:PixPaymentProps) {
   return <div className="checkout-pix-content">
     {props.reconciliationPending&&<div className="checkout-pix-terminal" role="status"><strong>Estamos confirmando seu Pix Automático</strong><span>A solicitação foi enviada e estamos confirmando o resultado. Não faça outro pagamento agora.</span><button className="secondary-button" type="button" onClick={props.onBack}>Voltar para a Alovia</button></div>}
     {!props.reconciliationPending&&!props.checkout&&!terminal&&<>
-      <div className="checkout-pix-intro"><QrCode size={24}/><div><strong>{automatic?'Gerar autorização segura':'Gerar cobrança Pix'}</strong><span>{automatic?'O QR Code será criado para o primeiro pagamento e autorização das próximas renovações.':'O QR Code será criado para este pagamento. Nas próximas renovações, um novo Pix será gerado.'}</span></div></div>
+      <div className="checkout-pix-intro"><QrCode size={24}/><div><strong>{automatic?'Gerar autorização segura':'Gerar cobrança Pix'}</strong><span>{automatic?'O QR Code será criado para o primeiro pagamento e autorização das próximas renovações.':'O QR Code será criado apenas para este pagamento. Na renovação, você gera um novo Pix.'}</span></div></div>
       {props.error&&<p className="form-error checkout-native-error" role="alert">{props.error}</p>}
       {props.adminAccessNotice?<AdminAccessNotice onBack={props.onBack}/>:<button className="primary-button checkout-native-submit" type="submit" disabled={!props.identificationComplete||props.submitting}>{props.submitting?(automatic?'Gerando Pix Automático…':'Gerando Pix…'):(automatic?'Gerar Pix Automático':'Gerar Pix')}</button>}
       {props.error?.includes('não está disponível')&&<button className="secondary-button checkout-alternative-button" type="button" disabled={props.canceling} onClick={props.onCard}>Pagar com cartão de crédito</button>}
     </>}
     {props.checkout&&!terminal&&!props.initialPaymentReceived&&<>
-      <div className="checkout-pix-heading"><span className="checkout-pix-icon"><QrCode size={24}/></span><div><strong>{automatic?'Pague e autorize o Pix Automático':'Pague por Pix'}</strong><span>{automatic?'Abra o app do seu banco, escaneie o QR Code e confirme o pagamento e a autorização das próximas renovações.':'Abra o app do seu banco, escaneie o QR Code e confirme o pagamento. Nas próximas renovações, a Alovia gerará um novo Pix.'}</span></div></div>
+      <div className="checkout-pix-heading"><span className="checkout-pix-icon"><QrCode size={24}/></span><div><strong>{automatic?'Pague e autorize o Pix Automático':'Pague por Pix'}</strong><span>{automatic?'Abra o app do seu banco, escaneie o QR Code e confirme o pagamento e a autorização das próximas renovações.':'Abra o app do seu banco, escaneie o QR Code e confirme o pagamento. Na renovação, gere um novo Pix pela Alovia.'}</span></div></div>
       <div className="checkout-pix-grid">
         <div className="checkout-pix-qr" aria-live="polite">{props.qrLoading&&<div className="checkout-loading-spinner" aria-label="Gerando QR Code"/>}{props.qrCode&&<img src={props.qrCode} alt={automatic?'QR Code do Pix Automático':'QR Code do Pix'}/>}{!props.qrLoading&&!props.qrCode&&<span>QR Code indisponível.</span>}</div>
         <div className="checkout-pix-details"><span>Pix Copia e Cola</span><textarea readOnly value={props.checkout.pix_payload??''} aria-label="Código Pix Copia e Cola"/><button className="secondary-button" type="button" onClick={props.onCopy}><Copy size={17}/>{props.copyState==='copied'?'Código copiado':'Copiar código Pix'}</button>{props.copyState==='failed'&&<small role="alert">Não foi possível copiar. Selecione o código acima.</small>}<dl><div><dt>Valor</dt><dd>{formatBRL(props.checkout.amount_cents/100)}</dd></div><div><dt>Plano</dt><dd>{props.planName} · {props.cycleLabel}</dd></div>{automatic&&props.remaining!==null&&<div><dt>Validade</dt><dd>{formatRemaining(props.remaining)}</dd></div>}</dl></div>
@@ -1245,7 +1245,7 @@ function PixPaymentContent(props:PixPaymentProps) {
           <p>Isso acontece por uma regra cadastral do Pix para contas MEI: o banco exibe o nome empresarial vinculado ao CNPJ responsável pela operação da Alovia. <span className="checkout-pix-receiver-confirmation">Seu pagamento é para a Alovia normalmente.</span></p>
         </div>
       </section>
-      <div className="checkout-pix-waiting" role="status"><div className="checkout-loading-spinner"/><div><strong>{automatic?'Aguardando pagamento e autorização':'Aguardando pagamento'}</strong><span>{automatic?'Assim que o banco confirmar o pagamento e a autorização, liberamos sua assinatura automaticamente.':'Assim que o banco confirmar o pagamento, liberamos sua assinatura. Na próxima renovação, um novo Pix será gerado para pagamento.'}</span></div></div>
+      <div className="checkout-pix-waiting" role="status"><div className="checkout-loading-spinner"/><div><strong>{automatic?'Aguardando pagamento e autorização':'Aguardando pagamento'}</strong><span>{automatic?'Assim que o banco confirmar o pagamento e a autorização, liberamos sua assinatura automaticamente.':'Assim que o banco confirmar o pagamento, liberamos sua assinatura. Na renovação, volte à Alovia para gerar um novo Pix.'}</span></div></div>
       {props.error&&<p className="form-error checkout-native-error" role="alert">{props.error}</p>}
     </>}
     {automatic&&props.checkout&&!terminal&&props.initialPaymentReceived&&<div className="checkout-pix-waiting" role="status"><div className="checkout-loading-spinner"/><div><strong>Pagamento recebido</strong><span>O primeiro pagamento foi confirmado. Estamos aguardando a confirmação da autorização das próximas renovações.</span></div></div>}
