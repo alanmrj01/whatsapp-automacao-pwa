@@ -331,13 +331,13 @@ export function PublicLandingPage() {
         <section className="public-section public-practical" data-track-section="plans">
           <div className="public-container">
             <h2>Planos pensados para o volume da sua operação</h2>
-            <p className="public-section__lead">No lançamento, o Basic atende quando o cliente chama. O Plus acrescentará mensagens proativas de utilidade depois que essa etapa estiver pronta.</p>
+            <p className="public-section__lead">O Basic cobre a rotina de atendimento e agendamento. O Plus amplia o volume e acrescenta contatos automáticos com clientes já atendidos.</p>
             <div className="public-flow">
               <article>
                 <span className="public-step">Basic</span>
                 <h3>R$ 197/mês</h3>
                 <ul>
-                  <li><CheckCircle2 /> Até 600 mensagens de serviço por mês</li>
+                  <li><CheckCircle2 /> Até 600 mensagens por mês</li>
                   <li><MessageCircle /> Atendimento automático iniciado pelo cliente</li>
                   <li><CalendarCheck2 /> Conversas e agendamentos organizados</li>
                 </ul>
@@ -346,9 +346,9 @@ export function PublicLandingPage() {
                 <span className="public-step">Plus</span>
                 <h3>R$ 397/mês · em breve</h3>
                 <ul>
-                  <li><CheckCircle2 /> Até 1.000 mensagens por mês no total</li>
-                  <li><MessageCircle /> Até 300 mensagens de utilidade dentro da franquia</li>
-                  <li><Snowflake /> Lembretes de limpeza e retomada de atendimentos parados</li>
+                  <li><CheckCircle2 /> Até 1.000 mensagens por mês</li>
+                  <li><Snowflake /> Oferta automática de manutenção preventiva para clientes já atendidos</li>
+                  <li><CalendarCheck2 /> Oferta automática de PMOC para clientes com histórico de PMOC</li>
                 </ul>
               </article>
               <article>
