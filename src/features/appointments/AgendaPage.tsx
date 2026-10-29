@@ -1,4 +1,4 @@
-import { CalendarDays, CalendarPlus2, ChevronLeft, ChevronRight, Clock3, List, RotateCcw, UserRound } from 'lucide-react'
+import { CalendarDays, CalendarPlus2, ChevronLeft, ChevronRight, Clock3, List, MessageCircle, RotateCcw, UserRound } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { BottomSheet } from '../../components/BottomSheet'
@@ -423,6 +423,7 @@ function RealAgenda({selectedDate,setSelectedDate,canMutate,initialView,setOuter
         <label>Observações<textarea rows={3} maxLength={2000} value={visibleDraft.notes} onChange={event=>update('notes',event.target.value)}/></label>
         {error&&<p className="form-error" role="alert">{error}</p>}
         <div className="form-actions">
+          {activeAppointment?.conversation_id&&<Link className="secondary-button" to={`/app/conversas/${activeAppointment.conversation_id}`}><MessageCircle size={16}/>Ver conversa</Link>}
           {activeAppointment?.status==='confirmed'&&<button className="secondary-button" type="button" onClick={()=>beginReschedule(activeAppointment)}><RotateCcw size={16}/>Reagendar atendimento</button>}
           {visibleDraft.id&&visibleDraft.status!=='cancelled'&&!activeAppointment?.reschedule_pending&&<button className="danger-button" type="button" disabled={cancel.isPending} onClick={()=>cancel.mutate(visibleDraft.id!,{onSuccess:closeDraft,onError:()=>setError('Não foi possível cancelar o agendamento.')})}>Cancelar agendamento</button>}
           {!activeAppointment?.reschedule_pending&&<button className="primary-button" type="submit" disabled={save.isPending||createCustomer.isPending}>Salvar</button>}
