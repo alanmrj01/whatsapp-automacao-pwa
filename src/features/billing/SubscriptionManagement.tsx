@@ -152,8 +152,8 @@ export function SubscriptionManagement() {
       </div>}
       {refundWaiting&&<div className="account-refund-timeline" role="status" aria-live="polite">
         <strong>Solicitação de reembolso recebida</strong>
-        <span>Seu reembolso será concluído em até 24 horas.</span>
-        <small>{refundDeadline?<>Previsão limite: {refundDeadline}. </>:null}Assim que a devolução for confirmada, sua conta voltará automaticamente ao modo gratuito.</small>
+        <span>Processaremos sua solicitação de reembolso em até 24 horas. A confirmação da devolução depende do processamento do meio de pagamento.</span>
+        <small>{refundDeadline?<>Prazo de processamento da solicitação: {refundDeadline}. </>:null}Assim que a devolução for confirmada, sua conta voltará automaticamente ao modo gratuito.</small>
       </div>}
       {refundCompleted&&<div className="account-guarantee-state">
         <strong>Reembolso concluído</strong>
@@ -176,7 +176,7 @@ export function SubscriptionManagement() {
       {cancellationPending&&<button className="secondary-button account-financial-action" type="button" disabled={billingBusy} onClick={()=>setConfirmation('cancel')}>Tentar cancelar novamente</button>}
       {confirmation==='refund'&&<div className="account-financial-confirmation" role="alertdialog" aria-label="Confirmar solicitação de reembolso">
         <strong>Confirmar cancelamento e devolução?</strong>
-        <p>Você está solicitando o cancelamento e a devolução integral dentro da garantia de 7 dias. Após a solicitação, o reembolso será concluído em até 24 horas.</p>
+        <p>Você está solicitando o cancelamento e a devolução integral dentro da garantia de 7 dias. A solicitação será processada em até 24 horas; a confirmação da devolução depende do meio de pagamento.</p>
         <div><button className="secondary-button" type="button" disabled={billingBusy} onClick={()=>setConfirmation(null)}>Voltar</button><button className="primary-button" type="button" disabled={billingBusy} onClick={()=>void requestBillingAction('refund')}>{billingBusy?'Registrando…':'Confirmar solicitação'}</button></div>
       </div>}
       {confirmation==='cancel'&&<div className="account-financial-confirmation" role="alertdialog" aria-label="Confirmar solicitação de cancelamento">
