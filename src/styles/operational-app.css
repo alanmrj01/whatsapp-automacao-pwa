@@ -171,6 +171,12 @@
   border-radius: 17px;
   background: #fff;
 }
+
+.conversation-list.has-open-menu {
+  position: relative;
+  z-index: 20;
+  overflow: visible;
+}
 .appointment-compact {
   min-height: 74px;
   padding: 12px 14px;
