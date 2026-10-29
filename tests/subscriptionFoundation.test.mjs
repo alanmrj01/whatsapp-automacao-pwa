@@ -131,3 +131,13 @@ test('service-distance inputs use the current rounded onboarding field system', 
   assert.match(css,/\.onboarding-distance-card input:not\(\[type="checkbox"\]\):focus/)
   assert.match(css,/\.onboarding-distance-card \.field-invalid/)
 })
+
+test('pending subscription cancellation stays retryable and refreshes while unresolved', () => {
+  const source = read('src/features/billing/SubscriptionManagement.tsx')
+  assert.match(source,/if\(!refundWaiting&&!cancellationPending\)return/)
+  assert.match(source,/Tentar cancelar novamente/)
+  assert.match(source,/Ainda não foi possível confirmar o cancelamento no provedor/)
+  assert.match(source,/if\(action==='cancel'\)void loadSubscription\(true\)/)
+  assert.match(source,/\/billing\/subscription\/cancel-request/)
+})
+
