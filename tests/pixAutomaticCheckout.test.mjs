@@ -99,7 +99,7 @@ test('waiting never unlocks access and paid is the only status that synchronizes
 
   assert.equal(PIX_STATUS_POLL_MS,4000)
   assert.match(checkout,/Aguardando pagamento/)
-  assert.match(checkout,/Na próxima renovação, um novo Pix será gerado para pagamento/)
+  assert.match(checkout,/Na renovação, volte à Alovia para gerar um novo Pix/)
   assert.doesNotMatch(checkout,/Pagamento aprovado/)
   assert.match(paidBlock,/await syncSession\(\)/)
   assert.match(paidBlock,/navigate\('\/app\/onboarding'/)
@@ -129,7 +129,7 @@ test('card flow and commercial guarantees remain intact',()=>{
   assert.match(checkout,/Garantia de 7 dias/)
   assert.doesNotMatch(checkout,/7 dias grátis|teste grátis/i)
   assert.match(checkout,/Pagamento: <strong>\{paymentMethod==='pix_automatic'\?'Pix Automático':paymentMethod==='pix'\?'Pix':'Cartão de crédito'\}/)
-  assert.match(checkout,/Renovação por novo Pix a cada ciclo/)
+  assert.match(checkout,/Renovação manual por Pix a cada ciclo/)
 })
 
 test('card checkout is created just in time by submit and preserves hosted and native paths',()=>{
@@ -237,11 +237,19 @@ test('hosted card checkout is fail-closed by default and does not ask for card d
 test('Pix comum communicates manual renewal without claiming automatic debit',()=>{
   const checkout=read('src/features/billing/CheckoutPage.tsx')
 
-  assert.match(checkout,/Pague agora por Pix\. Nas próximas renovações, geraremos um novo Pix para pagamento\./)
+  assert.match(checkout,/Pague agora por Pix\. Na renovação, você poderá gerar um novo Pix para continuar\./)
   assert.match(checkout,/automatic\?'Gerar autorização segura':'Gerar cobrança Pix'/)
   assert.match(checkout,/automatic&&props\.remaining!==null&&<div><dt>Validade<\/dt><dd>\{formatRemaining\(props\.remaining\)\}<\/dd><\/div>/)
   assert.doesNotMatch(checkout,/checkout-timer/)
   assert.match(checkout,/payment_method:method/)
   assert.match(checkout,/method==='pix'\|\|method==='pix_automatic'/)
-  assert.match(checkout,/paymentMethod==='pix'\?'Renovação por novo Pix a cada ciclo':'Renovação automática'/)
+  assert.match(checkout,/paymentMethod==='pix'\?'Renovação manual por Pix a cada ciclo':'Renovação automática'/)
 })
+
+test('common Pix does not promise automatic renewal generation',()=>{
+  const checkout=read('src/features/billing/CheckoutPage.tsx')
+  assert.doesNotMatch(checkout,/geraremos um novo Pix|um novo Pix será gerado|Alovia gerará um novo Pix/i)
+  assert.match(checkout,/Na renovação, você poderá gerar um novo Pix/)
+  assert.match(checkout,/Renovação manual por Pix a cada ciclo/)
+})
+
