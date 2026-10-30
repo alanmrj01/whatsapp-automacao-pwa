@@ -10,6 +10,7 @@ type CheckoutStatus = {
   status:'creating'|'active'|'paid'|'canceled'|'expired'|'failed'
   plan:'basic'|'plus'
   cycle:'monthly'|'quarterly'|'annual'
+  amount_cents:number
   payment_method?:'credit_card'|'pix'|'pix_automatic'
 }
 
@@ -72,11 +73,13 @@ export function CheckoutReturnPage() {
               plan: current.plan,
               billing_cycle: current.cycle,
               payment_method: current.payment_method ?? 'credit_card',
+              amount_cents: current.amount_cents,
               funnel_stage: 'subscription_paid',
             },
             {
               surface: 'checkout_return',
               businessId: membership?.business_id,
+              eventId: checkoutId,
             },
           )
           if (finalizing.current) return
