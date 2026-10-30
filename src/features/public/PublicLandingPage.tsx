@@ -72,7 +72,85 @@ function PhonePreview() {
 
 function VideoPreview() {
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const startedTracked = useRef(false)
+  const completedTracked = useRef(false)
+  const progressTracked = useRef(new Set<number>())
   const [started, setStarted] = useState(false)
+
+  useEffect(() => {
+    const iframe = iframeRef.current
+    if (!iframe) return
+
+    const subscribe = () => {
+      for (const event of ['play', 'timeupdate', 'ended']) {
+        iframe.contentWindow?.postMessage(
+          { method: 'addEventListener', value: event },
+          'https://player.vimeo.com',
+        )
+      }
+    }
+
+    const onMessage = (message: MessageEvent) => {
+      if (
+        message.origin !== 'https://player.vimeo.com'
+        || message.source !== iframe.contentWindow
+      ) return
+
+      let payload: unknown = message.data
+      if (typeof payload === 'string') {
+        try { payload = JSON.parse(payload) } catch { return }
+      }
+      if (!payload || typeof payload !== 'object') return
+
+      const event = 'event' in payload ? String(payload.event ?? '') : ''
+      const data = 'data' in payload && payload.data && typeof payload.data === 'object'
+        ? payload.data as Record<string, unknown>
+        : {}
+      const seconds = typeof data.seconds === 'number' ? data.seconds : null
+      const duration = typeof data.duration === 'number' ? data.duration : null
+      const percent = typeof data.percent === 'number' ? data.percent : null
+
+      if (event === 'play' && !startedTracked.current) {
+        startedTracked.current = true
+        trackEvent('landing_vsl_started', {
+          video_id: '1240828681',
+          seconds,
+          duration_seconds: duration,
+        }, { surface: 'landing' })
+      }
+
+      if (event === 'timeupdate' && percent !== null) {
+        for (const milestone of [25, 50, 75]) {
+          if (percent * 100 < milestone || progressTracked.current.has(milestone)) continue
+          progressTracked.current.add(milestone)
+          trackEvent('landing_vsl_progress', {
+            video_id: '1240828681',
+            percent: milestone,
+            seconds,
+            duration_seconds: duration,
+          }, { surface: 'landing' })
+        }
+      }
+
+      if (event === 'ended' && !completedTracked.current) {
+        completedTracked.current = true
+        trackEvent('landing_vsl_completed', {
+          video_id: '1240828681',
+          percent: 100,
+          seconds,
+          duration_seconds: duration,
+        }, { surface: 'landing' })
+      }
+    }
+
+    window.addEventListener('message', onMessage)
+    iframe.addEventListener('load', subscribe)
+    subscribe()
+    return () => {
+      window.removeEventListener('message', onMessage)
+      iframe.removeEventListener('load', subscribe)
+    }
+  }, [])
 
   const startVideo = () => {
     if (started) return

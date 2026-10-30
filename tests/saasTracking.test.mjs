@@ -95,3 +95,17 @@ test('diagnostic events use bounded reason codes instead of sensitive form value
   assert.match(whatsapp, /redirect_start_failed/)
   assert.doesNotMatch(checkout, /trackEvent\([^)]*(?:card_number|card_ccv|payer_cpf_cnpj|pix_payload)/s)
 })
+
+test('landing VSL tracks real Vimeo playback and completion milestones', () => {
+  const landing = read('src/features/public/PublicLandingPage.tsx')
+
+  assert.match(landing,/landing_vsl_play_intent/)
+  assert.match(landing,/landing_vsl_started/)
+  assert.match(landing,/landing_vsl_progress/)
+  assert.match(landing,/landing_vsl_completed/)
+  assert.match(landing,/\[25, 50, 75\]/)
+  assert.match(landing,/method: 'addEventListener'/)
+  assert.match(landing,/message\.origin !== 'https:\/\/player\.vimeo\.com'/)
+  assert.match(landing,/message\.source !== iframe\.contentWindow/)
+})
+
