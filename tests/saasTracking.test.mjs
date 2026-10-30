@@ -109,3 +109,50 @@ test('landing VSL tracks real Vimeo playback and completion milestones', () => {
   assert.match(landing,/message\.source !== iframe\.contentWindow/)
 })
 
+test('Meta Pixel uses the official web dataset and shared event IDs only on production hosts', () => {
+  const tracking = read('src/lib/tracking.ts')
+
+  assert.match(tracking,/1432131901730735/)
+  assert.match(tracking,/alovia\.netlify\.app/)
+  assert.match(tracking,/trackSingle/)
+  assert.match(tracking,/trackSingleCustom/)
+  assert.match(tracking,/\{eventID:eventId\}/)
+  assert.match(tracking,/context\.eventId/)
+  assert.match(tracking,/connect\.facebook\.net\/en_US\/fbevents\.js/)
+  assert.match(tracking,/META_PIXEL_HOSTS\.has\(window\.location\.hostname\.toLowerCase\(\)\)/)
+})
+
+test('Meta Pixel sends only truthful acquisition and conversion event mappings', () => {
+  const tracking = read('src/lib/tracking.ts')
+
+  for (const eventName of [
+    'PageView',
+    'VSLStarted',
+    'VSLProgress',
+    'VSLCompleted',
+    'CompleteRegistration',
+    'WhatsAppConnected',
+    'InitiateCheckout',
+    'Purchase',
+  ]) {
+    assert.match(tracking,new RegExp(eventName))
+  }
+  assert.match(tracking,/eventName==='payment_confirmed'/)
+  assert.match(tracking,/amountCents<=0/)
+  assert.match(tracking,/currency:'BRL'/)
+  assert.doesNotMatch(tracking,/\bLead\b/)
+  assert.doesNotMatch(tracking,/payer_cpf_cnpj/)
+})
+
+test('browser Purchase uses exact backend amount and checkout UUID for deduplication', () => {
+  const checkout = read('src/features/billing/CheckoutPage.tsx')
+  const checkoutReturn = read('src/features/billing/CheckoutReturnPage.tsx')
+
+  assert.match(checkout,/amount_cents:number/)
+  assert.match(checkout,/amount_cents:\s*current\.amount_cents/)
+  assert.match(checkout,/eventId:\s*checkoutId/)
+  assert.match(checkoutReturn,/amount_cents:number/)
+  assert.match(checkoutReturn,/amount_cents:\s*current\.amount_cents/)
+  assert.match(checkoutReturn,/eventId:\s*checkoutId/)
+})
+
