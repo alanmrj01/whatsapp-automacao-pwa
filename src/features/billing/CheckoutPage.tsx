@@ -77,6 +77,7 @@ type CheckoutStatusResponse = {
   payment_method:PaymentMethod
   plan:PlanId
   cycle:BillingCycle
+  amount_cents:number
   expires_at?:string|null
   initial_payment_received:boolean
 }
@@ -580,12 +581,14 @@ export function CheckoutPage() {
               plan: current.plan,
               billing_cycle: current.cycle,
               payment_method: current.payment_method,
+              amount_cents: current.amount_cents,
               funnel_stage: 'subscription_paid',
             },
             {
               surface: 'checkout',
               businessId: user?.active_business_id,
               userId: user?.id,
+              eventId: checkoutId,
             },
           )
           latestPixState.current={
