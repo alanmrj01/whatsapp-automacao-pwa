@@ -156,3 +156,13 @@ test('browser Purchase uses exact backend amount and checkout UUID for deduplica
   assert.match(checkoutReturn,/eventId:\s*checkoutId/)
 })
 
+
+
+test('checkout CSP allows the Meta Pixel endpoints used by browser conversion tracking', () => {
+  const netlify = read('netlify.toml')
+  const checkoutBlock = netlify.match(/\[\[headers\]\]\s*\n\s*for = "\/app\/checkout\*"[\s\S]*?\n\[\[headers\]\]/)?.[0] ?? ''
+
+  assert.match(checkoutBlock,/script-src[^\n]*https:\/\/connect\.facebook\.net/)
+  assert.match(checkoutBlock,/connect-src[^\n]*https:\/\/www\.facebook\.com/)
+  assert.match(checkoutBlock,/connect-src[^\n]*https:\/\/graph\.facebook\.com/)
+})
