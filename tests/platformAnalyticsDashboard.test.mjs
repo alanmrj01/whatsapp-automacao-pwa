@@ -25,7 +25,7 @@ test('tracking dashboard fetches admin analytics and keeps unavailable metrics e
   assert.match(page,/Sem números estimados/)
   assert.match(page,/Ativação operacional = conexão do WhatsApp concluída/)
   assert.match(page,/Funil de Conversão/)
-  assert.match(page,/Assinaturas por posicionamento/)
+  assert.match(page,/subscriptions_by_placement/)
 })
 
 test('tracking dashboard displays acronym meanings instead of ambiguous KPI labels', () => {
