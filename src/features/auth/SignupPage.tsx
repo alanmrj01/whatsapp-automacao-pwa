@@ -1,6 +1,6 @@
 import { Eye, EyeOff } from 'lucide-react'
 import { useRef, useState, type FormEvent } from 'react'
-import { trackEvent, trackEventOnce } from '../../lib/tracking'
+import { trackEvent } from '../../lib/tracking'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { BrandMark } from '../../components/BrandMark'
 import { LoadingState } from '../../components/LoadingState'
@@ -58,48 +58,21 @@ export function SignupPage() {
       const createdUser = await auth.signup(businessName.trim(), email.trim(), password, key)
       idempotencyKey.current = ''
       const createdMembership = createdUser.memberships.find(item=>item.business_id===createdUser.active_business_id)
-      const signupCompletedProperties = {
-        funnel_stage:'registration_completed',
-        access_mode:createdMembership?.access_mode ?? null,
-        account_state:createdMembership?.account_state ?? null,
-      }
-      const signupCompletedContext = {
-        surface:'signup',
-        businessId:createdUser.active_business_id,
-        userId:createdUser.id,
-        eventId:key,
-      }
-      const signupCompletedAccepted = await trackEvent(
-        'signup_completed',
-        signupCompletedProperties,
-        signupCompletedContext,
-      )
-      if (!signupCompletedAccepted) {
-        await new Promise(resolve=>window.setTimeout(resolve,150))
-        await trackEvent(
-          'signup_completed',
-          signupCompletedProperties,
-          signupCompletedContext,
-        )
-      }
       const preactivation = createdMembership?.access_mode === 'free'
         && createdMembership?.has_had_operational_access !== true
-      if(preactivation) {
-        trackEventOnce(
-          `preactivation_started:${createdUser.active_business_id}`,
-          'preactivation_started',
-          {
-            funnel_stage:'demo_access_ready',
-            whatsapp_connection_available:true,
-          },
-          {
-            surface:'signup',
+      navigate(homeFor(createdUser), {
+        replace:true,
+        state:{
+          signupTracking:{
+            eventId:key,
             businessId:createdUser.active_business_id,
             userId:createdUser.id,
+            accessMode:createdMembership?.access_mode ?? null,
+            accountState:createdMembership?.account_state ?? null,
+            preactivation,
           },
-        )
-      }
-      navigate(homeFor(createdUser), {replace:true})
+        },
+      })
     } catch (failure) {
       const transient = failure instanceof ApiError && (failure.status === 0 || failure.status >= 500)
       preserveAttempt = transient
