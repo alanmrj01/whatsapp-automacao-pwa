@@ -30,6 +30,48 @@ import '../../styles/public-landing.css'
 
 const technicianPhoto = '/landing/technician-hvac.webp'
 
+
+type VimeoPlaybackData = { seconds:number; duration:number; percent:number }
+type VimeoPlayerInstance = {
+  on:(event:'play'|'timeupdate'|'ended',callback:(data:VimeoPlaybackData)=>void)=>void
+  off:(event:'play'|'timeupdate'|'ended',callback:(data:VimeoPlaybackData)=>void)=>void
+  play:()=>Promise<void>
+}
+type VimeoConstructor = new (element:HTMLIFrameElement)=>VimeoPlayerInstance
+
+declare global {
+  interface Window {
+    Vimeo?: { Player: VimeoConstructor }
+  }
+}
+
+let vimeoSdkPromise: Promise<VimeoConstructor> | null = null
+
+function loadVimeoPlayer(): Promise<VimeoConstructor> {
+  if (window.Vimeo?.Player) return Promise.resolve(window.Vimeo.Player)
+  if (vimeoSdkPromise) return vimeoSdkPromise
+  vimeoSdkPromise = new Promise((resolve,reject)=>{
+    const existing=document.querySelector<HTMLScriptElement>('script[data-alovia-vimeo-sdk]')
+    const finish=()=>{
+      if(window.Vimeo?.Player)resolve(window.Vimeo.Player)
+      else reject(new Error('Vimeo Player SDK unavailable'))
+    }
+    if(existing){
+      existing.addEventListener('load',finish,{once:true})
+      existing.addEventListener('error',()=>reject(new Error('Vimeo Player SDK failed to load')),{once:true})
+      return
+    }
+    const script=document.createElement('script')
+    script.src='https://player.vimeo.com/api/player.js'
+    script.async=true
+    script.dataset.aloviaVimeoSdk='1'
+    script.addEventListener('load',finish,{once:true})
+    script.addEventListener('error',()=>reject(new Error('Vimeo Player SDK failed to load')),{once:true})
+    document.head.appendChild(script)
+  })
+  return vimeoSdkPromise
+}
+
 function TrackedLink({ source, className, children }: { source: string; className: string; children: ReactNode }) {
   return (
     <Link
@@ -72,6 +114,7 @@ function PhonePreview() {
 
 function VideoPreview() {
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const playerRef = useRef<VimeoPlayerInstance | null>(null)
   const startedTracked = useRef(false)
   const completedTracked = useRef(false)
   const progressTracked = useRef(new Set<number>())
@@ -80,75 +123,60 @@ function VideoPreview() {
   useEffect(() => {
     const iframe = iframeRef.current
     if (!iframe) return
+    let disposed = false
+    let player: VimeoPlayerInstance | null = null
 
-    const subscribe = () => {
-      for (const event of ['play', 'timeupdate', 'ended']) {
-        iframe.contentWindow?.postMessage(
-          { method: 'addEventListener', value: event },
-          'https://player.vimeo.com',
-        )
-      }
+    const onPlay = (data: VimeoPlaybackData) => {
+      if (startedTracked.current) return
+      startedTracked.current = true
+      trackEvent('landing_vsl_started', {
+        video_id: '1240828681',
+        seconds: data.seconds,
+        duration_seconds: data.duration,
+      }, { surface: 'landing' })
     }
 
-    const onMessage = (message: MessageEvent) => {
-      if (
-        message.origin !== 'https://player.vimeo.com'
-        || message.source !== iframe.contentWindow
-      ) return
-
-      let payload: unknown = message.data
-      if (typeof payload === 'string') {
-        try { payload = JSON.parse(payload) } catch { return }
-      }
-      if (!payload || typeof payload !== 'object') return
-
-      const event = 'event' in payload ? String(payload.event ?? '') : ''
-      const data = 'data' in payload && payload.data && typeof payload.data === 'object'
-        ? payload.data as Record<string, unknown>
-        : {}
-      const seconds = typeof data.seconds === 'number' ? data.seconds : null
-      const duration = typeof data.duration === 'number' ? data.duration : null
-      const percent = typeof data.percent === 'number' ? data.percent : null
-
-      if (event === 'play' && !startedTracked.current) {
-        startedTracked.current = true
-        trackEvent('landing_vsl_started', {
+    const onTimeupdate = (data: VimeoPlaybackData) => {
+      for (const milestone of [25, 50, 75]) {
+        if (data.percent * 100 < milestone || progressTracked.current.has(milestone)) continue
+        progressTracked.current.add(milestone)
+        trackEvent('landing_vsl_progress', {
           video_id: '1240828681',
-          seconds,
-          duration_seconds: duration,
-        }, { surface: 'landing' })
-      }
-
-      if (event === 'timeupdate' && percent !== null) {
-        for (const milestone of [25, 50, 75]) {
-          if (percent * 100 < milestone || progressTracked.current.has(milestone)) continue
-          progressTracked.current.add(milestone)
-          trackEvent('landing_vsl_progress', {
-            video_id: '1240828681',
-            percent: milestone,
-            seconds,
-            duration_seconds: duration,
-          }, { surface: 'landing' })
-        }
-      }
-
-      if (event === 'ended' && !completedTracked.current) {
-        completedTracked.current = true
-        trackEvent('landing_vsl_completed', {
-          video_id: '1240828681',
-          percent: 100,
-          seconds,
-          duration_seconds: duration,
+          percent: milestone,
+          seconds: data.seconds,
+          duration_seconds: data.duration,
         }, { surface: 'landing' })
       }
     }
 
-    window.addEventListener('message', onMessage)
-    iframe.addEventListener('load', subscribe)
-    subscribe()
+    const onEnded = (data: VimeoPlaybackData) => {
+      if (completedTracked.current) return
+      completedTracked.current = true
+      trackEvent('landing_vsl_completed', {
+        video_id: '1240828681',
+        percent: 100,
+        seconds: data.seconds,
+        duration_seconds: data.duration,
+      }, { surface: 'landing' })
+    }
+
+    void loadVimeoPlayer().then(Player=>{
+      if(disposed)return
+      player=new Player(iframe)
+      playerRef.current=player
+      player.on('play',onPlay)
+      player.on('timeupdate',onTimeupdate)
+      player.on('ended',onEnded)
+    }).catch(()=>undefined)
+
     return () => {
-      window.removeEventListener('message', onMessage)
-      iframe.removeEventListener('load', subscribe)
+      disposed = true
+      if(player){
+        player.off('play',onPlay)
+        player.off('timeupdate',onTimeupdate)
+        player.off('ended',onEnded)
+      }
+      if(playerRef.current===player)playerRef.current=null
     }
   }, [])
 
@@ -156,14 +184,26 @@ function VideoPreview() {
     if (started) return
     setStarted(true)
     trackEvent('landing_vsl_play_intent', {}, { surface: 'landing' })
-    iframeRef.current?.contentWindow?.postMessage({ method: 'play' }, 'https://player.vimeo.com')
+    const iframe=iframeRef.current
+    if(!iframe)return
+    const play=async()=>{
+      try{
+        const Player=await loadVimeoPlayer()
+        const player=playerRef.current??new Player(iframe)
+        if(!playerRef.current)playerRef.current=player
+        await player.play()
+      }catch{
+        iframe.contentWindow?.postMessage({ method: 'play' }, 'https://player.vimeo.com')
+      }
+    }
+    void play()
   }
 
   return (
     <div className="public-video" aria-label="Assistir demonstração da Alovia">
       <iframe
         ref={iframeRef}
-        src="https://player.vimeo.com/video/1240828681?badge=0&autopause=0&player_id=0&app_id=58479"
+        src="https://player.vimeo.com/video/1240828681?badge=0&autopause=0&player_id=alovia-vsl&app_id=58479"
         title="Alovia"
         frameBorder="0"
         allow="autoplay; fullscreen; picture-in-picture; clipboard-write; web-share"
