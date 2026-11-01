@@ -41,8 +41,20 @@ function AutomationForm({settings,canEdit}:{settings:AutomationSettings;canEdit:
   const [fallback,setFallback]=useState(settings.fallback_message)
   const [handoff,setHandoff]=useState(settings.handoff_message)
   const [saved,setSaved]=useState(false)
+  const toggleEnabled=(next:boolean)=>{
+    const previous=enabled
+    setEnabled(next)
+    setSaved(false)
+    update.mutate(
+      {assistant_enabled:next},
+      {
+        onSuccess:()=>setSaved(true),
+        onError:()=>setEnabled(previous),
+      },
+    )
+  }
   return <form className="settings-form" onSubmit={event=>{event.preventDefault();setSaved(false);update.mutate({assistant_enabled:enabled,human_control_window_minutes:minutes,greeting_message:greeting,fallback_message:fallback,handoff_message:handoff},{onSuccess:()=>setSaved(true)})}}>
-    <label className="check-row"><input type="checkbox" checked={enabled} disabled={!canEdit} onChange={event=>setEnabled(event.target.checked)}/>Assistente Virtual ativo</label>
+    <label className="check-row"><input type="checkbox" checked={enabled} disabled={!canEdit||update.isPending} onChange={event=>toggleEnabled(event.target.checked)}/>Assistente Virtual ativo</label>
     <label>Tempo antes do Assistente retomar após atendimento humano<select value={minutes} disabled={!canEdit} onChange={event=>setMinutes(Number(event.target.value))}>{windowOptions.map(value=><option value={value} key={value}>{formatWindow(value)}</option>)}</select></label>
     <label>Mensagem inicial<textarea required maxLength={1000} rows={3} value={greeting} disabled={!canEdit} onChange={event=>setGreeting(event.target.value)}/></label>
     <label>Mensagem quando não entende o pedido<textarea required maxLength={1000} rows={3} value={fallback} disabled={!canEdit} onChange={event=>setFallback(event.target.value)}/></label>
