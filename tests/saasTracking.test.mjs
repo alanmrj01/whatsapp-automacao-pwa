@@ -39,6 +39,7 @@ test('signup checkout and WhatsApp connection expose the core SaaS funnel events
   assert.match(signup, /eventId:key/)
   const funnelTracker = read('src/lib/FunnelTracker.tsx')
   assert.match(funnelTracker, /signup_completed/)
+  assert.match(funnelTracker, /signup_completed/)
   assert.match(funnelTracker, /preactivation_started/)
   assert.match(funnelTracker, /signupTracking\.preactivation === true/)
   assert.match(funnelTracker, /businessId !== auth\.user\.active_business_id/)
