@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
-import { trackEvent } from './tracking'
+import { trackEvent, trackEventOnce } from './tracking'
 import { useAuth } from '../features/auth/useAuth'
 
 function routeGroup(pathname:string) {
@@ -29,6 +29,61 @@ export function FunnelTracker() {
   const demo = membership?.access_mode === 'free' || membership?.account_state === 'demo'
   const demoRoute = demo && location.pathname.startsWith('/app')
   const surface = location.pathname === '/' ? 'landing' : demoRoute ? 'demo' : 'app'
+  const signupTracking = location.state && typeof location.state === 'object' && 'signupTracking' in location.state
+    ? (location.state as {signupTracking?:{
+        eventId?:unknown
+        businessId?:unknown
+        userId?:unknown
+        accessMode?:unknown
+        accountState?:unknown
+        preactivation?:unknown
+      }}).signupTracking
+    : undefined
+
+  useEffect(() => {
+    if (!demoRoute || !auth.user || !signupTracking) return
+    const businessId = typeof signupTracking.businessId === 'string' ? signupTracking.businessId : null
+    const userId = typeof signupTracking.userId === 'string' ? signupTracking.userId : null
+    const eventId = typeof signupTracking.eventId === 'string' ? signupTracking.eventId : undefined
+    if (
+      !businessId
+      || !userId
+      || businessId !== auth.user.active_business_id
+      || userId !== auth.user.id
+    ) return
+
+    void trackEvent('signup_completed', {
+      funnel_stage:'registration_completed',
+      access_mode:typeof signupTracking.accessMode === 'string' ? signupTracking.accessMode : null,
+      account_state:typeof signupTracking.accountState === 'string' ? signupTracking.accountState : null,
+    }, {
+      surface:'signup',
+      businessId,
+      userId,
+      eventId,
+    }).then(success=>{
+      if (!success) return
+      if (signupTracking.preactivation === true) {
+        trackEventOnce(
+          `preactivation_started:${businessId}`,
+          'preactivation_started',
+          {
+            funnel_stage:'demo_access_ready',
+            whatsapp_connection_available:true,
+          },
+          {
+            surface:'signup',
+            businessId,
+            userId,
+          },
+        )
+      }
+    })
+  }, [
+    auth.user,
+    demoRoute,
+    signupTracking,
+  ])
 
   useEffect(() => {
     const key = `${location.pathname}${location.search}:${surface}`
