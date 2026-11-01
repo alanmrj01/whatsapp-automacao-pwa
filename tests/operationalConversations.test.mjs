@@ -35,6 +35,10 @@ test('assistant settings hide internal recognition and keep permanent human-only
   const api = read('src/features/operations/api.ts')
 
   assert.match(settings,/Assistente Virtual ativo/)
+  assert.match(settings,/const toggleEnabled=\(next:boolean\)=>/)
+  assert.match(settings,/update\.mutate\(\s*\{assistant_enabled:next\}/)
+  assert.match(settings,/onError:\(\)=>setEnabled\(previous\)/)
+  assert.match(settings,/disabled=\{!canEdit\|\|update\.isPending\}/)
   assert.match(settings,/Mensagem inicial/)
   assert.doesNotMatch(settings,/Como o ALOVIA reconhece seus serviços/)
   assert.doesNotMatch(settings,/Frases de referência/)
