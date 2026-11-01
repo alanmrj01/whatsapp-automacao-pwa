@@ -19,7 +19,12 @@ test('first-party tracking delegates durable identity to HttpOnly backend cookie
   }
   assert.match(tracking, /trackEventOnce/)
   assert.match(tracking, /import \{ api \} from '\.\/api'/)
-  assert.match(tracking, /api\.request<\{accepted:boolean\}>\('\/marketing\/events'/)
+  assert.match(tracking, /api\.optionalAuthRequest<\{accepted:boolean\}>\('\/marketing\/events'/)
+
+  const httpClient = read('src/lib/httpClient.ts')
+  assert.match(httpClient, /async function optionalAuthRequest<T>/)
+  assert.match(httpClient, /return body<T>\(await raw\(path, options, token\)\)/)
+  assert.match(httpClient, /request, optionalAuthRequest, requestBlob/)
 })
 
 test('signup checkout and WhatsApp connection expose the core SaaS funnel events', () => {
