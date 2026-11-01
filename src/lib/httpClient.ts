@@ -116,6 +116,14 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
     }
   }
 
+  async function optionalAuthRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+    // Public analytics endpoints must remain callable for anonymous visitors even
+    // after auth bootstrap has established that there is no signed-in session.
+    // Reuse the bearer only when one already exists; never refresh or mutate auth
+    // state from this request path.
+    return body<T>(await raw(path, options, token))
+  }
+
   async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     if (blocked) throw new ApiError(401)
     const expected = generation
@@ -174,7 +182,7 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
   }
 
   return {
-    request, requestBlob, refresh, clear, resume,
+    request, optionalAuthRequest, requestBlob, refresh, clear, resume,
     async forgotPassword(email: string) {
       await publicVoid('/auth/password/forgot', {email})
     },
