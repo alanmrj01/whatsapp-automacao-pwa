@@ -1,4 +1,4 @@
-import { AlertTriangle, Building2, CirclePower, Clock3, Eye, KeyRound, Mail, Phone, Plus, RefreshCw, ShieldCheck } from 'lucide-react'
+import { AlertTriangle, BarChart3, Building2, CirclePower, Clock3, Eye, KeyRound, Mail, Phone, Plus, RefreshCw, ShieldCheck } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppHeader } from '../../components/AppHeader'
@@ -243,6 +243,7 @@ export function AdminPage() {
           <p>Crie tenants, defina o primeiro OWNER e acompanhe o estado operacional de cada empresa.</p>
         </div>
         <div className="platform-admin__hero-actions">
+          <button className="platform-admin__preview-button" type="button" onClick={()=>navigate('/admin/indicadores')}><BarChart3 size={18}/> Indicadores</button>
           <button className="platform-admin__preview-button" type="button" onClick={()=>navigate('/admin/preview')}><Eye size={18}/> Prévia do aplicativo</button>
           <PrimaryButton icon={<Plus size={18}/>} onClick={()=>setShowCreate(value=>!value)}>
             {showCreate ? 'Fechar cadastro' : 'Nova empresa'}

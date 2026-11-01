@@ -38,6 +38,7 @@ const ForgotPasswordPage = lazy(async () => ({default:(await PasswordRecoveryPag
 const ResetPasswordPage = lazy(async () => ({default:(await PasswordRecoveryPages()).ResetPasswordPage}))
 const SignupPage = lazy(async () => ({default:(await import('../features/auth/SignupPage')).SignupPage}))
 const AdminPage = lazy(async () => ({default:(await import('../features/auth/AdminPage')).AdminPage}))
+const TrackingDashboardPage = lazy(async () => ({default:(await import('../features/auth/TrackingDashboardPage')).TrackingDashboardPage}))
 const PlatformPreviewPage = lazy(async () => ({default:(await import('../features/preview/PlatformPreviewPage')).PlatformPreviewPage}))
 const PublicLandingPage = lazy(async () => ({default:(await import('../features/public/PublicLandingPage')).PublicLandingPage}))
 const DemoSettingsPreviewPage = lazy(async () => ({default:(await import('../features/more/DemoSettingsPreviewPage')).DemoSettingsPreviewPage}))
@@ -84,6 +85,7 @@ export function AppRouter() {
         <Route path="/criar-conta" element={<SignupPage />} />
         <Route element={<ProtectedRoute platform />}>
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin/indicadores" element={<TrackingDashboardPage />} />
           <Route path="/admin/preview" element={<PlatformPreviewPage />} />
         </Route>
         <Route element={<ProtectedRoute />}>
