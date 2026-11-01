@@ -231,7 +231,7 @@ export function trackEvent(
       },
     }
     trackMetaBrowserEvent(eventName,eventId,properties)
-    return api.request<{accepted:boolean}>('/marketing/events', {
+    return api.optionalAuthRequest<{accepted:boolean}>('/marketing/events', {
       method: 'POST',
       keepalive: true,
       body: JSON.stringify(payload),
