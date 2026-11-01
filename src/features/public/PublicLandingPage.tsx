@@ -36,6 +36,8 @@ type VimeoPlayerInstance = {
   on:(event:'play'|'timeupdate'|'ended',callback:(data:VimeoPlaybackData)=>void)=>void
   off:(event:'play'|'timeupdate'|'ended',callback:(data:VimeoPlaybackData)=>void)=>void
   play:()=>Promise<void>
+  getCurrentTime:()=>Promise<number>
+  getDuration:()=>Promise<number>
 }
 type VimeoConstructor = new (element:HTMLIFrameElement)=>VimeoPlayerInstance
 
@@ -115,6 +117,7 @@ function PhonePreview() {
 function VideoPreview() {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const playerRef = useRef<VimeoPlayerInstance | null>(null)
+  const pollTimerRef = useRef<number | null>(null)
   const startedTracked = useRef(false)
   const completedTracked = useRef(false)
   const progressTracked = useRef(new Set<number>())
@@ -160,6 +163,55 @@ function VideoPreview() {
       }, { surface: 'landing' })
     }
 
+    const applyPlaybackSnapshot = (seconds:number,duration:number) => {
+      if (!(duration > 0) || seconds < 0) return
+      if (seconds > 0.2 && !startedTracked.current) {
+        startedTracked.current = true
+        trackEvent('landing_vsl_started', {
+          video_id: '1240828681',
+          seconds,
+          duration_seconds: duration,
+          source: 'player_poll',
+        }, { surface: 'landing' })
+      }
+      const percent = seconds / duration
+      for (const milestone of [25, 50, 75]) {
+        if (percent * 100 < milestone || progressTracked.current.has(milestone)) continue
+        progressTracked.current.add(milestone)
+        trackEvent('landing_vsl_progress', {
+          video_id: '1240828681',
+          percent: milestone,
+          seconds,
+          duration_seconds: duration,
+          source: 'player_poll',
+        }, { surface: 'landing' })
+      }
+      if (percent >= 0.995 && !completedTracked.current) {
+        completedTracked.current = true
+        trackEvent('landing_vsl_completed', {
+          video_id: '1240828681',
+          percent: 100,
+          seconds,
+          duration_seconds: duration,
+          source: 'player_poll',
+        }, { surface: 'landing' })
+      }
+    }
+
+    const pollPlayback = async () => {
+      const currentPlayer=playerRef.current
+      if(!currentPlayer)return
+      try{
+        const [seconds,duration]=await Promise.all([
+          currentPlayer.getCurrentTime(),
+          currentPlayer.getDuration(),
+        ])
+        applyPlaybackSnapshot(seconds,duration)
+      }catch{
+        // Event listeners remain the primary path; polling is a resilient fallback.
+      }
+    }
+
     void loadVimeoPlayer().then(Player=>{
       if(disposed)return
       player=new Player(iframe)
@@ -167,10 +219,15 @@ function VideoPreview() {
       player.on('play',onPlay)
       player.on('timeupdate',onTimeupdate)
       player.on('ended',onEnded)
+      void pollPlayback()
     }).catch(()=>undefined)
 
     return () => {
       disposed = true
+      if(pollTimerRef.current!==null){
+        window.clearInterval(pollTimerRef.current)
+        pollTimerRef.current=null
+      }
       if(player){
         player.off('play',onPlay)
         player.off('timeupdate',onTimeupdate)
@@ -192,6 +249,46 @@ function VideoPreview() {
         const player=playerRef.current??new Player(iframe)
         if(!playerRef.current)playerRef.current=player
         await player.play()
+        if(pollTimerRef.current===null){
+          pollTimerRef.current=window.setInterval(()=>{
+            void Promise.all([player.getCurrentTime(),player.getDuration()])
+              .then(([seconds,duration])=>{
+                if (!(duration > 0) || seconds < 0) return
+                if (seconds > 0.2 && !startedTracked.current) {
+                  startedTracked.current = true
+                  trackEvent('landing_vsl_started', {
+                    video_id: '1240828681',
+                    seconds,
+                    duration_seconds: duration,
+                    source: 'player_poll',
+                  }, { surface: 'landing' })
+                }
+                const percent=seconds/duration
+                for(const milestone of [25,50,75]){
+                  if(percent*100<milestone||progressTracked.current.has(milestone))continue
+                  progressTracked.current.add(milestone)
+                  trackEvent('landing_vsl_progress', {
+                    video_id: '1240828681',
+                    percent: milestone,
+                    seconds,
+                    duration_seconds: duration,
+                    source: 'player_poll',
+                  }, { surface: 'landing' })
+                }
+                if(percent>=0.995&&!completedTracked.current){
+                  completedTracked.current=true
+                  trackEvent('landing_vsl_completed', {
+                    video_id: '1240828681',
+                    percent: 100,
+                    seconds,
+                    duration_seconds: duration,
+                    source: 'player_poll',
+                  }, { surface: 'landing' })
+                }
+              })
+              .catch(()=>undefined)
+          },1000)
+        }
       }catch{
         iframe.contentWindow?.postMessage({ method: 'play' }, 'https://player.vimeo.com')
       }
