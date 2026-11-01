@@ -14,7 +14,8 @@ test('new prospects keep demo access while WhatsApp connection remains available
   const plan=read('src/features/billing/PlanPage.tsx')
 
   assert.match(signup,/navigate\(homeFor\(createdUser\)/)
-  assert.match(signup,/funnel_stage:'demo_access_ready'/)
+  const tracker=read('src/lib/FunnelTracker.tsx')
+  assert.match(tracker,/funnel_stage:'demo_access_ready'/)
   assert.doesNotMatch(signup,/navigate\('\/app\/whatsapp\?from=activation'/)
 
   assert.doesNotMatch(router,/allowedPreactivationRoute/)
