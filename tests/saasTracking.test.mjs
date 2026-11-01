@@ -36,6 +36,9 @@ test('signup checkout and WhatsApp connection expose the core SaaS funnel events
   const plan = read('src/features/billing/PlanPage.tsx')
 
   assert.match(signup, /signup_completed/)
+  assert.match(signup, /eventId:key/)
+  assert.match(signup, /signupCompletedAccepted/)
+  assert.match(signup, /window\.setTimeout\(resolve,150\)/)
   assert.match(checkout, /checkout_started/)
   assert.match(checkout, /checkout_created/)
   assert.match(checkout, /checkout_redirected/)
