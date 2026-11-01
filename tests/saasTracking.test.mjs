@@ -109,9 +109,12 @@ test('landing VSL tracks real Vimeo playback and completion milestones', () => {
   assert.match(landing,/landing_vsl_progress/)
   assert.match(landing,/landing_vsl_completed/)
   assert.match(landing,/\[25, 50, 75\]/)
-  assert.match(landing,/method: 'addEventListener'/)
-  assert.match(landing,/message\.origin !== 'https:\/\/player\.vimeo\.com'/)
-  assert.match(landing,/message\.source !== iframe\.contentWindow/)
+  assert.match(landing,/https:\/\/player\.vimeo\.com\/api\/player\.js/)
+  assert.match(landing,/player\.on\('play',onPlay\)/)
+  assert.match(landing,/player\.on\('timeupdate',onTimeupdate\)/)
+  assert.match(landing,/player\.on\('ended',onEnded\)/)
+  const netlify = read('netlify.toml')
+  assert.match(netlify,/script-src[^\n]*https:\/\/player\.vimeo\.com/)
 })
 
 test('Meta Pixel uses the official web dataset and shared event IDs only on production hosts', () => {
