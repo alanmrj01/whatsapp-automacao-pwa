@@ -70,12 +70,12 @@ test('auth foundation exposes free/paid access, signup and explicit reconnect UX
   assert.match(connection, /canReadOperationalData/)
 })
 
-test('never-activated free accounts keep WhatsApp connection available before payment', () => {
+test('all owner/admin free accounts keep WhatsApp connection available before payment', () => {
   const whatsapp = read('src/features/whatsapp/WhatsAppPage.tsx')
   const dashboard = read('src/features/dashboard/DashboardPage.tsx')
   const more = read('src/features/more/MorePage.tsx')
-  assert.match(whatsapp, /const preactivation = entitlement\.isPreactivation/)
-  assert.match(whatsapp, /entitlement\.isPaid \|\| preactivation/)
+  assert.match(whatsapp, /const canConnect = canConfigure && !!connection\.data/)
+  assert.match(whatsapp, /entitlement\.isFree&&status==='connected'/)
   assert.doesNotMatch(whatsapp, /conexão oficial está disponível com assinatura/i)
   assert.doesNotMatch(whatsapp, /openUpgrade\('Conectar o WhatsApp'\)/)
   assert.doesNotMatch(dashboard, /openUpgrade\('Conectar o WhatsApp'\)/)
