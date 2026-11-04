@@ -26,8 +26,7 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const fromOnboarding = searchParams.get('from') === 'onboarding'
-  const preactivation = membership?.access_mode === 'free'
-    && membership?.has_had_operational_access !== true
+  const unpaid = membership?.access_mode === 'free'
   const [phase, setPhase] = useState<EmbeddedSignupPhase>('idle')
   const [message, setMessage] = useState<string | null>(null)
   const [connected, setConnected] = useState<WhatsAppConnection | null>(null)
@@ -155,10 +154,10 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
       navigate('/app/onboarding', {replace:true})
       return
     }
-    if (preactivation) {
+    if (unpaid) {
       navigate('/app/mais/plano?activation=1', {replace:true})
     }
-  }, [fromOnboarding, navigate, phase, preactivation])
+  }, [fromOnboarding, navigate, phase, unpaid])
 
   const beginRedirectSignup = useCallback(async () => {
     if (!configuration.data) {

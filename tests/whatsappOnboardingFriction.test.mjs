@@ -236,7 +236,7 @@ test('new prospects keep demo access and can connect WhatsApp before payment whi
   assert.doesNotMatch(dashboard,/openUpgrade\('Conectar o WhatsApp'\)/)
   assert.doesNotMatch(more,/FREE_DEMO'\?'Disponível com assinatura'/)
   assert.match(page,/Escolher plano e ativar a Alovia/)
-  assert.match(page,/A automação permanece desligada até você ativar um plano/)
+  assert.match(page,/A automação permanece desligada até você ativar ou reativar um plano/)
   assert.match(plan,/WhatsApp conectado/)
   assert.match(plan,/activation_paywall_viewed/)
   assert.match(plan,/plan_selected/)
@@ -245,12 +245,16 @@ test('new prospects keep demo access and can connect WhatsApp before payment whi
   assert.match(router,/if\(!entitlement\.isPaid\)return children/)
 })
 
-test('former subscribers are not treated as new preactivation prospects', () => {
+test('former subscribers can reconnect WhatsApp before reactivating while operations stay paused', () => {
   const entitlements=read('src/features/access/entitlements.ts')
   const whatsapp=read('src/features/whatsapp/WhatsAppPage.tsx')
+  const embedded=read('src/features/whatsapp/EmbeddedSignupButton.tsx')
 
-  assert.match(entitlements,/isPreactivation = isFree && !hasOperationalHistory/)
   assert.match(entitlements,/isReadOnlyRetained = isFree && hasOperationalHistory/)
-  assert.match(whatsapp,/Dados da conexão preservados/)
-  assert.match(whatsapp,/Reative uma assinatura para alterar ou reconectar o WhatsApp/)
+  assert.match(whatsapp,/const canConnect = canConfigure && !!connection\.data/)
+  assert.match(whatsapp,/Operação pausada, conexão disponível/)
+  assert.match(whatsapp,/Você pode conectar ou ajustar o WhatsApp antes de reativar/)
+  assert.match(embedded,/const unpaid = membership\?\.access_mode === 'free'/)
+  assert.match(embedded,/if \(unpaid\)/)
+  assert.match(embedded,/mais\/plano\?activation=1/)
 })

@@ -566,8 +566,8 @@ export function PublicLandingPage() {
                   <li><CalendarCheck2 /> Oferta automática de PMOC para clientes com histórico de PMOC</li>
                 </ul>
               </article>
-              <article>
-                <span className="public-step">Franquia</span>
+              <article className="public-flow__plan--franchise">
+                <span className="public-step public-step--wide">Franquia</span>
                 <h3>Você acompanha o uso</h3>
                 <ul>
                   <li><CheckCircle2 /> Mensagens recebidas não consomem a franquia</li>

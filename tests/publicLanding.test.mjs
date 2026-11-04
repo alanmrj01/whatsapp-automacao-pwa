@@ -19,6 +19,8 @@ test('root is the approved refrigeration landing journey', () => {
   assert.match(landing, /Criar conta grátis/)
   assert.match(landing, /Até 600 mensagens por mês/)
   assert.match(landing, /Até 1\.000 mensagens por mês/)
+  assert.match(landing, /public-flow__plan--franchise/)
+  assert.match(landing, /public-step public-step--wide">Franquia/)
   assert.match(landing, /Oferta automática de manutenção preventiva para clientes já atendidos/)
   assert.match(landing, /Oferta automática de PMOC para clientes com histórico de PMOC/)
   assert.doesNotMatch(landing, /mensagens de serviço/)

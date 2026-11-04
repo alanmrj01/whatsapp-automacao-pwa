@@ -334,6 +334,8 @@
   box-shadow: 0 5px 14px rgb(38 74 118 / 4%);
 }
 .public-step { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; color: var(--landing-blue); background: #e4f2ff; font-size: .83rem; font-weight: 900; }
+.public-flow article.public-flow__plan--franchise { grid-template-columns: auto minmax(0, 1fr); }
+.public-step--wide { width: auto; min-width: 30px; padding-inline: 7px; border-radius: 999px; white-space: nowrap; }
 .public-flow h3 { margin: 0; color: var(--landing-navy); font-size: .86rem; line-height: 1.16; }
 .public-mini-message,
 .public-success { grid-column: 1 / -1; margin-top: 8px; padding: 8px 9px; border-radius: 9px; color: #2c405d; background: #f1f4f8; font-size: .68rem; line-height: 1.32; }

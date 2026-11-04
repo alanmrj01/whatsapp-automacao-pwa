@@ -27,7 +27,7 @@ test('new prospects keep demo access while WhatsApp connection remains available
 
   assert.match(whatsapp,/const preactivation = entitlement\.isPreactivation/)
   assert.doesNotMatch(whatsapp,/A conexão oficial está disponível com assinatura/)
-  assert.match(whatsapp,/entitlement\.isPaid \|\| preactivation/)
+  assert.match(whatsapp,/const canConnect = canConfigure && !!connection\.data/)
   assert.doesNotMatch(dashboard,/openUpgrade\('Conectar o WhatsApp'\)/)
   assert.match(dashboard,/to="\/app\/whatsapp"/)
   assert.doesNotMatch(more,/FREE_DEMO'\?'Disponível com assinatura'/)

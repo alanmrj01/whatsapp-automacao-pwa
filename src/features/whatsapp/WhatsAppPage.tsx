@@ -77,13 +77,13 @@ export function WhatsAppPage() {
   // A business review approval is not proof that a number supports coexistence.
   const coexistenceReviewReady=false
   const canConfigure = canConfigureWhatsApp(membership?.role)
-  const canConnect = (entitlement.isPaid || preactivation) && canConfigure && !!connection.data
+  const canConnect = canConfigure && !!connection.data
     && journey.requiresUserAction
     && journey.nextAction!=='review_meta_rejection'
     && (
     status === 'disconnected' || status === 'error' || status === 'pending'
   )
-  const canDisconnect = (entitlement.isPaid || preactivation) && canConfigure && status==='connected'
+  const canDisconnect = canConfigure && status==='connected'
   const savedBusinessPreparationStep=status==='disconnected'
     ? searchParams.get('preparacao')
     : null
@@ -119,15 +119,15 @@ export function WhatsAppPage() {
           {mode&&<div><dt>Forma de operação</dt><dd>{connectionModeLabels[mode]}</dd></div>}
           <div><dt>Situação</dt><dd>Conexão ativa</dd></div>
         </dl>}
-        {preactivation&&status==='connected'&&<div className="account-note">
-          <strong>Seu WhatsApp está pronto para usar com a Alovia</strong>
-          <span>A conexão foi concluída. A automação permanece desligada até você ativar um plano.</span>
+        {entitlement.isFree&&status==='connected'&&<div className="account-note">
+          <strong>Seu WhatsApp está conectado à Alovia</strong>
+          <span>A conexão foi concluída. A automação permanece desligada até você ativar ou reativar um plano.</span>
           <PrimaryButton
             fullWidth
             icon={<ArrowRight size={19}/>}
             onClick={()=>navigate('/app/mais/plano?activation=1')}
           >
-            Escolher plano e ativar a Alovia
+            {preactivation?'Escolher plano e ativar a Alovia':'Reativar plano e operação'}
           </PrimaryButton>
         </div>}
         {status!=='connected'&&<div className="account-note">
@@ -181,9 +181,9 @@ export function WhatsAppPage() {
           <span>Essa revisão é separada da conexão técnica. Se o WhatsApp aparece como conectado, ele continua ativo; não é necessário reconectar apenas por causa deste aviso.</span>
         </div>}
         {readOnly&&<div className="account-note">
-          <strong>Dados da conexão preservados</strong>
-          <span>Seu acesso operacional está pausado. Reative uma assinatura para alterar ou reconectar o WhatsApp.</span>
-          <PrimaryButton fullWidth onClick={()=>openUpgrade('Reativar a operação do WhatsApp')}>Ver planos</PrimaryButton>
+          <strong>Operação pausada, conexão disponível</strong>
+          <span>Você pode conectar ou ajustar o WhatsApp antes de reativar. A automação e o atendimento operacional permanecem pausados até a assinatura ser reativada.</span>
+          <PrimaryButton fullWidth onClick={()=>openUpgrade('Reativar a operação da Alovia')}>Ver planos</PrimaryButton>
         </div>}
         {canConnect && <PrimaryButton
           fullWidth
