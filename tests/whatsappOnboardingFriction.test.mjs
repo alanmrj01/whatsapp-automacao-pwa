@@ -236,7 +236,7 @@ test('new prospects keep demo access and can connect WhatsApp before payment whi
   assert.doesNotMatch(dashboard,/openUpgrade\('Conectar o WhatsApp'\)/)
   assert.doesNotMatch(more,/FREE_DEMO'\?'Disponível com assinatura'/)
   assert.match(page,/Escolher plano e ativar a Alovia/)
-  assert.match(page,/A automação permanece desligada até você ativar um plano/)
+  assert.match(page,/A automação permanece desligada até você ativar ou reativar um plano/)
   assert.match(plan,/WhatsApp conectado/)
   assert.match(plan,/activation_paywall_viewed/)
   assert.match(plan,/plan_selected/)
