@@ -2,7 +2,7 @@ name: PWA validation
 
 on:
   push:
-    branches: [main]
+    branches: [main, productivity]
   pull_request:
     paths:
       - 'src/**'
