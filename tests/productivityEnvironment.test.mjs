@@ -4,13 +4,13 @@ import test from 'node:test'
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 
-test('productivity Netlify config is fail-closed and never proxies to production', () => {
+test('Netlify API proxy is environment-aware and never hardcodes production backend', () => {
   const config = read('netlify.toml')
-  assert.match(config, /PRODUCTIVITY ENVIRONMENT ONLY/)
-  assert.match(config, /from = "\/api\/\*"/)
-  assert.match(config, /status = 404/)
+  assert.match(config, /ALOVIA_API_ORIGIN/)
+  assert.match(config, /ALOVIA_API_ORIGIN_PLACEHOLDER/)
+  assert.match(config, /test -n/)
+  assert.match(config, /sed -i/)
   assert.doesNotMatch(config, /whatsapp-backend-186627697999\.southamerica-east1\.run\.app/)
-  assert.doesNotMatch(config, /alovia\.netlify\.app/)
 })
 
 test('productivity branch runs the same PWA validation workflow as main', () => {
