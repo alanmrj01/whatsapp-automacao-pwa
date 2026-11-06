@@ -67,6 +67,8 @@ test('quiz is mobile-first, auto-advances and keeps the final video configurable
   assert.match(quiz, /setTimeout\(\(\) => \{/)
   assert.match(quiz, /}, 320\)/)
   assert.match(quiz, /VITE_QUIZ_DEMO_VIMEO_ID/)
+  assert.match(quiz, /1240828681/)
+  assert.match(quiz, /player_id=alovia-vsl/)
   assert.match(quiz, /player\.vimeo\.com\/video/)
   assert.match(styles, /aspect-ratio:\s*9\s*\/\s*16/)
   assert.match(styles, /min-height:\s*68px/)
@@ -90,4 +92,12 @@ test('approved quiz visual polish keeps the first screen clean and strengthens r
   assert.match(quiz, /quiz-whatsapp-help__icon"><WhatsAppLogo size=\{24\}/)
   assert.match(quiz, /quiz-whatsapp-cta__logo"><WhatsAppLogo size=\{20\}/)
   assert.doesNotMatch(quiz, /MessageCircle/)
+})
+
+test('development proxy never defaults to the production Netlify origin', () => {
+  const vite = read('vite.config.ts')
+
+  assert.match(vite, /ALOVIA_API_ORIGIN/)
+  assert.match(vite, /http:\/\/127\.0\.0\.1:8000/)
+  assert.doesNotMatch(vite, /target:\s*['"]https:\/\/alovia\.netlify\.app/)
 })
