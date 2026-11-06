@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, CheckCircle2, MessageCircle, Play, Wrench } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CheckCircle2, Play } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { BrandMark } from '../../components/BrandMark'
@@ -151,6 +151,28 @@ type VimeoConstructor = new (element: HTMLIFrameElement) => VimeoPlayerInstance
 type VimeoWindow = Window & { Vimeo?: { Player: VimeoConstructor } }
 
 let vimeoSdkPromise: Promise<VimeoConstructor> | null = null
+
+function WhatsAppLogo({ size = 22 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 32 32"
+      fill="none"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        fill="currentColor"
+        d="M16 3C8.82 3 3 8.64 3 15.6c0 2.45.73 4.84 2.11 6.9L3.73 29l6.71-1.76A13.2 13.2 0 0 0 16 28.47c7.18 0 13-5.64 13-12.6C29 8.64 23.18 3 16 3Z"
+      />
+      <path
+        fill="#fff"
+        d="M23.23 19.03c-.4-.2-2.35-1.15-2.71-1.28-.36-.13-.63-.2-.89.2-.27.39-1.03 1.28-1.26 1.54-.23.27-.46.3-.86.1-.4-.2-1.68-.61-3.19-1.94-1.18-1.04-1.98-2.32-2.21-2.72-.23-.4-.02-.61.18-.81.18-.18.4-.46.59-.69.2-.23.27-.4.4-.66.13-.27.07-.5-.03-.7-.1-.2-.89-2.14-1.22-2.93-.32-.78-.65-.67-.89-.68h-.76c-.27 0-.7.1-1.06.5-.36.39-1.39 1.35-1.39 3.3 0 1.95 1.42 3.83 1.62 4.1.2.26 2.8 4.23 6.78 5.93.95.41 1.68.65 2.26.83.95.3 1.81.26 2.5.16.76-.12 2.35-.96 2.68-1.89.33-.92.33-1.72.23-1.88-.1-.17-.36-.27-.76-.47Z"
+      />
+    </svg>
+  )
+}
 
 function loadVimeoPlayer(): Promise<VimeoConstructor> {
   const current = (window as VimeoWindow).Vimeo?.Player
@@ -398,7 +420,9 @@ export function QuizFunnelPage() {
             <div className="quiz-result__body">
               {result.body.map(paragraph => <p key={paragraph}>{paragraph}</p>)}
             </div>
-            <p className="quiz-result__nudge">{result.nudge}</p>
+            <p className="quiz-result__nudge">
+              Você precisa ver isso funcionando. Assista ao vídeo abaixo agora e veja como a Alovia atende seus clientes enquanto você continua no serviço.
+            </p>
           </section>
 
           <section className="quiz-demo-section">
@@ -425,7 +449,7 @@ export function QuizFunnelPage() {
 
           <section className="quiz-whatsapp-help">
             <div>
-              <span className="quiz-whatsapp-help__icon"><MessageCircle /></span>
+              <span className="quiz-whatsapp-help__icon"><WhatsAppLogo size={24} /></span>
               <div>
                 <strong>Se ainda tiver com dúvidas, tenha um atendimento exclusivo em nosso WhatsApp</strong>
                 <p>Fale diretamente com a Alovia antes de criar sua conta.</p>
@@ -442,7 +466,7 @@ export function QuizFunnelPage() {
                 result_profile: result.id,
               }, { surface: 'quiz' })}
             >
-              <MessageCircle size={20} />
+              <span className="quiz-whatsapp-cta__logo"><WhatsAppLogo size={20} /></span>
               Falar no WhatsApp
             </a>
           </section>
@@ -456,11 +480,10 @@ export function QuizFunnelPage() {
       <section className="quiz-shell">
         <header className="quiz-brand">
           <span className="quiz-brand__mark"><BrandMark /></span>
-          <span><strong>Alovia</strong><small>Atendimento automático pelo WhatsApp</small></span>
+          <span><strong>Alovia</strong></span>
         </header>
 
         <section className="quiz-hero">
-          <span className="quiz-kicker"><Wrench size={15} /> Para quem vive a rotina de refrigeração</span>
           <h1>Refrigerista</h1>
           <p className="quiz-hero__subtitle">Atendimento automático pelo WhatsApp</p>
           <p className="quiz-hero__support">Descubra como o atendimento está impactando sua rotina hoje.</p>
