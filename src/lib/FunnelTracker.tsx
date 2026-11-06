@@ -4,7 +4,7 @@ import { trackEvent, trackEventOnce } from './tracking'
 import { useAuth } from '../features/auth/useAuth'
 
 function routeGroup(pathname:string) {
-  if(pathname==='/') return 'landing'
+  if(pathname==='/') return 'quiz'
   if(pathname==='/criar-conta') return 'signup'
   if(pathname.includes('/checkout')) return 'checkout'
   if(pathname.includes('/plano')) return 'plan'
@@ -28,7 +28,7 @@ export function FunnelTracker() {
   const membership = auth.membership
   const demo = membership?.access_mode === 'free' || membership?.account_state === 'demo'
   const demoRoute = demo && location.pathname.startsWith('/app')
-  const surface = location.pathname === '/' ? 'landing' : demoRoute ? 'demo' : 'app'
+  const surface = location.pathname === '/' ? 'quiz' : demoRoute ? 'demo' : 'app'
   const signupTracking = location.state && typeof location.state === 'object' && 'signupTracking' in location.state
     ? (location.state as {signupTracking?:{
         eventId?:unknown
@@ -94,7 +94,7 @@ export function FunnelTracker() {
       access_mode: membership?.access_mode ?? null,
       account_state: membership?.account_state ?? null,
       route_group: routeGroup(location.pathname),
-      funnel_stage: demoRoute ? 'demo_exploration' : location.pathname === '/' ? 'landing' : 'app',
+      funnel_stage: demoRoute ? 'demo_exploration' : location.pathname === '/' ? 'quiz' : 'app',
     }, {
       surface,
       businessId: auth.user?.active_business_id,
