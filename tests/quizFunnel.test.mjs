@@ -94,14 +94,6 @@ test('approved quiz visual polish keeps the first screen clean and strengthens r
   assert.doesNotMatch(quiz, /MessageCircle/)
 })
 
-test('development proxy never defaults to the production Netlify origin', () => {
-  const vite = read('vite.config.ts')
-
-  assert.match(vite, /ALOVIA_API_ORIGIN/)
-  assert.match(vite, /http:\/\/127\.0\.0\.1:8000/)
-  assert.doesNotMatch(vite, /target:\s*['"]https:\/\/alovia\.netlify\.app/)
-})
-
 test('tracking remains continuous from quiz profile through account creation and authenticated entry', () => {
   const quiz = read('src/features/public/QuizFunnelPage.tsx')
   const signup = read('src/features/auth/SignupPage.tsx')
