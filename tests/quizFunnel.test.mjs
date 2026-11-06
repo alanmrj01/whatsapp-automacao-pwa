@@ -67,6 +67,8 @@ test('quiz is mobile-first, auto-advances and keeps the final video configurable
   assert.match(quiz, /setTimeout\(\(\) => \{/)
   assert.match(quiz, /}, 320\)/)
   assert.match(quiz, /VITE_QUIZ_DEMO_VIMEO_ID/)
+  assert.match(quiz, /1240828681/)
+  assert.match(quiz, /player_id=alovia-vsl/)
   assert.match(quiz, /player\.vimeo\.com\/video/)
   assert.match(styles, /aspect-ratio:\s*9\s*\/\s*16/)
   assert.match(styles, /min-height:\s*68px/)
