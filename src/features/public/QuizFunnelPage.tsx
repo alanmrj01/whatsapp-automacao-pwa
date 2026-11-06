@@ -480,11 +480,10 @@ export function QuizFunnelPage() {
       <section className="quiz-shell">
         <header className="quiz-brand">
           <span className="quiz-brand__mark"><BrandMark /></span>
-          <span><strong>Alovia</strong><small>Atendimento automático pelo WhatsApp</small></span>
+          <span><strong>Alovia</strong></span>
         </header>
 
         <section className="quiz-hero">
-          <span className="quiz-kicker"><Wrench size={15} /> Para quem vive a rotina de refrigeração</span>
           <h1>Refrigerista</h1>
           <p className="quiz-hero__subtitle">Atendimento automático pelo WhatsApp</p>
           <p className="quiz-hero__support">Descubra como o atendimento está impactando sua rotina hoje.</p>
