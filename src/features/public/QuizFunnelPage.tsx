@@ -206,7 +206,7 @@ function loadVimeoPlayer(): Promise<VimeoConstructor> {
 }
 
 function QuizDemoVideo({ profile }: { profile: ProfileId }) {
-  const videoId = String(import.meta.env.VITE_QUIZ_DEMO_VIMEO_ID ?? '').trim()
+  const videoId = String(import.meta.env.VITE_QUIZ_DEMO_VIMEO_ID ?? '1240828681').trim()
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const started = useRef(false)
   const completed = useRef(false)
@@ -287,7 +287,7 @@ function QuizDemoVideo({ profile }: { profile: ProfileId }) {
     <div className="quiz-video" aria-label="Demonstração da Alovia">
       <iframe
         ref={iframeRef}
-        src={`https://player.vimeo.com/video/${videoId}?title=0&byline=0&portrait=0&dnt=1`}
+        src={`https://player.vimeo.com/video/${videoId}?badge=0&autopause=0&player_id=alovia-vsl&app_id=58479&title=0&byline=0&portrait=0&dnt=1`}
         title="Como a Alovia atende enquanto você continua no serviço"
         allow="autoplay; fullscreen; picture-in-picture"
         allowFullScreen
