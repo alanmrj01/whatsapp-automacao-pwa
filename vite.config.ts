@@ -2,16 +2,15 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const devApiOrigin = process.env.ALOVIA_API_ORIGIN?.trim().replace(/\/$/, '') || 'http://127.0.0.1:8000'
+
 export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://alovia.netlify.app',
+        target: devApiOrigin,
         changeOrigin: true,
-        secure: true,
-        headers: {
-          Origin: 'https://alovia.netlify.app',
-        },
+        secure: devApiOrigin.startsWith('https://'),
       },
     },
   },

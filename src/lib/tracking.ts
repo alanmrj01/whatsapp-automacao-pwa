@@ -96,8 +96,23 @@ function metaBrowserEvent(
 ):MetaBrowserEvent|null {
   if(eventName==='page_view'){
     const routeGroup=properties.route_group
-    if(!['landing','signup','checkout','plan'].includes(String(routeGroup ?? '')))return null
+    if(!['quiz','landing','signup','checkout','plan'].includes(String(routeGroup ?? '')))return null
     return {name:'PageView',custom:false,parameters:{}}
+  }
+  if(eventName==='quiz_demo_started'){
+    return {
+      name:'VSLStarted',
+      custom:true,
+      parameters:{video_id:String(properties.video_id ?? '').slice(0,64),surface:'quiz'},
+    }
+  }
+  if(eventName==='quiz_demo_progress'){
+    const percent=Number(properties.percent)
+    if(![25,50,75].includes(percent))return null
+    return {name:'VSLProgress',custom:true,parameters:{progress_percent:percent,surface:'quiz'}}
+  }
+  if(eventName==='quiz_demo_completed'){
+    return {name:'VSLCompleted',custom:true,parameters:{progress_percent:100,surface:'quiz'}}
   }
   if(eventName==='landing_vsl_started'){
     return {
@@ -186,6 +201,8 @@ function currentAttribution(): Record<string,string|number> {
       'placement',
       'fbclid',
       'gclid',
+      'angle',
+      'quiz_profile',
     ]
     const value: Record<string,string|number> = {attribution_version: 3}
     for (const key of keys) {
