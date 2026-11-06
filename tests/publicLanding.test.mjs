@@ -4,29 +4,24 @@ import test from 'node:test'
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 
-test('root is the approved refrigeration landing journey', () => {
+test('root is the approved refrigeration quiz journey', () => {
   const router = read('src/app/router.tsx')
-  const landing = read('src/features/public/PublicLandingPage.tsx')
+  const quiz = read('src/features/public/QuizFunnelPage.tsx')
 
-  assert.match(router, /path="\/" element={<PublicLandingPage \/>}/)
-  assert.doesNotMatch(router, /path="\/" element={<Navigate to="\/app"/)
-  assert.match(landing, /Feito para Refrigeristas/)
-  assert.match(landing, /Enquanto você está no serviço, outro cliente pode estar esperando no WhatsApp/)
-  assert.match(landing, /Enquanto você cuida do serviço, a Alovia responde, coleta os dados e encaminha o agendamento/)
-  assert.match(landing, /Como a Alovia atende enquanto você está no serviço/)
-  assert.match(landing, /Conheça na prática como seus clientes serão atendidos/)
-  assert.match(landing, /Conheça a Alovia grátis/)
-  assert.match(landing, /Criar conta grátis/)
-  assert.match(landing, /Até 600 mensagens por mês/)
-  assert.match(landing, /Até 1\.000 mensagens por mês/)
-  assert.match(landing, /public-flow__plan--franchise/)
-  assert.match(landing, /public-step public-step--wide">Franquia/)
-  assert.match(landing, /Oferta automática de manutenção preventiva para clientes já atendidos/)
-  assert.match(landing, /Oferta automática de PMOC para clientes com histórico de PMOC/)
-  assert.doesNotMatch(landing, /mensagens de serviço/)
-  assert.doesNotMatch(landing, /mensagens de utilidade/)
-  assert.match(landing, /to="\/login"/)
+  assert.match(router, /path="\/" element={<QuizFunnelPage \/>}/)
+  assert.match(quiz, /Refrigerista/)
+  assert.match(quiz, /Atendimento automático pelo WhatsApp/)
+  assert.match(quiz, /Enquanto você está instalando ou fazendo manutenção/)
+  assert.match(quiz, /Nos dias corridos, o que mais acontece com seu WhatsApp/)
+  assert.match(quiz, /Hoje, quanto o atendimento da empresa depende de você/)
+  assert.match(quiz, /Pensar que algum cliente pode ter fechado com outra empresa/)
+  assert.match(quiz, /Serviço em primeiro lugar/)
+  assert.match(quiz, /Multitarefa/)
+  assert.match(quiz, /Atendimento no Limite/)
+  assert.match(quiz, /Criar conta grátis/)
+  assert.match(quiz, /5512981359722/)
 })
+
 
 test('landing tracks the commercial journey without private app API dependencies', () => {
   const landing = read('src/features/public/PublicLandingPage.tsx')
