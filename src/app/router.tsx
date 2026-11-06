@@ -40,7 +40,7 @@ const SignupPage = lazy(async () => ({default:(await import('../features/auth/Si
 const AdminPage = lazy(async () => ({default:(await import('../features/auth/AdminPage')).AdminPage}))
 const TrackingDashboardPage = lazy(async () => ({default:(await import('../features/auth/TrackingDashboardPage')).TrackingDashboardPage}))
 const PlatformPreviewPage = lazy(async () => ({default:(await import('../features/preview/PlatformPreviewPage')).PlatformPreviewPage}))
-const PublicLandingPage = lazy(async () => ({default:(await import('../features/public/PublicLandingPage')).PublicLandingPage}))
+const QuizFunnelPage = lazy(async () => ({default:(await import('../features/public/QuizFunnelPage')).QuizFunnelPage}))
 const DemoSettingsPreviewPage = lazy(async () => ({default:(await import('../features/more/DemoSettingsPreviewPage')).DemoSettingsPreviewPage}))
 
 function Deferred({children}:{children:ReactNode}) {
@@ -78,7 +78,7 @@ export function AppRouter() {
   return (
     <Deferred>
       <Routes>
-        <Route path="/" element={<PublicLandingPage />} />
+        <Route path="/" element={<QuizFunnelPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/esqueci-senha" element={<ForgotPasswordPage />} />
         <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
