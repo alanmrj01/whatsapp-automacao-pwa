@@ -75,6 +75,23 @@ test('quiz is mobile-first, auto-advances and keeps the final video configurable
   assert.match(netlify, /frame-src[^\n]*https:\/\/player\.vimeo\.com/)
 })
 
+
+test('approved quiz visual polish keeps the first screen clean and strengthens result actions', () => {
+  const quiz = read('src/features/public/QuizFunnelPage.tsx')
+  const styles = read('src/styles/quiz-funnel.css')
+
+  assert.doesNotMatch(quiz, /Para quem vive a rotina de refrigeração/)
+  assert.equal((quiz.match(/Atendimento automático pelo WhatsApp/g) ?? []).length, 2)
+  assert.match(quiz, /Você precisa ver isso funcionando\. Assista ao vídeo abaixo agora/)
+  assert.match(styles, /background:\s*#fff3bf/)
+  assert.match(styles, /@keyframes quiz-cta-hop/)
+  assert.match(styles, /animation:\s*quiz-cta-hop 2\.1s ease-in-out infinite/)
+  assert.match(quiz, /function WhatsAppLogo/)
+  assert.match(quiz, /quiz-whatsapp-help__icon"><WhatsAppLogo size=\{24\}/)
+  assert.match(quiz, /quiz-whatsapp-cta__logo"><WhatsAppLogo size=\{20\}/)
+  assert.doesNotMatch(quiz, /MessageCircle/)
+})
+
 test('development proxy never defaults to the production Netlify origin', () => {
   const vite = read('vite.config.ts')
 
