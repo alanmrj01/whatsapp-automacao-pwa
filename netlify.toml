@@ -53,6 +53,26 @@
     window_size = 60
     aggregate_by = ["ip", "domain"]
 
+# Diagnostic endpoints live outside the backend /api namespace. Keep these
+# exact same-origin aliases before the generic /api/* proxy for smoke/readiness checks.
+[[redirects]]
+  from = "/api/health"
+  to = "ALOVIA_API_ORIGIN_PLACEHOLDER/health"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/health/db"
+  to = "ALOVIA_API_ORIGIN_PLACEHOLDER/health/db"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/ready"
+  to = "ALOVIA_API_ORIGIN_PLACEHOLDER/ready"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/api/*"
   to = "ALOVIA_API_ORIGIN_PLACEHOLDER/api/:splat"
