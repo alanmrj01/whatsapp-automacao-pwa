@@ -20,7 +20,8 @@ test('real conversations use a full paid route with human reply controls', () =>
   assert.match(detail,/conversation-contact-name-form/)
   assert.match(detail,/Assistente nesta conversa/)
   assert.match(detail,/Respostas automáticas permanentes/)
-  assert.match(detail,/customer_whatsapp_id\?\?conversation\.customer_phone/)
+  assert.match(detail,/conversation\.customer_automation_mode!=='automatic'/)
+  assert.match(detail,/id:conversation\.customer_id/)
   assert.match(detail,/Nunca responder automaticamente/)
   assert.match(detail,/Agendar/)
   assert.match(detail,/janela de atendimento está encerrada/i)
@@ -123,6 +124,37 @@ test('agenda defaults to calendar navigation with month, week and day detail', (
   assert.match(agenda,/Voltar ao calendário/)
   assert.match(agenda,/useAppointmentsRange/)
   assert.match(css,/\.agenda-calendar__grid/)
+})
+
+test('permanent automation policy is customer-centric across Conversations and Settings', () => {
+  const detail = read('src/features/conversations/ConversationDetailPage.tsx')
+  const api = read('src/features/operations/api.ts')
+  const types = read('src/features/operations/types.ts')
+  const settings = read('src/features/more/AutomationSettingsPage.tsx')
+
+  assert.match(types,/customer_automation_mode:'automatic'\|'human_only'\|'ignore'/)
+  assert.match(types,/automation_mode:'automatic'\|'human_only'\|'ignore'/)
+  assert.match(api,/useUpdateCustomerAutomation/)
+  assert.match(api,/\/customers\/\$\{id\}\/automation/)
+  assert.match(detail,/useUpdateCustomerAutomation\(\)/)
+  assert.match(detail,/conversation\.customer_automation_mode!=='automatic'/)
+  assert.match(detail,/id:conversation\.customer_id/)
+  assert.match(detail,/mode:permanentlyHumanOnly\?'automatic':'human_only'/)
+  assert.doesNotMatch(detail,/permanentExclusion/)
+  assert.doesNotMatch(detail,/useAssistantExclusions/)
+  assert.match(settings,/useAddAssistantExclusion/)
+  assert.match(settings,/useRemoveAssistantExclusion/)
+  assert.match(api,/\/automation\/exclusions/)
+})
+
+test('renaming a conversation invalidates both customer and exclusion views', () => {
+  const api = read('src/features/operations/api.ts')
+  const detail = read('src/features/conversations/ConversationDetailPage.tsx')
+
+  assert.match(api,/useUpdateCustomerName/)
+  assert.match(api,/invalidate\(context\.businessId,'conversations','conversation','dashboard','customers','assistant-exclusions'\)/)
+  assert.match(detail,/rename\.mutate/)
+  assert.match(detail,/name:name\.trim\(\)\|\|null/)
 })
 
 test('assistant exclusions accept existing customers or a normalized manual number', () => {
