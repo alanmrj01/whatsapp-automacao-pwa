@@ -66,6 +66,16 @@ function AutomationForm({settings,canEdit}:{settings:AutomationSettings;canEdit:
 
 type DeviceContact = {name?:string[];tel?:string[]}
 type ContactProperty = 'name'|'tel'
+
+function normalizeExclusionPhone(value:string){
+  const digits=value.replace(/\D/g,'')
+  if(!digits)return ''
+  const areaCode=Number(digits.slice(0,2))
+  const plausibleBrazilArea=Number.isInteger(areaCode)&&areaCode>=11&&areaCode<=99
+  const brazilMobile=digits.length===11&&plausibleBrazilArea&&digits[2]==='9'
+  const brazilLandline=digits.length===10&&plausibleBrazilArea&&/[2-5]/.test(digits[2]??'')
+  return brazilMobile||brazilLandline?'55'+digits:digits
+}
 type ContactNavigator = Navigator & {
   contacts?: {
     getProperties?:()=>Promise<string[]>
@@ -82,18 +92,18 @@ function Exclusions({conversations,exclusions,canEdit}:{conversations:Conversati
   const [devicePhones,setDevicePhones]=useState<string[]>([])
   const [reason,setReason]=useState('')
   const [contactError,setContactError]=useState(false)
-  const excluded=new Set(exclusions.map(item=>item.whatsapp_id))
+  const excluded=new Set(exclusions.map(item=>normalizeExclusionPhone(item.whatsapp_id)))
   const conversationContacts=[...new Map(
     conversations
       .map(item=>{
-        const whatsappId=(item.customer_whatsapp_id??item.customer_phone??'').replace(/\D/g,'')
+        const whatsappId=normalizeExclusionPhone(item.customer_whatsapp_id??item.customer_phone??'')
         const displayPhone=(item.customer_phone??item.customer_whatsapp_id??'').replace(/\D/g,'')
         return [whatsappId,{id:item.customer_id,name:item.customer_name,whatsappId,displayPhone}] as const
       })
       .filter(([whatsappId])=>whatsappId&&!excluded.has(whatsappId)),
   ).values()].sort((left,right)=>left.name.localeCompare(right.name,'pt-BR'))
   const selected=conversationContacts.find(item=>item.whatsappId===customerId)
-  const normalizedManualPhone=manualPhone.replace(/\D/g,'')
+  const normalizedManualPhone=normalizeExclusionPhone(manualPhone)
   const manualValid=/^[1-9]\d{6,14}$/.test(normalizedManualPhone)&&!excluded.has(normalizedManualPhone)
   const contactNavigator=navigator as ContactNavigator
   const canPickDeviceContact=typeof contactNavigator.contacts?.select==='function'
@@ -157,7 +167,7 @@ function Exclusions({conversations,exclusions,canEdit}:{conversations:Conversati
       {source!=='customer'&&normalizedManualPhone&&excluded.has(normalizedManualPhone)&&<p className="settings-warning">Este número já está na lista.</p>}
       <button className="primary-button" disabled={add.isPending||(source==='customer'?!selected?.whatsappId:!manualValid)}><BotOff size={18}/>{add.isPending?'Salvando…':'Nunca responder automaticamente'}</button>
     </form>}
-    <div className="settings-list">{exclusions.map(item=><article className="settings-row" key={item.id}><BotOff/><div><strong>{item.label??item.whatsapp_id}</strong><span>+{item.whatsapp_id}{item.reason?' · '+item.reason:''}</span></div>{canEdit&&<button className="danger-button" type="button" disabled={remove.isPending} onClick={()=>remove.mutate(item.id)}><Trash2 size={16}/>Remover</button>}</article>)}{!exclusions.length&&<p className="settings-empty">Nenhum contato nesta lista.</p>}</div>
+    <div className="settings-list">{exclusions.map(item=><article className="settings-row" key={item.id}><BotOff/><div><strong>{item.label??item.whatsapp_id}</strong><span>+{normalizeExclusionPhone(item.whatsapp_id)}{item.reason?' · '+item.reason:''}</span></div>{canEdit&&<button className="danger-button" type="button" disabled={remove.isPending} onClick={()=>remove.mutate(item.id)}><Trash2 size={16}/>Remover</button>}</article>)}{!exclusions.length&&<p className="settings-empty">Nenhum contato nesta lista.</p>}</div>
   </section>
 }
 
