@@ -42,6 +42,19 @@ test('device contact picker is the default and preserves safe fallbacks',()=>{
   assert.match(automation,/Escolha um contato disponível na agenda do aparelho\./)
 })
 
+test('automation exclusions canonicalize Brazilian device contacts before saving and comparing',()=>{
+  const automation=read('src/features/more/AutomationSettingsPage.tsx')
+
+  assert.match(automation,/function normalizeExclusionPhone\(value:string\)/)
+  assert.match(automation,/brazilMobile/)
+  assert.match(automation,/brazilLandline/)
+  assert.match(automation,/\?'55'\+digits:digits/)
+  assert.match(automation,/exclusions\.map\(item=>normalizeExclusionPhone\(item\.whatsapp_id\)\)/)
+  assert.match(automation,/const normalizedManualPhone=normalizeExclusionPhone\(manualPhone\)/)
+  assert.match(automation,/whatsapp_id:whatsappId/)
+  assert.match(automation,/\+\{normalizeExclusionPhone\(item\.whatsapp_id\)\}/)
+})
+
 test('ALOVIA contact source lists every current conversation contact in a collapsible select',()=>{
   const automation=read('src/features/more/AutomationSettingsPage.tsx')
   const api=read('src/features/operations/api.ts')
