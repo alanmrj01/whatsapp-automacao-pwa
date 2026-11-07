@@ -90,7 +90,7 @@ export function ConversationDetailPage() {
   if(detail.isPending||business.isPending)return <div className="conversation-detail-page conversation-detail-page--state"><LoadingState/></div>
   if(detail.isError||business.isError||!detail.data)return <div className="conversation-detail-page conversation-detail-page--state"><ErrorState onRetry={()=>{void detail.refetch();void business.refetch()}}/></div>
   const conversation=detail.data
-  const permanentlyHumanOnly=conversation.customer_automation_mode!=='automatic'
+  const permanentlyHumanOnly=(conversation.customer_automation_mode??'automatic')!=='automatic'
 
   const submitMessage=()=>{
     const normalized=text.trim()
