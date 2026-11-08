@@ -23,6 +23,37 @@ const whatsappLabel: Record<PlatformBusiness['whatsapp_status'], string> = {
   error: 'Erro no WhatsApp',
 }
 
+const whatsappModeLabel: Record<NonNullable<PlatformBusiness['whatsapp_mode']>, string> = {
+  coexistence: 'WhatsApp Business + Alovia',
+  api_only: 'Uso exclusivo pela Alovia',
+}
+
+function whatsappDiagnosticText(business: PlatformBusiness) {
+  const parts = [whatsappLabel[business.whatsapp_status]]
+  if (business.whatsapp_mode) parts.push(whatsappModeLabel[business.whatsapp_mode])
+  if (business.whatsapp_display_phone_number) parts.push(business.whatsapp_display_phone_number)
+  if (business.whatsapp_status === 'disconnected' && business.whatsapp_ever_connected) {
+    parts.push('já teve conexão')
+  }
+  if (business.whatsapp_last_error_code) {
+    parts.push(`erro: ${business.whatsapp_last_error_code}`)
+  }
+  if (business.whatsapp_meta_review_status) {
+    parts.push(`revisão Meta: ${business.whatsapp_meta_review_status === 'approved' ? 'aprovada' : 'não aprovada'}`)
+  }
+  if (business.whatsapp_legacy_binding) parts.push('vínculo Meta legado detectado')
+  return parts.join(' · ')
+}
+
+function whatsappHistoryText(business: PlatformBusiness) {
+  const timestamp = business.whatsapp_status === 'disconnected'
+    ? business.whatsapp_disconnected_at
+    : business.whatsapp_connected_at
+  if (!timestamp) return null
+  const label = business.whatsapp_status === 'disconnected' ? 'Desconectado em' : 'Conectado em'
+  return `${label} ${new Intl.DateTimeFormat('pt-BR', {dateStyle:'short', timeStyle:'short'}).format(new Date(timestamp))}`
+}
+
 const planLabel: Record<NonNullable<PlatformBusiness['commercial_plan_code']>, string> = {
   basic: 'Básico',
   plus: 'Plus',
@@ -351,7 +382,8 @@ export function AdminPage() {
               </span>
             </div>
             <div className="platform-admin__meta">
-              <span>{whatsappLabel[business.whatsapp_status]}</span>
+              <span>{whatsappDiagnosticText(business)}</span>
+              {whatsappHistoryText(business)&&<span>{whatsappHistoryText(business)}</span>}
               <span>{business.timezone}</span>
             </div>
             <div className="platform-admin__access">
