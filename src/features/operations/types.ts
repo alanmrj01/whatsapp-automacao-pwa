@@ -64,6 +64,7 @@ export type Conversation = {
   customer_name:string
   customer_phone:string|null
   customer_whatsapp_id?:string|null
+  customer_automation_mode:'automatic'|'human_only'|'ignore'
   last_content:string|null
   last_message_at:string|null
   status:ConversationStatus
@@ -206,7 +207,7 @@ export type AssistantExclusion = {
   active:boolean
 }
 
-export type Customer = {id:string;name:string;phone:string|null}
+export type Customer = {id:string;name:string;phone:string|null;automation_mode:'automatic'|'human_only'|'ignore'}
 
 export type Service = {
   id:string
