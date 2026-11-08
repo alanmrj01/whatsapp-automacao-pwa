@@ -21,6 +21,7 @@ import {
   useUpdateCustomerName,
 } from '../operations/api'
 import type { ConversationMessage } from '../operations/types'
+import { normalizeExclusionPhone } from '../operations/phoneIdentity'
 import './conversation-detail.css'
 
 const conversationStatusLabels = {
@@ -94,8 +95,10 @@ export function ConversationDetailPage() {
   if(detail.isPending||business.isPending)return <div className="conversation-detail-page conversation-detail-page--state"><LoadingState/></div>
   if(detail.isError||business.isError||!detail.data)return <div className="conversation-detail-page conversation-detail-page--state"><ErrorState onRetry={()=>{void detail.refetch();void business.refetch()}}/></div>
   const conversation=detail.data
-  const whatsappId=(conversation.customer_whatsapp_id??conversation.customer_phone??'').replace(/\D/g,'')
-  const permanentExclusion=exclusions.data?.items.find(item=>item.whatsapp_id===whatsappId)
+  const whatsappId=normalizeExclusionPhone(conversation.customer_whatsapp_id??conversation.customer_phone??'')
+  const permanentExclusion=exclusions.data?.items.find(
+    item=>normalizeExclusionPhone(item.whatsapp_id)===whatsappId,
+  )
 
   const submitMessage=()=>{
     const normalized=text.trim()
