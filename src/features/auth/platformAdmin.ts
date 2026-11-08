@@ -24,6 +24,16 @@ export type PlatformBusiness = {
   commercial_refund_deadline_at: string | null
   owners: string[]
   whatsapp_status: 'disconnected' | 'pending' | 'connected' | 'error'
+  whatsapp_mode: 'coexistence' | 'api_only' | null
+  whatsapp_display_phone_number: string | null
+  whatsapp_connected_at: string | null
+  whatsapp_disconnected_at: string | null
+  whatsapp_last_error_code: string | null
+  whatsapp_meta_review_status: 'approved' | 'rejected' | null
+  whatsapp_connection_updated_at: string | null
+  whatsapp_has_phone_number_id: boolean
+  whatsapp_ever_connected: boolean
+  whatsapp_legacy_binding: boolean
 }
 
 type PlatformBusinessList = { businesses: PlatformBusiness[] }
