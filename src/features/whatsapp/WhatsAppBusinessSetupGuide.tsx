@@ -153,7 +153,7 @@ export function WhatsAppBusinessSetupGuide(){
           disabled={!businessReady}
           onClick={continueToMeta}
         >
-          <ShieldCheck size={18}/>Ir para autorização da Meta<ArrowRight size={17}/>
+          <ShieldCheck size={18}/>Continuar com a Meta<ArrowRight size={17}/>
         </button>
       </>}
 

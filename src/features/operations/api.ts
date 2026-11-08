@@ -233,17 +233,7 @@ export function useDeleteConversation() {
 }
 export function useUpdateCustomerName() {
   const context=usePaidContext()
-  return useMutation({mutationFn:({id,name}:{id:string;name:string|null})=>paidMutation(context,()=>api.request<ConversationDetail>(`/conversations/${id}/customer`,{method:'PATCH',body:json({name})})),onSuccess:()=>invalidate(context.businessId,'conversations','conversation','dashboard','customers','assistant-exclusions')})
-}
-export function useUpdateCustomerAutomation() {
-  const context=usePaidContext()
-  return useMutation({
-    mutationFn:({id,mode}:{id:string;mode:'automatic'|'human_only'})=>paidMutation(
-      context,
-      ()=>api.request<Customer>(`/customers/${id}/automation`,{method:'PATCH',body:json({mode})}),
-    ),
-    onSuccess:()=>invalidate(context.businessId,'customers','assistant-exclusions','conversations','conversation','dashboard'),
-  })
+  return useMutation({mutationFn:({id,name}:{id:string;name:string|null})=>paidMutation(context,()=>api.request<ConversationDetail>(`/conversations/${id}/customer`,{method:'PATCH',body:json({name})})),onSuccess:()=>invalidate(context.businessId,'conversations','conversation','dashboard')})
 }
 export function useUpdateConversationAssistant() {
   const context=usePaidContext()

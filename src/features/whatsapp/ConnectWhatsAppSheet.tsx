@@ -80,8 +80,8 @@ export function ConnectWhatsAppSheet({ open, onClose, currentMode=null }: Connec
           <button className="choice-row" type="button" onClick={() => choose('/app/whatsapp/business', {auto:'1'})}>
             <span className="choice-row__icon"><BriefcaseBusiness size={23} /></span>
             <span className="choice-row__copy">
-              <strong>Meu número já está no WhatsApp Business</strong>
-              <small>Escolher este caminho e seguir para a autorização da Meta.</small>
+              <strong>Já utilizo o WhatsApp Business</strong>
+              <small>Continuar para a conexão oficial com a Meta.</small>
             </span>
             <ArrowRight size={20} aria-hidden="true" />
           </button>

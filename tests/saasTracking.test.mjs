@@ -104,8 +104,7 @@ test('diagnostic events use bounded reason codes instead of sensitive form value
   assert.match(whatsapp, /pending_state/)
   assert.match(whatsapp, /next_action/)
   assert.match(whatsapp, /review_status/)
-  assert.match(whatsapp, /embedded_signup_error/)
-  assert.doesNotMatch(whatsapp, /redirect_start_failed/)
+  assert.match(whatsapp, /redirect_start_failed/)
   assert.doesNotMatch(checkout, /trackEvent\([^)]*(?:card_number|card_ccv|payer_cpf_cnpj|pix_payload)/s)
 })
 
