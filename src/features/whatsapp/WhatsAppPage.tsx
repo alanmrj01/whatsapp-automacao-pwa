@@ -192,7 +192,11 @@ export function WhatsAppPage() {
         >
           {savedBusinessPreparationStep&&journey.nextAction==='choose_mode'
             ? `Continuar preparação · passo ${savedBusinessPreparationStep} de 3`
-            : journey.ctaLabel??'Continuar'}
+            : journey.nextAction==='choose_mode'
+              ? 'Escolher como usar este número'
+              : (journey.nextAction==='continue_authorization'||journey.nextAction==='resolve_connection')
+                ? 'Ir para autorização da Meta'
+                : journey.ctaLabel??'Continuar'}
         </PrimaryButton>}
         {canDisconnect&&<PrimaryButton
           fullWidth
