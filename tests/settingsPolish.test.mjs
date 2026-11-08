@@ -42,13 +42,15 @@ test('device contact picker is the default and preserves safe fallbacks',()=>{
   assert.match(automation,/Escolha um contato disponível na agenda do aparelho\./)
 })
 
-test('automation exclusions canonicalize Brazilian device contacts before saving and comparing',()=>{
+test('automation exclusions canonicalize Brazilian contacts through one shared identity helper',()=>{
   const automation=read('src/features/more/AutomationSettingsPage.tsx')
+  const identity=read('src/features/operations/phoneIdentity.ts')
 
-  assert.match(automation,/function normalizeExclusionPhone\(value:string\)/)
-  assert.match(automation,/brazilMobile/)
-  assert.match(automation,/brazilLandline/)
-  assert.match(automation,/\?'55'\+digits:digits/)
+  assert.match(automation,/from '..\/operations\/phoneIdentity'/)
+  assert.match(identity,/export function normalizeExclusionPhone\(value:string\)/)
+  assert.match(identity,/brazilMobile/)
+  assert.match(identity,/brazilLandline/)
+  assert.match(identity,/\?'55'\+digits:digits/)
   assert.match(automation,/exclusions\.map\(item=>normalizeExclusionPhone\(item\.whatsapp_id\)\)/)
   assert.match(automation,/const normalizedManualPhone=normalizeExclusionPhone\(manualPhone\)/)
   assert.match(automation,/whatsapp_id:whatsappId/)
