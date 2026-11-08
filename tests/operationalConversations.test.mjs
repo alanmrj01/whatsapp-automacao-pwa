@@ -18,7 +18,7 @@ test('real conversations use a full paid route with human reply controls', () =>
   assert.match(detail,/navigator\.clipboard\.writeText/)
   assert.match(detail,/Dados do contato/)
   assert.match(detail,/conversation-contact-name-form/)
-  assert.match(detail,/Assistente nesta conversa/)
+  assert.match(detail,/Assistente para este contato/)
   assert.match(detail,/Respostas automáticas permanentes/)
   assert.match(detail,/customer_whatsapp_id\?\?conversation\.customer_phone/)
   assert.match(detail,/Nunca responder automaticamente/)
@@ -148,6 +148,8 @@ test('permanent contact block stays synchronized between conversation and settin
   assert.match(api,/queryClient\.setQueryData<\{items:AssistantExclusion\[\]\}>/)
   assert.match(api,/current=>\(\{items:\[\.\.\.\(current\?\.items\?\?\[\]\)\.filter\(existing=>existing\.id!==item\.id\),item\]\}\)/)
   assert.match(api,/current=>\(\{items:\(current\?\.items\?\?\[\]\)\.filter\(item=>item\.id!==id\)\}\)/)
+  assert.match(api,/useUpdateConversationAssistant\(\)[\s\S]*'assistant-exclusions'/)
+  assert.match(api,/useBulkConversationAction\(\)[\s\S]*'assistant-exclusions'/)
 })
 
 test('assistant toggle stays immediately visible at the top-left of an opened conversation', () => {
