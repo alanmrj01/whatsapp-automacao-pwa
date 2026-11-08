@@ -216,7 +216,7 @@ export function useBulkConversationAction() {
       context,
       ()=>api.request<{affected:number}>('/conversations/bulk',{method:'POST',body:json({conversation_ids,action})}),
     ),
-    onSuccess:()=>invalidate(context.businessId,'conversations','conversation','dashboard'),
+    onSuccess:()=>invalidate(context.businessId,'conversations','conversation','dashboard','assistant-exclusions'),
   })
 }
 export function useSetConversationPinned() {
@@ -237,7 +237,7 @@ export function useUpdateCustomerName() {
 }
 export function useUpdateConversationAssistant() {
   const context=usePaidContext()
-  return useMutation({mutationFn:({id,enabled}:{id:string;enabled:boolean})=>paidMutation(context,()=>api.request<ConversationDetail>(`/conversations/${id}/assistant`,{method:'PATCH',body:json({enabled})})),onSuccess:()=>invalidate(context.businessId,'conversations','conversation','dashboard')})
+  return useMutation({mutationFn:({id,enabled}:{id:string;enabled:boolean})=>paidMutation(context,()=>api.request<ConversationDetail>(`/conversations/${id}/assistant`,{method:'PATCH',body:json({enabled})})),onSuccess:()=>invalidate(context.businessId,'conversations','conversation','dashboard','assistant-exclusions')})
 }
 export function useSendConversationMessage() {
   const context=usePaidContext()
