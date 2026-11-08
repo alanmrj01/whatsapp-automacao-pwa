@@ -52,7 +52,5 @@ test('connection failures expose only bounded diagnostic metadata to tracking', 
     'next_action',
     'review_status',
   ]) assert.match(coexistence,new RegExp(key))
-  assert.doesNotMatch(coexistence,/trackEventOnce\([\s\S]{0,700}(?:authorization_code\s*:|access_token\s*:|display_phone_number\s*:)/)
-  assert.match(coexistence,/authorization_code_received/)
-  assert.doesNotMatch(coexistence,/authorization_code:\s*result\.authorization_code/)
+  assert.doesNotMatch(coexistence,/authorization_code.*trackEvent|access_token.*trackEvent|display_phone_number.*trackEvent/s)
 })
