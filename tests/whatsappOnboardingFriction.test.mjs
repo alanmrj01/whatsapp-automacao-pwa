@@ -147,6 +147,19 @@ test('connection choice starts with desired experience and only then asks about 
   assert.match(sheet,/Escolher este caminho e seguir para a autorização da Meta/)
 })
 
+test('failed connection asks for connection mode again instead of silently reusing the old mode', () => {
+  const page=read('src/features/whatsapp/WhatsAppPage.tsx')
+  const onboarding=read('src/features/onboarding/OnboardingPage.tsx')
+
+  assert.match(page,/status === 'pending' && nextAction === 'continue_authorization'/)
+  assert.doesNotMatch(page,/nextAction === 'continue_authorization' \|\| nextAction === 'resolve_connection'/)
+  assert.match(page,/journey\.nextAction==='resolve_connection'[\s\S]{0,120}'Escolher forma de conexão'/)
+
+  assert.match(onboarding,/connection\.data\?\.status==='pending'&&journey\.nextAction==='continue_authorization'/)
+  assert.doesNotMatch(onboarding,/journey\.nextAction==='continue_authorization'\|\|journey\.nextAction==='resolve_connection'/)
+  assert.match(onboarding,/journey\.nextAction==='resolve_connection'\?'Escolher forma de conexão'/)
+})
+
 test('connection buttons have distinct choice and provider-action semantics', () => {
   const onboarding=read('src/features/onboarding/OnboardingPage.tsx')
   const page=read('src/features/whatsapp/WhatsAppPage.tsx')
