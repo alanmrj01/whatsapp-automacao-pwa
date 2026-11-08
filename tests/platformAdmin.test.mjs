@@ -41,3 +41,17 @@ test('admin distinguishes load failure, empty success and access confirmation', 
   assert.match(page,/!business\.commercial_access_active&&<button/)
   assert.match(page,/business\.owners\.join/)
 })
+
+
+test('admin surfaces canonical WhatsApp diagnostics instead of status alone', () => {
+  const api = read('src/features/auth/platformAdmin.ts')
+  const page = read('src/features/auth/AdminPage.tsx')
+  assert.match(api,/whatsapp_mode/)
+  assert.match(api,/whatsapp_display_phone_number/)
+  assert.match(api,/whatsapp_ever_connected/)
+  assert.match(api,/whatsapp_legacy_binding/)
+  assert.match(page,/whatsappDiagnosticText/)
+  assert.match(page,/já teve conexão/)
+  assert.match(page,/vínculo Meta legado detectado/)
+  assert.match(page,/revisão Meta:/)
+})
