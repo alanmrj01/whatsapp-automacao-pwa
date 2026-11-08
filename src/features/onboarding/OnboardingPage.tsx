@@ -678,7 +678,7 @@ function WhatsAppStep({onBack,onFinished}:{onBack:()=>void;onFinished:(deferred:
 
   const continueWhatsApp=()=>{
     const mode=connection.data?.mode
-    const directProviderStep=journey.nextAction==='continue_authorization'||journey.nextAction==='resolve_connection'
+    const directProviderStep=connection.data?.status==='pending'&&journey.nextAction==='continue_authorization'
     if(directProviderStep&&mode==='coexistence'){
       navigate('/app/whatsapp/business?auto=1&from=onboarding')
       return
@@ -717,7 +717,7 @@ function WhatsAppStep({onBack,onFinished}:{onBack:()=>void;onFinished:(deferred:
                   ? 'nenhuma. A Alovia está validando a conexão no servidor.'
                   : 'concluir a autorização oficial da Meta.'}</span>
       </div>}
-      {!connected&&journey.requiresUserAction&&journey.nextAction!=='review_meta_rejection'&&<PrimaryButton fullWidth icon={<ArrowRight size={18}/>} onClick={continueWhatsApp}>{journey.nextAction==='choose_mode'?'Escolher como usar este número':(journey.nextAction==='continue_authorization'||journey.nextAction==='resolve_connection')?'Ir para autorização da Meta':journey.ctaLabel??'Continuar'}</PrimaryButton>}
+      {!connected&&journey.requiresUserAction&&journey.nextAction!=='review_meta_rejection'&&<PrimaryButton fullWidth icon={<ArrowRight size={18}/>} onClick={continueWhatsApp}>{journey.nextAction==='choose_mode'?'Escolher como usar este número':journey.nextAction==='resolve_connection'?'Escolher forma de conexão':journey.nextAction==='continue_authorization'?'Ir para autorização da Meta':journey.ctaLabel??'Continuar'}</PrimaryButton>}
       {connected&&<p className="form-success">WhatsApp conectado. Sua configuração inicial está pronta para ser finalizada.</p>}
     </div>}
     {!connected&&!metaReviewPending&&!metaReviewRejected&&<div className="onboarding-whatsapp-defer">

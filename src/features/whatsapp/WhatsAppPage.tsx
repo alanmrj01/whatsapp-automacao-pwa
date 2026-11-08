@@ -42,7 +42,7 @@ export function WhatsAppPage() {
       || nextAction === 'wait_for_completion'
       || nextAction === 'none'
     ) return
-    const directProviderStep = nextAction === 'continue_authorization' || nextAction === 'resolve_connection'
+    const directProviderStep = status === 'pending' && nextAction === 'continue_authorization'
     if (directProviderStep && mode === 'coexistence') {
       navigate('/app/whatsapp/business?auto=1')
       return
@@ -194,7 +194,9 @@ export function WhatsAppPage() {
             ? `Continuar preparação · passo ${savedBusinessPreparationStep} de 3`
             : journey.nextAction==='choose_mode'
               ? 'Escolher como usar este número'
-              : (journey.nextAction==='continue_authorization'||journey.nextAction==='resolve_connection')
+              : journey.nextAction==='resolve_connection'
+              ? 'Escolher forma de conexão'
+              : journey.nextAction==='continue_authorization'
                 ? 'Ir para autorização da Meta'
                 : journey.ctaLabel??'Continuar'}
         </PrimaryButton>}
