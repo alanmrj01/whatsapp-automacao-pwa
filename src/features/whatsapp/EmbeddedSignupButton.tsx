@@ -132,20 +132,6 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
     queryClient.setQueryData(queryKey, connection)
     if (connection.status === 'connected') {
       serverConnectedRef.current=true
-      trackEventOnce(
-        `whatsapp_connection_completed:${membership?.business_id ?? 'unknown'}:${connection.onboarding_attempt_id ?? connection.mode ?? 'current'}`,
-        'whatsapp_connection_completed',
-        {
-          mode:connection.mode,
-          funnel_stage:'whatsapp_connected',
-          from_onboarding:fromOnboarding,
-        },
-        {
-          surface:'whatsapp_onboarding',
-          businessId:membership?.business_id,
-          userId:user?.id,
-        },
-      )
       setConnected(connection)
       setResumeAvailable(false)
       setMessage(null)
