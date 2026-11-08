@@ -139,6 +139,17 @@ test('assistant exclusions accept existing customers or a normalized manual numb
   assert.match(api,/\/automation\/exclusions/)
 })
 
+test('permanent contact block stays synchronized between conversation and settings', () => {
+  const detail = read('src/features/conversations/ConversationDetailPage.tsx')
+  const api = read('src/features/operations/api.ts')
+
+  assert.match(detail,/normalizeExclusionPhone\(conversation\.customer_whatsapp_id\?\?conversation\.customer_phone\?\?''\)/)
+  assert.match(detail,/normalizeExclusionPhone\(item\.whatsapp_id\)===whatsappId/)
+  assert.match(api,/queryClient\.setQueryData<\{items:AssistantExclusion\[\]\}>/)
+  assert.match(api,/current=>\(\{items:\[\.\.\.\(current\?\.items\?\?\[\]\)\.filter\(existing=>existing\.id!==item\.id\),item\]\}\)/)
+  assert.match(api,/current=>\(\{items:\(current\?\.items\?\?\[\]\)\.filter\(item=>item\.id!==id\)\}\)/)
+})
+
 test('assistant toggle stays immediately visible at the top-left of an opened conversation', () => {
   const detail = read('src/features/conversations/ConversationDetailPage.tsx')
   const css = read('src/features/conversations/conversation-detail.css')
