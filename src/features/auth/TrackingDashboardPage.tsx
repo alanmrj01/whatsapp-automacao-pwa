@@ -405,7 +405,7 @@ export function TrackingDashboardPage() {
 
         <footer className="tracking-footer">
           <span>Atualizado em {new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short',timeZone:'America/Sao_Paulo'}).format(new Date(summary.generated_at))}</span>
-          <span>Ativação operacional = conexão do WhatsApp concluída. Receita líquida = recebimentos − reembolsos confirmados.</span>
+          <span>Ativação = pagamento confirmado + WhatsApp conectado. Receita líquida = recebimentos − reembolsos confirmados.</span>
         </footer>
       </>}
     </main>
