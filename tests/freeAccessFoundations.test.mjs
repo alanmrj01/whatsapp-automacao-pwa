@@ -14,7 +14,14 @@ test('public signup sends Idempotency-Key and keeps the bearer only in memory', 
     return response(200, {ok:true})
   })
 
-  await api.signup('João Refrigeração', 'owner@example.test', 'uma-senha-segura-123', '11111111-1111-4111-8111-111111111111')
+  await api.signup(
+    'João Refrigeração',
+    'João da Silva',
+    '(12) 99999-1234',
+    'owner@example.test',
+    'uma-senha-segura-123',
+    '11111111-1111-4111-8111-111111111111',
+  )
   assert.deepEqual(await api.request('/me'), {ok:true})
 
   assert.equal(calls[0].url, 'https://api.example.test/api/v1/auth/signup')
@@ -35,8 +42,25 @@ test('a transient signup retry can reuse exactly the same idempotency key', asyn
     return attempt === 1 ? response(503) : response(201, {access_token:'signup-token'})
   })
   const key = '22222222-2222-4222-8222-222222222222'
-  await assert.rejects(api.signup('Empresa Teste', 'owner@example.test', 'uma-senha-segura-123', key), {status:503})
-  await api.signup('Empresa Teste', 'owner@example.test', 'uma-senha-segura-123', key)
+  await assert.rejects(
+    api.signup(
+      'Empresa Teste',
+      'João da Silva',
+      '(12) 99999-1234',
+      'owner@example.test',
+      'uma-senha-segura-123',
+      key,
+    ),
+    {status:503},
+  )
+  await api.signup(
+    'Empresa Teste',
+    'João da Silva',
+    '(12) 99999-1234',
+    'owner@example.test',
+    'uma-senha-segura-123',
+    key,
+  )
   assert.deepEqual(keys, [key, key])
 })
 
