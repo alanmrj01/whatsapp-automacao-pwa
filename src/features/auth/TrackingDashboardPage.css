@@ -6,7 +6,7 @@
     radial-gradient(circle at 14% -10%,rgb(29 91 165 / 25%),transparent 34%),
     #101827;
 }
-.tracking-topbar,.tracking-controls,.tracking-headline-grid,.tracking-funnel,.tracking-section,.tracking-ad-performance,.tracking-dual-grid,.tracking-quiz,.tracking-secondary-grid,.tracking-trend,.tracking-bottom-grid,.tracking-footer,.tracking-error,.tracking-loading{
+.tracking-topbar,.tracking-controls,.tracking-headline-grid,.tracking-funnel,.tracking-section,.tracking-ad-performance,.tracking-leads,.tracking-dual-grid,.tracking-quiz,.tracking-secondary-grid,.tracking-trend,.tracking-bottom-grid,.tracking-footer,.tracking-error,.tracking-loading{
   width:min(1500px,100%);
   margin-inline:auto;
 }
@@ -190,6 +190,34 @@
   gap:8px;
 }
 .tracking-ad-performance{margin-bottom:10px}
+.tracking-leads{margin-bottom:10px}
+.tracking-lead-status{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:64px;
+  padding:4px 7px;
+  border-radius:999px;
+  font-size:.54rem;
+  font-weight:850;
+}
+.tracking-lead-status.is-followup{color:#ffd27a;background:rgb(221 154 31 / 14%)}
+.tracking-lead-status.is-customer{color:#60e5a7;background:rgb(42 170 111 / 15%)}
+.tracking-whatsapp-link{
+  min-height:31px;
+  padding:5px 8px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  border:1px solid #2e9c71;
+  border-radius:6px;
+  color:#83e8ba;
+  background:rgb(31 137 92 / 12%);
+  font-size:.58rem;
+  font-weight:850;
+}
+.tracking-whatsapp-link:hover{background:rgb(31 137 92 / 20%)}
 .tracking-table-wrap{
   width:100%;
   overflow:auto;
