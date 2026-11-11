@@ -30,7 +30,7 @@ test('tracking dashboard mirrors the complete MVP funnel and keeps sources expli
   assert.match(page,/summary\.conversions_by_angle/)
   assert.match(page,/summary\.conversions_by_quiz_profile/)
   assert.match(page,/Respostas do quiz e qualidade do lead/)
-  assert.match(page,/Gargalos de ativação/)
+  assert.match(page,/summary\.onboarding_issues/)
   assert.match(page,/Meta Ads/)
   assert.match(page,/Fonte de verdade/)
   assert.match(page,/Receita líquida = recebimentos − reembolsos confirmados/)
