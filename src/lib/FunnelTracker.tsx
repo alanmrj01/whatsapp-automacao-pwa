@@ -44,7 +44,6 @@ export function FunnelTracker() {
     if (!demoRoute || !auth.user || !signupTracking) return
     const businessId = typeof signupTracking.businessId === 'string' ? signupTracking.businessId : null
     const userId = typeof signupTracking.userId === 'string' ? signupTracking.userId : null
-    const eventId = typeof signupTracking.eventId === 'string' ? signupTracking.eventId : undefined
     if (
       !businessId
       || !userId
@@ -52,33 +51,21 @@ export function FunnelTracker() {
       || userId !== auth.user.id
     ) return
 
-    void trackEvent('signup_completed', {
-      funnel_stage:'registration_completed',
-      access_mode:typeof signupTracking.accessMode === 'string' ? signupTracking.accessMode : null,
-      account_state:typeof signupTracking.accountState === 'string' ? signupTracking.accountState : null,
-    }, {
-      surface:'signup',
-      businessId,
-      userId,
-      eventId,
-    }).then(success=>{
-      if (!success) return
-      if (signupTracking.preactivation === true) {
-        trackEventOnce(
-          `preactivation_started:${businessId}`,
-          'preactivation_started',
-          {
-            funnel_stage:'demo_access_ready',
-            whatsapp_connection_available:true,
-          },
-          {
-            surface:'signup',
-            businessId,
-            userId,
-          },
-        )
-      }
-    })
+    if (signupTracking.preactivation === true) {
+      trackEventOnce(
+        `preactivation_started:${businessId}`,
+        'preactivation_started',
+        {
+          funnel_stage:'demo_access_ready',
+          whatsapp_connection_available:true,
+        },
+        {
+          surface:'signup',
+          businessId,
+          userId,
+        },
+      )
+    }
   }, [
     auth.user,
     demoRoute,
