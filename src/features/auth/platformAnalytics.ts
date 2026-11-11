@@ -100,6 +100,24 @@ export type AnalyticsAdPerformance = {
   roas:number|null
 }
 
+export type AnalyticsLeadRecovery = {
+  business_id:string
+  lead_name:string
+  whatsapp_e164:string
+  business_name:string
+  created_at:string
+  last_activity_at:string
+  stage_key:'account'|'demo'|'whatsapp_connected_unpaid'|'offer'|'checkout'|'payment_failed'|'purchase'|'activated'|'refunded'
+  stage_label:string
+  purchased:boolean
+  activated:boolean
+  needs_follow_up:boolean
+  angle:string|null
+  quiz_profile:string|null
+  ad_id:string|null
+  ad_name:string|null
+}
+
 export type AnalyticsSeriesPoint = {
   date:string
   lpv:number
@@ -130,6 +148,7 @@ export type PlatformAnalyticsSummary = {
   onboarding_issues:AnalyticsBreakdown
   quiz_questions:AnalyticsQuizQuestion[]
   ad_performance:AnalyticsAdPerformance[]
+  lead_recovery:AnalyticsLeadRecovery[]
   meta_ads_status:'ready'|'awaiting_integration'
   meta_ads_note:string|null
   series:AnalyticsSeriesPoint[]
