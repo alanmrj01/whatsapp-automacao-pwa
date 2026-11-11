@@ -60,6 +60,16 @@ export function SignupPage() {
       const createdMembership = createdUser.memberships.find(item=>item.business_id===createdUser.active_business_id)
       const preactivation = createdMembership?.access_mode === 'free'
         && createdMembership?.has_had_operational_access !== true
+      void trackEvent('signup_completed', {
+        funnel_stage:'registration_completed',
+        access_mode:createdMembership?.access_mode ?? null,
+        account_state:createdMembership?.account_state ?? null,
+      }, {
+        surface:'signup',
+        businessId:createdUser.active_business_id,
+        userId:createdUser.id,
+        eventId:key,
+      })
       navigate(homeFor(createdUser), {
         replace:true,
         state:{
