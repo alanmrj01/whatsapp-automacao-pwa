@@ -33,7 +33,7 @@ test('tracking dashboard mirrors the complete MVP funnel and keeps sources expli
   assert.match(page,/summary\.onboarding_issues/)
   assert.match(page,/Meta Ads/)
   assert.match(page,/Fonte de verdade/)
-  assert.match(page,/Receita líquida = recebimentos − reembolsos confirmados/)
+  assert.match(page,/Ativação = pagamento confirmado + WhatsApp conectado/)
 })
 
 test('dashboard prioritizes the selected launch KPIs and deep conversion diagnostics', () => {
