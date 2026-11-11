@@ -6,6 +6,7 @@ import {
   Gauge,
   ListChecks,
   Megaphone,
+  MessageCircle,
   RefreshCw,
   Target,
   TrendingUp,
@@ -20,6 +21,7 @@ import {
   type AnalyticsBreakdown,
   type AnalyticsConversionBreakdown,
   type AnalyticsKpi,
+  type AnalyticsLeadRecovery,
   type AnalyticsQuizQuestion,
   type AnalyticsSeriesPoint,
   type AnalyticsStatus,
@@ -230,6 +232,45 @@ function AdPerformanceTable({items,metaStatus,metaNote}:{items:AnalyticsAdPerfor
   </section>
 }
 
+function formatLeadWhatsApp(value:string) {
+  const digits=value.replace(/\D/g,'')
+  const local=digits.startsWith('55')?digits.slice(2):digits
+  if(local.length===11)return `+55 (${local.slice(0,2)}) ${local.slice(2,7)}-${local.slice(7)}`
+  if(local.length===10)return `+55 (${local.slice(0,2)}) ${local.slice(2,6)}-${local.slice(6)}`
+  return value
+}
+
+function LeadRecoveryTable({items}:{items:AnalyticsLeadRecovery[]}) {
+  return <section className="tracking-card tracking-leads">
+    <header className="tracking-card__header">
+      <div>
+        <span className="tracking-eyebrow"><MessageCircle size={15}/> RECUPERAÇÃO</span>
+        <h2>Leads e ponto de abandono</h2>
+      </div>
+      <span className="tracking-card__hint">Oportunidades sem compra aparecem primeiro</span>
+    </header>
+    {items.length?<div className="tracking-table-wrap tracking-table-wrap--wide">
+      <table>
+        <thead><tr>
+          <th>Lead</th><th>WhatsApp</th><th>Empresa</th><th>Última etapa</th><th>Última atividade</th><th>Status</th><th>Ação</th>
+        </tr></thead>
+        <tbody>{items.map(item=>{
+          const digits=item.whatsapp_e164.replace(/\D/g,'')
+          return <tr key={item.business_id}>
+            <td><strong>{item.lead_name}</strong>{item.ad_name&&<small>{item.ad_name}</small>}</td>
+            <td>{formatLeadWhatsApp(item.whatsapp_e164)}</td>
+            <td>{item.business_name}</td>
+            <td><strong>{item.stage_label}</strong>{item.angle&&<small>{item.angle.replaceAll('_',' ')}</small>}</td>
+            <td>{new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short',timeZone:'America/Sao_Paulo'}).format(new Date(item.last_activity_at))}</td>
+            <td><span className={`tracking-lead-status ${item.needs_follow_up?'is-followup':'is-customer'}`}>{item.needs_follow_up?'Recuperar':'Cliente'}</span></td>
+            <td><a className="tracking-whatsapp-link" href={`https://wa.me/${digits}`} target="_blank" rel="noreferrer"><MessageCircle size={14}/> Abrir WhatsApp</a></td>
+          </tr>
+        })}</tbody>
+      </table>
+    </div>:<EmptyBlock text="Novos cadastros com nome e WhatsApp aparecerão aqui automaticamente."/>}
+  </section>
+}
+
 function QuizQuestions({questions}:{questions:AnalyticsQuizQuestion[]}) {
   return <section className="tracking-card tracking-quiz">
     <header className="tracking-card__header">
@@ -366,6 +407,8 @@ export function TrackingDashboardPage() {
         </section>
 
         <AdPerformanceTable items={summary.ad_performance} metaStatus={summary.meta_ads_status} metaNote={summary.meta_ads_note}/>
+
+        <LeadRecoveryTable items={summary.lead_recovery}/>
 
         <section className="tracking-dual-grid">
           <ConversionTable breakdown={summary.conversions_by_angle}/>
