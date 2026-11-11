@@ -123,13 +123,27 @@ export function AuthProvider({children}: {children:ReactNode}) {
     setState('authenticated')
   }
 
-  async function signup(businessName:string,email:string,password:string,idempotencyKey:string):Promise<SessionUser> {
+  async function signup(
+    businessName:string,
+    leadName:string,
+    leadWhatsApp:string,
+    email:string,
+    password:string,
+    idempotencyKey:string,
+  ):Promise<SessionUser> {
     clearPendingLogout()
     const expected = ++operation.current
     logoutBlocked.current = false
     dropPrivateState()
     try {
-      const hydrated = await api.signup<SessionUser>(businessName,email,password,idempotencyKey)
+      const hydrated = await api.signup<SessionUser>(
+        businessName,
+        leadName,
+        leadWhatsApp,
+        email,
+        password,
+        idempotencyKey,
+      )
       if (operation.current !== expected) throw new ApiError(401)
       const me = hydrated ?? await api.request<SessionUser>('/me')
       if (operation.current !== expected) throw new ApiError(401)

@@ -18,10 +18,9 @@ test('real conversations use a full paid route with human reply controls', () =>
   assert.match(detail,/navigator\.clipboard\.writeText/)
   assert.match(detail,/Dados do contato/)
   assert.match(detail,/conversation-contact-name-form/)
-  assert.match(detail,/Assistente nesta conversa/)
+  assert.match(detail,/Assistente para este contato/)
   assert.match(detail,/Respostas automáticas permanentes/)
-  assert.match(detail,/\(conversation\.customer_automation_mode\?\?'automatic'\)!=='automatic'/)
-  assert.match(detail,/id:conversation\.customer_id/)
+  assert.match(detail,/customer_whatsapp_id\?\?conversation\.customer_phone/)
   assert.match(detail,/Nunca responder automaticamente/)
   assert.match(detail,/Agendar/)
   assert.match(detail,/janela de atendimento está encerrada/i)
@@ -126,37 +125,6 @@ test('agenda defaults to calendar navigation with month, week and day detail', (
   assert.match(css,/\.agenda-calendar__grid/)
 })
 
-test('permanent automation policy is customer-centric across Conversations and Settings', () => {
-  const detail = read('src/features/conversations/ConversationDetailPage.tsx')
-  const api = read('src/features/operations/api.ts')
-  const types = read('src/features/operations/types.ts')
-  const settings = read('src/features/more/AutomationSettingsPage.tsx')
-
-  assert.match(types,/customer_automation_mode:'automatic'\|'human_only'\|'ignore'/)
-  assert.match(types,/automation_mode:'automatic'\|'human_only'\|'ignore'/)
-  assert.match(api,/useUpdateCustomerAutomation/)
-  assert.match(api,/\/customers\/\$\{id\}\/automation/)
-  assert.match(detail,/useUpdateCustomerAutomation\(\)/)
-  assert.match(detail,/\(conversation\.customer_automation_mode\?\?'automatic'\)!=='automatic'/)
-  assert.match(detail,/id:conversation\.customer_id/)
-  assert.match(detail,/mode:permanentlyHumanOnly\?'automatic':'human_only'/)
-  assert.doesNotMatch(detail,/permanentExclusion/)
-  assert.doesNotMatch(detail,/useAssistantExclusions/)
-  assert.match(settings,/useAddAssistantExclusion/)
-  assert.match(settings,/useRemoveAssistantExclusion/)
-  assert.match(api,/\/automation\/exclusions/)
-})
-
-test('renaming a conversation invalidates both customer and exclusion views', () => {
-  const api = read('src/features/operations/api.ts')
-  const detail = read('src/features/conversations/ConversationDetailPage.tsx')
-
-  assert.match(api,/useUpdateCustomerName/)
-  assert.match(api,/invalidate\(context\.businessId,'conversations','conversation','dashboard','customers','assistant-exclusions'\)/)
-  assert.match(detail,/rename\.mutate/)
-  assert.match(detail,/name:name\.trim\(\)\|\|null/)
-})
-
 test('assistant exclusions accept existing customers or a normalized manual number', () => {
   const settings = read('src/features/more/AutomationSettingsPage.tsx')
   const api = read('src/features/operations/api.ts')
@@ -164,11 +132,24 @@ test('assistant exclusions accept existing customers or a normalized manual numb
   assert.match(settings,/Contatos sem resposta automática/)
   assert.match(settings,/mode:'human_only'/)
   assert.match(settings,/Adicionar por número/)
-  assert.match(settings,/function normalizeExclusionPhone\(value:string\)/)
+  assert.match(settings,/from '..\/operations\/phoneIdentity'/)
   assert.match(settings,/const normalizedManualPhone=normalizeExclusionPhone\(manualPhone\)/)
   assert.match(settings,/\^\[1-9\]\\d\{6,14\}\$/)
   assert.match(settings,/Este número já está na lista/)
   assert.match(api,/\/automation\/exclusions/)
+})
+
+test('permanent contact block stays synchronized between conversation and settings', () => {
+  const detail = read('src/features/conversations/ConversationDetailPage.tsx')
+  const api = read('src/features/operations/api.ts')
+
+  assert.match(detail,/normalizeExclusionPhone\(conversation\.customer_whatsapp_id\?\?conversation\.customer_phone\?\?''\)/)
+  assert.match(detail,/normalizeExclusionPhone\(item\.whatsapp_id\)===whatsappId/)
+  assert.match(api,/queryClient\.setQueryData<\{items:AssistantExclusion\[\]\}>/)
+  assert.match(api,/current=>\(\{items:\[\.\.\.\(current\?\.items\?\?\[\]\)\.filter\(existing=>existing\.id!==item\.id\),item\]\}\)/)
+  assert.match(api,/current=>\(\{items:\(current\?\.items\?\?\[\]\)\.filter\(item=>item\.id!==id\)\}\)/)
+  assert.match(api,/useUpdateConversationAssistant\(\)[\s\S]*'assistant-exclusions'/)
+  assert.match(api,/useBulkConversationAction\(\)[\s\S]*'assistant-exclusions'/)
 })
 
 test('assistant toggle stays immediately visible at the top-left of an opened conversation', () => {

@@ -216,7 +216,7 @@ export function useBulkConversationAction() {
       context,
       ()=>api.request<{affected:number}>('/conversations/bulk',{method:'POST',body:json({conversation_ids,action})}),
     ),
-    onSuccess:()=>invalidate(context.businessId,'conversations','conversation','dashboard'),
+    onSuccess:()=>invalidate(context.businessId,'conversations','conversation','dashboard','assistant-exclusions'),
   })
 }
 export function useSetConversationPinned() {
@@ -233,21 +233,11 @@ export function useDeleteConversation() {
 }
 export function useUpdateCustomerName() {
   const context=usePaidContext()
-  return useMutation({mutationFn:({id,name}:{id:string;name:string|null})=>paidMutation(context,()=>api.request<ConversationDetail>(`/conversations/${id}/customer`,{method:'PATCH',body:json({name})})),onSuccess:()=>invalidate(context.businessId,'conversations','conversation','dashboard','customers','assistant-exclusions')})
-}
-export function useUpdateCustomerAutomation() {
-  const context=usePaidContext()
-  return useMutation({
-    mutationFn:({id,mode}:{id:string;mode:'automatic'|'human_only'})=>paidMutation(
-      context,
-      ()=>api.request<Customer>(`/customers/${id}/automation`,{method:'PATCH',body:json({mode})}),
-    ),
-    onSuccess:()=>invalidate(context.businessId,'customers','assistant-exclusions','conversations','conversation','dashboard'),
-  })
+  return useMutation({mutationFn:({id,name}:{id:string;name:string|null})=>paidMutation(context,()=>api.request<ConversationDetail>(`/conversations/${id}/customer`,{method:'PATCH',body:json({name})})),onSuccess:()=>invalidate(context.businessId,'conversations','conversation','dashboard')})
 }
 export function useUpdateConversationAssistant() {
   const context=usePaidContext()
-  return useMutation({mutationFn:({id,enabled}:{id:string;enabled:boolean})=>paidMutation(context,()=>api.request<ConversationDetail>(`/conversations/${id}/assistant`,{method:'PATCH',body:json({enabled})})),onSuccess:()=>invalidate(context.businessId,'conversations','conversation','dashboard')})
+  return useMutation({mutationFn:({id,enabled}:{id:string;enabled:boolean})=>paidMutation(context,()=>api.request<ConversationDetail>(`/conversations/${id}/assistant`,{method:'PATCH',body:json({enabled})})),onSuccess:()=>invalidate(context.businessId,'conversations','conversation','dashboard','assistant-exclusions')})
 }
 export function useSendConversationMessage() {
   const context=usePaidContext()
@@ -293,7 +283,19 @@ export function useAssistantExclusions() {
 }
 export function useAddAssistantExclusion() {
   const context=usePaidContext()
-  return useMutation({mutationFn:({whatsapp_id,label,reason,mode='human_only'}:{whatsapp_id:string;label?:string|null;reason?:string|null;mode?:'ignore'|'human_only'})=>paidMutation(context,()=>api.request<AssistantExclusion>('/automation/exclusions',{method:'POST',body:json({whatsapp_id,mode,label:label||null,reason:reason||null,active:true})})),onSuccess:()=>invalidate(context.businessId,'assistant-exclusions','conversation','conversations')})
+  return useMutation({
+    mutationFn:({whatsapp_id,label,reason,mode='human_only'}:{whatsapp_id:string;label?:string|null;reason?:string|null;mode?:'ignore'|'human_only'})=>paidMutation(
+      context,
+      ()=>api.request<AssistantExclusion>('/automation/exclusions',{method:'POST',body:json({whatsapp_id,mode,label:label||null,reason:reason||null,active:true})}),
+    ),
+    onSuccess:(item)=>{
+      queryClient.setQueryData<{items:AssistantExclusion[]}>(
+        [...root(context.businessId),'assistant-exclusions'],
+        current=>({items:[...(current?.items??[]).filter(existing=>existing.id!==item.id),item]}),
+      )
+      return invalidate(context.businessId,'assistant-exclusions','conversation','conversations')
+    },
+  })
 }
 export function useUpdateAssistantExclusion() {
   const context=usePaidContext()
@@ -301,7 +303,16 @@ export function useUpdateAssistantExclusion() {
 }
 export function useRemoveAssistantExclusion() {
   const context=usePaidContext()
-  return useMutation({mutationFn:(id:string)=>paidMutation(context,()=>api.request<void>(`/automation/exclusions/${id}`,{method:'DELETE'})),onSuccess:()=>invalidate(context.businessId,'assistant-exclusions','conversation','conversations')})
+  return useMutation({
+    mutationFn:(id:string)=>paidMutation(context,()=>api.request<void>(`/automation/exclusions/${id}`,{method:'DELETE'})),
+    onSuccess:(_result,id)=>{
+      queryClient.setQueryData<{items:AssistantExclusion[]}>(
+        [...root(context.businessId),'assistant-exclusions'],
+        current=>({items:(current?.items??[]).filter(item=>item.id!==id)}),
+      )
+      return invalidate(context.businessId,'assistant-exclusions','conversation','conversations')
+    },
+  })
 }
 
 export function useEmployees() {

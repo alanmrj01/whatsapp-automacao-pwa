@@ -8,17 +8,20 @@ import { api } from '../../lib/api'
 import { useAuth } from '../auth/useAuth'
 import {
   useDeleteConversation,
+  useAddAssistantExclusion,
+  useAssistantExclusions,
   useBusiness,
   useConversation,
   useConversationMessages,
+  useRemoveAssistantExclusion,
   useSendConversationMessage,
   useSetConversationPinned,
   useSetConversationRead,
   useUpdateConversationAssistant,
-  useUpdateCustomerAutomation,
   useUpdateCustomerName,
 } from '../operations/api'
 import type { ConversationMessage } from '../operations/types'
+import { normalizeExclusionPhone } from '../operations/phoneIdentity'
 import './conversation-detail.css'
 
 const conversationStatusLabels = {
@@ -42,8 +45,10 @@ export function ConversationDetailPage() {
   const {membership}=useAuth()
   const detail=useConversation(conversationId||null)
   const business=useBusiness()
+  const exclusions=useAssistantExclusions()
+  const addExclusion=useAddAssistantExclusion()
+  const removeExclusion=useRemoveAssistantExclusion()
   const rename=useUpdateCustomerName()
-  const customerAutomation=useUpdateCustomerAutomation()
   const assistant=useUpdateConversationAssistant()
   const send=useSendConversationMessage()
   const pin=useSetConversationPinned()
@@ -90,7 +95,10 @@ export function ConversationDetailPage() {
   if(detail.isPending||business.isPending)return <div className="conversation-detail-page conversation-detail-page--state"><LoadingState/></div>
   if(detail.isError||business.isError||!detail.data)return <div className="conversation-detail-page conversation-detail-page--state"><ErrorState onRetry={()=>{void detail.refetch();void business.refetch()}}/></div>
   const conversation=detail.data
-  const permanentlyHumanOnly=(conversation.customer_automation_mode??'automatic')!=='automatic'
+  const whatsappId=normalizeExclusionPhone(conversation.customer_whatsapp_id??conversation.customer_phone??'')
+  const permanentExclusion=exclusions.data?.items.find(
+    item=>normalizeExclusionPhone(item.whatsapp_id)===whatsappId,
+  )
 
   const submitMessage=()=>{
     const normalized=text.trim()
@@ -251,24 +259,22 @@ export function ConversationDetailPage() {
         <section className="conversation-contact-section">
           <h3>Atendimento</h3>
           <div className={`conversation-assistant-card ${conversation.assistant_enabled?'is-active':'is-paused'}`}>
-            <div><Bot size={20}/><div><span>Assistente nesta conversa</span><strong>{conversation.assistant_enabled?'Assistente ativo':'Assistente pausado'}</strong></div></div>
+            <div><Bot size={20}/><div><span>Assistente para este contato</span><strong>{conversation.assistant_enabled?'Assistente ativo':'Assistente pausado'}</strong></div></div>
             <button className="primary-button" type="button" disabled={!canMutate||assistant.isPending} onClick={()=>assistant.mutate({id:conversation.id,enabled:!conversation.assistant_enabled})}>
               {assistant.isPending?'Atualizando…':conversation.assistant_enabled?'Desativar':'Reativar assistente'}
             </button>
           </div>
-          <button
-            className="conversation-contact-row"
-            type="button"
-            disabled={!canMutate||customerAutomation.isPending}
-            onClick={()=>customerAutomation.mutate({
-              id:conversation.customer_id,
-              mode:permanentlyHumanOnly?'automatic':'human_only',
-            })}
-          >
-            <div><span>Respostas automáticas permanentes</span><strong>{permanentlyHumanOnly?'Nunca responder automaticamente':'Permitidas para este contato'}</strong></div>
+          <button className="conversation-contact-row" type="button" disabled={!canMutate||!whatsappId||addExclusion.isPending||removeExclusion.isPending||exclusions.isPending} onClick={()=>{
+            if(permanentExclusion){
+              removeExclusion.mutate(permanentExclusion.id)
+            }else{
+              addExclusion.mutate({whatsapp_id:whatsappId,label:conversation.customer_name,reason:'Definido pela conversa',mode:'human_only'})
+            }
+          }}>
+            <div><span>Respostas automáticas permanentes</span><strong>{permanentExclusion?'Nunca responder automaticamente':'Permitidas para este contato'}</strong></div>
             <Bot size={19}/>
           </button>
-          {(assistant.isError||customerAutomation.isError)&&<p className="form-error" role="alert">Não foi possível alterar o Assistente Virtual.</p>}
+          {(assistant.isError||addExclusion.isError||removeExclusion.isError||exclusions.isError)&&<p className="form-error" role="alert">Não foi possível alterar o Assistente Virtual.</p>}
         </section>
 
         <button className="conversation-contact-danger" type="button" disabled={!canMutate} onClick={()=>setConfirmDelete(true)}><Trash2 size={18}/>Excluir conversa</button>

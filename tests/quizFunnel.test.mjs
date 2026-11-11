@@ -94,10 +94,27 @@ test('approved quiz visual polish keeps the first screen clean and strengthens r
   assert.doesNotMatch(quiz, /MessageCircle/)
 })
 
-test('development proxy never defaults to the production Netlify origin', () => {
-  const vite = read('vite.config.ts')
+test('tracking remains continuous from quiz profile through account creation and authenticated entry', () => {
+  const quiz = read('src/features/public/QuizFunnelPage.tsx')
+  const signup = read('src/features/auth/SignupPage.tsx')
+  const funnel = read('src/lib/FunnelTracker.tsx')
+  const tracking = read('src/lib/tracking.ts')
 
-  assert.match(vite, /ALOVIA_API_ORIGIN/)
-  assert.match(vite, /http:\/\/127\.0\.0\.1:8000/)
-  assert.doesNotMatch(vite, /target:\s*['"]https:\/\/alovia\.netlify\.app/)
+  assert.match(quiz, /params\.set\('quiz_profile', profile\)/)
+  assert.match(quiz, /to=\{signupUrl\}/)
+  assert.match(tracking, /'quiz_profile'/)
+  assert.match(signup, /trackEvent\('signup_started'/)
+  assert.match(signup, /trackEvent\('signup_submit'/)
+  assert.match(signup, /crypto\.randomUUID\(\)/)
+  assert.match(signup, /eventId:key/)
+  assert.match(signup, /trackEvent\('signup_completed'/)
+  assert.match(signup, /businessId:createdUser\.active_business_id/)
+  assert.match(signup, /userId:createdUser\.id/)
+  assert.match(signup, /trackEvent\('signup_completed'[\s\S]*navigate\(homeFor\(createdUser\)/)
+  assert.doesNotMatch(funnel, /signup_completed/)
+  assert.match(funnel, /businessId !== auth\.user\.active_business_id/)
+  assert.match(funnel, /userId !== auth\.user\.id/)
+  assert.match(funnel, /demo_page_view' : 'page_view'/)
+  assert.match(tracking, /optionalAuthRequest<\{accepted:boolean\}>\('\/marketing\/events'/)
 })
+

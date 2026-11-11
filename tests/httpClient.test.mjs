@@ -25,6 +25,41 @@ test('login sends credentials without storage and subsequent calls use memory on
   }
 })
 
+test('signup sends lead contact only in the protected request body and keeps idempotency', async () => {
+  const calls = []
+  const password = secret()
+  const api = createApiClient('https://api.example.test', async (url, options) => {
+    calls.push({url, options})
+    return response(201, {access_token:secret(),session:{id:'lead'}})
+  })
+
+  await api.signup(
+    'João Refrigeração',
+    'João da Silva',
+    '(12) 99999-1234',
+    'joao@example.test',
+    password,
+    '00000000-0000-0000-0000-000000000123',
+  )
+
+  assert.equal(calls.length,1)
+  assert.equal(calls[0].url,'https://api.example.test/api/v1/auth/signup')
+  assert.equal(
+    calls[0].options.headers['Idempotency-Key'],
+    '00000000-0000-0000-0000-000000000123',
+  )
+  assert.deepEqual(JSON.parse(calls[0].options.body),{
+    business_name:'João Refrigeração',
+    lead_name:'João da Silva',
+    lead_whatsapp:'(12) 99999-1234',
+    email:'joao@example.test',
+    password,
+  })
+  assert.equal(calls[0].url.includes('99999'),false)
+  assert.equal(calls[0].url.includes('João'),false)
+  assert.equal(calls[0].url.includes(password),false)
+})
+
 test('session bundled with refresh hydrates auth in one request without a follow-up me call', async () => {
   const session = {id:'member',active_business_id:'business',memberships:[]}
   const calls = []
