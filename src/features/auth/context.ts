@@ -7,7 +7,14 @@ type AuthContextValue = {
   user: SessionUser | null
   membership: Membership | undefined
   login: (email: string, password: string) => Promise<void>
-  signup: (businessName: string, email: string, password: string, idempotencyKey: string) => Promise<SessionUser>
+  signup: (
+    businessName: string,
+    leadName: string,
+    leadWhatsApp: string,
+    email: string,
+    password: string,
+    idempotencyKey: string,
+  ) => Promise<SessionUser>
   logout: () => Promise<void>
   selectBusiness: (id: string) => Promise<void>
   bootstrap: () => Promise<void>
