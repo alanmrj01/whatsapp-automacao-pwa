@@ -138,13 +138,13 @@ export function SubscriptionManagement() {
     {billingLoading&&<p>Carregando dados da assinatura…</p>}
     {!billingLoading&&hasCommercialSubscription&&<>
       {usage?.quota_applies&&usage.limit!==null&&<div className="account-guarantee-state">
-        <strong>Mensagens do mês: {usage.used.toLocaleString('pt-BR')} de {usage.limit.toLocaleString('pt-BR')}</strong>
+        <strong>Crédito de Mensagens: {usage.used.toLocaleString('pt-BR')} de {usage.limit.toLocaleString('pt-BR')}</strong>
         <span>{usage.exhausted
           ? usage.plan==='basic'
-            ? 'Sua franquia do Basic chegou ao limite. Os novos envios ficam pausados até a renovação mensal. O Plus, com mensagens proativas, será liberado após o lançamento.'
-            : 'Sua franquia do Plus chegou ao limite. Os novos envios ficam pausados até a renovação mensal.'
-          : `Restam ${(usage.remaining??0).toLocaleString('pt-BR')} mensagens enviadas pela Alovia neste mês.`}</span>
-        {usageResetsAt&&<small>A franquia renova em {usageResetsAt}.</small>}
+            ? 'Seu crédito de mensagens do Basic chegou ao limite. As novas respostas automáticas ficam pausadas até a renovação mensal.'
+            : 'Seu crédito de mensagens do Plus chegou ao limite. As novas respostas automáticas ficam pausadas até a renovação mensal.'
+          : `Restam ${(usage.remaining??0).toLocaleString('pt-BR')} mensagens automáticas neste mês.`}</span>
+        {usageResetsAt&&<small>O crédito renova em {usageResetsAt}.</small>}
       </div>}
       {subscription.guarantee_eligible&&guaranteeUntil&&!refundWaiting&&<div className="account-guarantee-state is-active">
         <strong>Garantia até {guaranteeUntil}</strong>
