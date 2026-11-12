@@ -36,6 +36,7 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
   const [failedAttempts,setFailedAttempts]=useState(0)
   const serverConnectedRef=useRef(false)
   const serverAttemptIdRef=useRef<string | null>(null)
+  const reuseServerAttemptRef=useRef(false)
   const pendingObservationsRef=useRef<EmbeddedSignupObservation[]>([])
   const pendingAssetsRef=useRef<Array<{waba_id:string; phone_number_id?:string}>>([])
   const liveConnection=useConnection()
@@ -213,6 +214,7 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
       return
     }
     if (connection.status === 'pending' && connection.next_action === 'continue_authorization') {
+      setResumeAvailable(Boolean(connection.onboarding_attempt_id))
       setMessage(null)
       setPhase('waiting')
     }
@@ -284,40 +286,47 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
       // FB.login must stay in the original click task. Starting async work is
       // safe here, but awaiting the server attempt before opening Meta breaks
       // user activation on mobile browsers and can detach popup callbacks.
-      serverAttemptIdRef.current=null
-      pendingObservationsRef.current=[]
-      pendingAssetsRef.current=[]
-      const idempotencyKey=crypto.randomUUID()
-      const attemptPromise=api.request<WhatsAppConnection>(
-        '/whatsapp/onboarding/embedded-signup/attempt',
-        {
-          method:'POST',
-          body:'{}',
-          headers:{'Idempotency-Key':idempotencyKey},
-          keepalive:true,
-        },
-      ).then((pending) => {
-        if (!pending.onboarding_attempt_id) {
-          throw new Error('Onboarding attempt unavailable')
-        }
-        serverAttemptIdRef.current=pending.onboarding_attempt_id
-        trackEventOnce(
-          `whatsapp_connection_started:${pending.onboarding_attempt_id}`,
-          'whatsapp_connection_started',
+      const persistedAttemptId=reuseServerAttemptRef.current
+        ? serverAttemptIdRef.current
+        : null
+      reuseServerAttemptRef.current=false
+      if (!persistedAttemptId) {
+        serverAttemptIdRef.current=null
+        pendingObservationsRef.current=[]
+        pendingAssetsRef.current=[]
+      }
+      const attemptPromise=persistedAttemptId
+        ? Promise.resolve(null)
+        : api.request<WhatsAppConnection>(
+          '/whatsapp/onboarding/embedded-signup/attempt',
           {
-            preferred_mode:pending.preferred_mode ?? pending.mode,
-            from_onboarding:fromOnboarding,
+            method:'POST',
+            body:'{}',
+            headers:{'Idempotency-Key':crypto.randomUUID()},
+            keepalive:true,
           },
-          {
-            surface:'whatsapp_onboarding',
-            businessId:membership?.business_id,
-            userId:user?.id,
-          },
-        )
-        applyServerConnection(pending)
-        flushPendingProviderSignals(pending.onboarding_attempt_id)
-        return pending
-      })
+        ).then((pending) => {
+          if (!pending.onboarding_attempt_id) {
+            throw new Error('Onboarding attempt unavailable')
+          }
+          serverAttemptIdRef.current=pending.onboarding_attempt_id
+          trackEventOnce(
+            `whatsapp_connection_started:${pending.onboarding_attempt_id}`,
+            'whatsapp_connection_started',
+            {
+              preferred_mode:pending.preferred_mode ?? pending.mode,
+              from_onboarding:fromOnboarding,
+            },
+            {
+              surface:'whatsapp_onboarding',
+              businessId:membership?.business_id,
+              userId:user?.id,
+            },
+          )
+          applyServerConnection(pending)
+          flushPendingProviderSignals(pending.onboarding_attempt_id)
+          return pending
+        })
 
       const providerPromise=launchMetaEmbeddedSignup(
         signupConfiguration,
@@ -455,6 +464,13 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
             if (resumeMetaEmbeddedSignup(attemptKey)) {
               setResumeAvailable(false)
               setPhase('opening')
+            } else if (serverAttemptIdRef.current) {
+              // Android/PWA may recreate the page after Meta opens in a custom
+              // tab. The browser-local runner is then gone, but the correlated
+              // server attempt is still authoritative and must be reused.
+              reuseServerAttemptRef.current=true
+              setResumeAvailable(false)
+              void run().catch(() => {})
             } else {
               void reconcileConnection()
             }
