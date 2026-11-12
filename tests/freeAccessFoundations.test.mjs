@@ -119,3 +119,23 @@ test('platform admin presents commercial billing separately from administrative 
   assert.match(admin,/Liberação administrativa ativa, sem assinatura comercial vinculada/)
   assert.doesNotMatch(`${admin}${api}`,/\b(?:Premium|Pro)\b|checkout/i)
 })
+
+
+test('preactivation always connects WhatsApp before showing the commercial upsell', () => {
+  const upgrade = read('src/features/access/UpgradePrompt.tsx')
+  const whatsapp = read('src/features/whatsapp/WhatsAppPage.tsx')
+  const plan = read('src/features/billing/PlanPage.tsx')
+  const catalog = read('src/features/billing/planCatalog.ts')
+
+  assert.match(upgrade, /entitlement\.isPreactivation && connection\.data\?\.status !== 'connected'/)
+  assert.match(upgrade, /navigate\('\/app\/whatsapp\?from=activation&continuar=1'\)/)
+  assert.match(upgrade, /Basic: R\$ 147,90\/mês no plano mensal/)
+  assert.match(whatsapp, /Conecte seu WhatsApp/)
+  assert.match(whatsapp, /continue a conexão oficial pela Meta/)
+  assert.match(whatsapp, /status!=='connected'&&!preactivation/)
+  assert.match(whatsapp, /entitlement\.usesDemoData&&!preactivation/)
+  assert.match(plan, /Você está a 1 passo de ter seu atendimento automático no whatsapp/)
+  assert.match(catalog, /monthlyPrice:147\.90/)
+  assert.match(catalog, /id:'quarterly',label:'Trimestral',discount:0\.10/)
+  assert.match(catalog, /id:'annual',label:'Anual',discount:0\.15/)
+})
