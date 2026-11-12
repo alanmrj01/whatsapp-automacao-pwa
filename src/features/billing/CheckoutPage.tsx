@@ -28,6 +28,7 @@ import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { BrandMark } from '../../components/BrandMark'
 import { api } from '../../lib/api'
 import { ApiError } from '../../lib/httpClient'
+import { clearSessionDraft, readSessionDraft, writeSessionDraft } from '../forms/sessionDraft'
 import { trackEvent, trackEventOnce } from '../../lib/tracking'
 import { useAuth } from '../auth/useAuth'
 import {
@@ -95,6 +96,17 @@ type CheckoutProfile = {
 
 type CheckoutAttempt = {method:PaymentMethod;key:string}
 type PixTrackingEvent = 'pix_payment_viewed'|'pix_payment_abandon_intent'|'pix_payment_expired_unpaid'
+type CheckoutDraft = {
+  businessId:string
+  paymentMethod:PaymentMethod
+  payerName:string
+  payerDocument:string
+  payerPhone:string
+  postalCode:string
+  addressNumber:string
+  addressComplement:string
+  openStep:1|2
+}
 
 function isPixCheckout(checkout:CheckoutResponse|null):checkout is CheckoutResponse {
   return checkout?.payment_method==='pix'||checkout?.payment_method==='pix_automatic'
@@ -191,6 +203,19 @@ export function CheckoutPage() {
   const {membership,user,syncSession}=useAuth()
   const planId=params.get('plan')
   const cycleParam=params.get('cycle')
+  const checkoutDraftKey=
+    user?.active_business_id&&isPlanId(planId)&&isBillingCycle(cycleParam)
+      ?`alovia:checkout:draft:v1:${user.active_business_id}:${planId}:${cycleParam}`
+      :null
+  const initialCheckoutDraft=useRef(
+    checkoutDraftKey?readSessionDraft<CheckoutDraft>(checkoutDraftKey):null,
+  ).current
+  const draftPaymentMethod=initialCheckoutDraft?.paymentMethod
+  const initialPaymentMethod:PaymentMethod=
+    draftPaymentMethod==='credit_card'||draftPaymentMethod==='pix'||
+    (draftPaymentMethod==='pix_automatic'&&PIX_AUTOMATIC_ENABLED)
+      ?draftPaymentMethod
+      :'pix'
   const checkoutAttempt=useRef<CheckoutAttempt>({
     method:'pix',
     key:crypto.randomUUID(),
@@ -216,7 +241,7 @@ export function CheckoutPage() {
   }>({checkout:null,status:null,initialPaymentReceived:false,expired:false})
   const trackPixAbandonRef=useRef<()=>void>(()=>undefined)
 
-  const [paymentMethod,setPaymentMethod]=useState<PaymentMethod>('pix')
+  const [paymentMethod,setPaymentMethod]=useState<PaymentMethod>(initialPaymentMethod)
   const [profile,setProfile]=useState<CheckoutProfile|null>(null)
   const [checkout,setCheckout]=useState<CheckoutResponse|null>(null)
   const [profileLoading,setProfileLoading]=useState(true)
@@ -225,7 +250,7 @@ export function CheckoutPage() {
   const [error,setError]=useState<string|null>(null)
   const [submitting,setSubmitting]=useState(false)
   const [adminAccessNotice,setAdminAccessNotice]=useState(false)
-  const [openStep,setOpenStep]=useState<1|2>(1)
+  const [openStep,setOpenStep]=useState<1|2>(initialCheckoutDraft?.openStep===2?2:1)
   const [pixStatus,setPixStatus]=useState<CheckoutStatus|null>(null)
   const [pixQrCode,setPixQrCode]=useState<string|null>(null)
   const [pixQrLoading,setPixQrLoading]=useState(false)
@@ -246,19 +271,45 @@ export function CheckoutPage() {
   const ccvRef=useRef<HTMLInputElement|null>(null)
   const submitRef=useRef<HTMLButtonElement|null>(null)
 
-  const [payerName,setPayerName]=useState('')
-  const [payerDocument,setPayerDocument]=useState('')
-  const [payerPhone,setPayerPhone]=useState('')
-  const [postalCode,setPostalCode]=useState('')
-  const [addressNumber,setAddressNumber]=useState('')
-  const [addressComplement,setAddressComplement]=useState('')
-  const [cardHolderName,setCardHolderName]=useState('')
+  const [payerName,setPayerName]=useState(initialCheckoutDraft?.payerName??'')
+  const [payerDocument,setPayerDocument]=useState(initialCheckoutDraft?.payerDocument??'')
+  const [payerPhone,setPayerPhone]=useState(initialCheckoutDraft?.payerPhone??'')
+  const [postalCode,setPostalCode]=useState(initialCheckoutDraft?.postalCode??'')
+  const [addressNumber,setAddressNumber]=useState(initialCheckoutDraft?.addressNumber??'')
+  const [addressComplement,setAddressComplement]=useState(initialCheckoutDraft?.addressComplement??'')
+  const [cardHolderName,setCardHolderName]=useState(initialCheckoutDraft?.payerName??'')
   const [cardNumber,setCardNumber]=useState('')
   const [expiryMonth,setExpiryMonth]=useState('')
   const [expiryYear,setExpiryYear]=useState('')
   const [ccv,setCcv]=useState('')
 
   const validSelection=isPlanId(planId)&&isBillingCycle(cycleParam)&&isPurchasablePlan(planId)
+
+  useEffect(()=>{
+    if(!checkoutDraftKey||!user?.active_business_id)return
+    writeSessionDraft<CheckoutDraft>(checkoutDraftKey,{
+      businessId:user.active_business_id,
+      paymentMethod,
+      payerName,
+      payerDocument,
+      payerPhone,
+      postalCode,
+      addressNumber,
+      addressComplement,
+      openStep,
+    },60*60*1000)
+  },[
+    addressComplement,
+    addressNumber,
+    checkoutDraftKey,
+    openStep,
+    payerDocument,
+    payerName,
+    payerPhone,
+    paymentMethod,
+    postalCode,
+    user?.active_business_id,
+  ])
 
   useEffect(()=>{
     void syncSession().catch(()=>undefined)
@@ -629,6 +680,7 @@ export function CheckoutPage() {
         setInitialPaymentReceived(current.initial_payment_received)
         if(current.status==='paid') {
           paidPixCheckoutIds.current.add(checkoutId)
+          if(checkoutDraftKey)clearSessionDraft(checkoutDraftKey)
           trackEventOnce(
             `payment_confirmed:${checkoutId}`,
             'payment_confirmed',
@@ -674,7 +726,7 @@ export function CheckoutPage() {
       cancelled=true
       if(timer)window.clearTimeout(timer)
     }
-  },[checkout?.checkout_id,checkout?.payment_method,expired,navigate,syncSession,user?.active_business_id,user?.id])
+  },[checkout?.checkout_id,checkout?.payment_method,checkoutDraftKey,expired,navigate,syncSession,user?.active_business_id,user?.id])
 
   const identificationComplete=
     payerName.trim().length>=2&&

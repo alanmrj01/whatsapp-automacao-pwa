@@ -1,11 +1,12 @@
 import { ArrowLeft, ArrowRight, Check, MapPin, MessageCircleMore, Pencil, Plus, Save, Trash2, Wrench } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { ErrorState } from '../../components/ErrorState'
 import { LoadingState } from '../../components/LoadingState'
 import { PrimaryButton } from '../../components/PrimaryButton'
 import { StatusBadge } from '../../components/StatusBadge'
 import { RequiredLabel } from '../../components/RequiredLabel'
+import { clearSessionDraft, readSessionDraft, writeSessionDraft } from '../forms/sessionDraft'
 import { canConfigureWhatsApp } from '../auth/types'
 import { SessionActions } from '../auth/SessionActions'
 import { useAuth } from '../auth/useAuth'
@@ -54,16 +55,36 @@ export function OnboardingPage(){
   const auth=useAuth()
   const setup=useSetupStatus()
   const canConfigure=canConfigureWhatsApp(auth.membership?.role)
-  const [started,setStarted]=useState(false)
+  const onboardingProgressKey=auth.user?.active_business_id
+    ?`alovia:onboarding:progress:v1:${auth.user.active_business_id}`
+    :null
+  const initialProgress=useMemo(
+    ()=>onboardingProgressKey?readSessionDraft<{started:boolean}>(onboardingProgressKey):null,
+    [onboardingProgressKey],
+  )
+  const [started,setStarted]=useState(initialProgress?.started===true)
   const [step,setStep]=useState(1)
   const [finished,setFinished]=useState(false)
   const [whatsappDeferred,setWhatsappDeferred]=useState(false)
   const navigate=useNavigate()
+
+  useEffect(()=>{
+    if(initialProgress?.started)setStarted(true)
+  },[initialProgress?.started])
   const webPush=useWebPush()
 
   useEffect(()=>{
     if(setup.data&&!setup.data.onboarding_completed)setStep(stepNumber[setup.data.next_step])
   },[setup.data])
+
+  useEffect(()=>{
+    if(!onboardingProgressKey)return
+    if(finished||setup.data?.onboarding_completed){
+      clearSessionDraft(onboardingProgressKey)
+      return
+    }
+    writeSessionDraft(onboardingProgressKey,{started},4*60*60*1000)
+  },[finished,onboardingProgressKey,setup.data?.onboarding_completed,started])
 
   if(setup.isPending)return <OnboardingShell><LoadingState/></OnboardingShell>
   if(setup.isError||!setup.data)return <OnboardingShell><ErrorState onRetry={()=>void setup.refetch()}/></OnboardingShell>
@@ -118,25 +139,44 @@ function OnboardingProgress({step}:{step:number}){
   </header>
 }
 
+type CompanyDraft={
+  name:string
+  responsible:string
+  postalCode:string
+  street:string
+  neighborhood:string
+  number:string
+  city:string
+  state:string
+  timezone:string
+  validatedPostalCode:string
+  postalStatus:'idle'|'valid'|'invalid'
+}
+
 function CompanyStep({onNext}:{onNext:()=>void}){
+  const auth=useAuth()
   const business=useBusiness(),update=useUpdateBusiness(),setup=useSetupStatus()
   const data=business.data
-  const [name,setName]=useState('')
-  const [responsible,setResponsible]=useState('')
-  const [postalCode,setPostalCode]=useState('')
-  const [street,setStreet]=useState('')
-  const [neighborhood,setNeighborhood]=useState('')
-  const [number,setNumber]=useState('')
-  const [city,setCity]=useState('')
-  const [state,setState]=useState('')
-  const [timezone,setTimezone]=useState('America/Sao_Paulo')
-  const [validatedPostalCode,setValidatedPostalCode]=useState('')
-  const [postalStatus,setPostalStatus]=useState<'idle'|'loading'|'valid'|'invalid'>('idle')
+  const companyDraftKey=auth.user?.active_business_id
+    ?`alovia:onboarding:company:draft:v1:${auth.user.active_business_id}`
+    :null
+  const initialDraft=useRef(companyDraftKey?readSessionDraft<CompanyDraft>(companyDraftKey):null).current
+  const [name,setName]=useState(initialDraft?.name??'')
+  const [responsible,setResponsible]=useState(initialDraft?.responsible??'')
+  const [postalCode,setPostalCode]=useState(initialDraft?.postalCode??'')
+  const [street,setStreet]=useState(initialDraft?.street??'')
+  const [neighborhood,setNeighborhood]=useState(initialDraft?.neighborhood??'')
+  const [number,setNumber]=useState(initialDraft?.number??'')
+  const [city,setCity]=useState(initialDraft?.city??'')
+  const [state,setState]=useState(initialDraft?.state??'')
+  const [timezone,setTimezone]=useState(initialDraft?.timezone??'America/Sao_Paulo')
+  const [validatedPostalCode,setValidatedPostalCode]=useState(initialDraft?.validatedPostalCode??'')
+  const [postalStatus,setPostalStatus]=useState<'idle'|'loading'|'valid'|'invalid'>(initialDraft?.postalStatus??'idle')
   const [postalMessage,setPostalMessage]=useState('')
   const [attempted,setAttempted]=useState(false)
 
   useEffect(()=>{
-    if(!data)return
+    if(!data||initialDraft)return
     setName(data.name)
     setResponsible(data.responsible_name??'')
     setPostalCode(data.service_origin_postal_code??'')
@@ -150,7 +190,37 @@ function CompanyStep({onNext}:{onNext:()=>void}){
       setValidatedPostalCode(data.service_origin_postal_code)
       setPostalStatus('valid')
     }
-  },[data])
+  },[data,initialDraft])
+
+  useEffect(()=>{
+    if(!companyDraftKey)return
+    writeSessionDraft<CompanyDraft>(companyDraftKey,{
+      name,
+      responsible,
+      postalCode,
+      street,
+      neighborhood,
+      number,
+      city,
+      state,
+      timezone,
+      validatedPostalCode,
+      postalStatus:postalStatus==='loading'?'idle':postalStatus,
+    },4*60*60*1000)
+  },[
+    city,
+    companyDraftKey,
+    name,
+    neighborhood,
+    number,
+    postalCode,
+    postalStatus,
+    responsible,
+    state,
+    street,
+    timezone,
+    validatedPostalCode,
+  ])
 
   if(business.isPending)return <LoadingState/>
   if(business.isError||!data)return <ErrorState onRetry={()=>void business.refetch()}/>
@@ -217,6 +287,7 @@ function CompanyStep({onNext}:{onNext:()=>void}){
         service_origin_state:finalState,
         timezone,
       })
+      if(companyDraftKey)clearSessionDraft(companyDraftKey)
       await setup.refetch()
       onNext()
     }}>

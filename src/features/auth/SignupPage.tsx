@@ -1,30 +1,52 @@
 import { Eye, EyeOff } from 'lucide-react'
-import { useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { trackEvent } from '../../lib/tracking'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { BrandMark } from '../../components/BrandMark'
 import { LoadingState } from '../../components/LoadingState'
 import { PrimaryButton } from '../../components/PrimaryButton'
 import { ApiError } from '../../lib/httpClient'
+import { clearSessionDraft, readSessionDraft, writeSessionDraft } from '../forms/sessionDraft'
 import { LogoutRecovery } from './LogoutRecovery'
 import { SessionRecovery } from './SessionRecovery'
 import { homeFor } from './types'
 import { useAuth } from './useAuth'
 
+type SignupDraft = {
+  businessName:string
+  leadName:string
+  leadWhatsApp:string
+  email:string
+  idempotencyKey:string
+}
+
+const SIGNUP_DRAFT_KEY='alovia:signup:draft:v1'
+
 export function SignupPage() {
   const auth = useAuth()
   const navigate = useNavigate()
-  const [businessName, setBusinessName] = useState('')
-  const [leadName, setLeadName] = useState('')
-  const [leadWhatsApp, setLeadWhatsApp] = useState('')
-  const [email, setEmail] = useState('')
+  const initialDraft = useRef(readSessionDraft<SignupDraft>(SIGNUP_DRAFT_KEY)).current
+  const [businessName, setBusinessName] = useState(initialDraft?.businessName??'')
+  const [leadName, setLeadName] = useState(initialDraft?.leadName??'')
+  const [leadWhatsApp, setLeadWhatsApp] = useState(initialDraft?.leadWhatsApp??'')
+  const [email, setEmail] = useState(initialDraft?.email??'')
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
   const [visible, setVisible] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const idempotencyKey = useRef('')
+  const idempotencyKey = useRef(initialDraft?.idempotencyKey??'')
   const started = useRef(false)
+
+  useEffect(()=>{
+    writeSessionDraft<SignupDraft>(SIGNUP_DRAFT_KEY,{
+      businessName,
+      leadName,
+      leadWhatsApp,
+      email,
+      idempotencyKey:idempotencyKey.current,
+    })
+  },[businessName,email,leadName,leadWhatsApp])
 
   if (auth.state === 'logout_failed') return <LogoutRecovery />
   if (auth.state === 'unavailable') return <SessionRecovery />
@@ -66,6 +88,13 @@ export function SignupPage() {
     }
     const key = idempotencyKey.current || crypto.randomUUID()
     idempotencyKey.current = key
+    writeSessionDraft<SignupDraft>(SIGNUP_DRAFT_KEY,{
+      businessName,
+      leadName,
+      leadWhatsApp,
+      email,
+      idempotencyKey:key,
+    })
     let preserveAttempt = false
     setBusy(true)
     setError('')
@@ -79,6 +108,7 @@ export function SignupPage() {
         key,
       )
       idempotencyKey.current = ''
+      clearSessionDraft(SIGNUP_DRAFT_KEY)
       const createdMembership = createdUser.memberships.find(item=>item.business_id===createdUser.active_business_id)
       const preactivation = createdMembership?.access_mode === 'free'
         && createdMembership?.has_had_operational_access !== true
@@ -108,7 +138,16 @@ export function SignupPage() {
     } catch (failure) {
       const transient = failure instanceof ApiError && (failure.status === 0 || failure.status >= 500)
       preserveAttempt = transient
-      if (!transient) idempotencyKey.current = ''
+      if (!transient) {
+        idempotencyKey.current = ''
+        writeSessionDraft<SignupDraft>(SIGNUP_DRAFT_KEY,{
+          businessName,
+          leadName,
+          leadWhatsApp,
+          email,
+          idempotencyKey:'',
+        })
+      }
       trackEvent('signup_failed', {reason: failure instanceof ApiError ? String(failure.status) : 'unknown'}, {surface:'signup'})
       setError(
         failure instanceof ApiError && failure.status === 409

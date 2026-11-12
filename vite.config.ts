@@ -80,6 +80,9 @@ export default defineConfig({
         navigateFallbackAllowlist: [/^\/$/, /^\/app(?:\/|$)/, /^\/login$/, /^\/criar-conta$/, /^\/admin(?:\/|$)/],
         navigateFallbackDenylist: [/^\/api(?:\/|$)/, /^\/auth(?:\/|$)/, /^\/internal(?:\/|$)/],
         runtimeCaching: [],
+        // Escape stale installed PWAs: activate the new worker immediately, but
+        // let the current page keep running until the next navigation/reload.
+        skipWaiting: true,
         cleanupOutdatedCaches: true,
       },
     }),
