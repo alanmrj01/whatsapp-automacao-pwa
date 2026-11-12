@@ -47,8 +47,17 @@ export function AppShell() {
   const title = titles[pathname] ?? 'Conectar WhatsApp'
 
   useEffect(() => {
-    const accessUntil = subscription.data?.access_until
-    if (!entitlement.isPaid || !accessUntil) return
+    if (!entitlement.isPaid) return
+    const current = subscription.data
+    const blockedByBilling = current?.status === 'past_due'
+      || current?.status === 'suspended'
+      || current?.refund_status === 'refunded'
+    if (blockedByBilling) {
+      void syncSession().catch(() => undefined)
+      return
+    }
+    const accessUntil = current?.access_until
+    if (!accessUntil) return
     let timer:number | undefined
     const synchronizeAtExpiry = () => {
       const remaining = new Date(accessUntil).getTime() - Date.now()
@@ -65,7 +74,13 @@ export function AppShell() {
     return () => {
       if (timer) window.clearTimeout(timer)
     }
-  }, [entitlement.isPaid, subscription.data?.access_until, syncSession])
+  }, [
+    entitlement.isPaid,
+    subscription.data?.access_until,
+    subscription.data?.refund_status,
+    subscription.data?.status,
+    syncSession,
+  ])
 
   if (isConversationDetail) {
     return (
