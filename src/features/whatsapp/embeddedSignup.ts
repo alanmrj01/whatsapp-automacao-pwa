@@ -177,6 +177,10 @@ function openEmbeddedSignup(
     const finish = (error?: Error) => {
       if (settled) return
       settled = true
+      if (!error && authorizationCode && popupWindow && !popupWindow.closed) {
+        try { popupWindow.close() } catch {}
+        try { runtime.focus() } catch {}
+      }
       cleanup()
       if (error) reject(error)
       else if (authorizationCode) {
