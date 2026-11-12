@@ -233,6 +233,7 @@ export function CheckoutPage() {
   const [initialPaymentReceived,setInitialPaymentReceived]=useState(false)
   const [cancelingPix,setCancelingPix]=useState(false)
   const [pixReconciliationPending,setPixReconciliationPending]=useState(false)
+  const [recoveredCheckout,setRecoveredCheckout]=useState(false)
   const payerDocumentRef=useRef<HTMLInputElement|null>(null)
   const payerPhoneRef=useRef<HTMLInputElement|null>(null)
   const postalCodeRef=useRef<HTMLInputElement|null>(null)
@@ -302,6 +303,59 @@ export function CheckoutPage() {
     }
   },[cycleParam,planId])
 
+  const restoreActivePixCheckout=useCallback(async()=>{
+    if(!isPlanId(planId)||!isBillingCycle(cycleParam)||!isPurchasablePlan(planId))return
+    const methods:PaymentMethod[]=PIX_AUTOMATIC_ENABLED?['pix','pix_automatic']:['pix']
+    for(const method of methods) {
+      const query=new URLSearchParams({
+        plan:planId,
+        cycle:cycleParam,
+        payment_method:method,
+      })
+      try {
+        const recovered=await api.request<CheckoutResponse>(
+          `/billing/checkouts/active?${query.toString()}`,
+        )
+        if(
+          recovered.payment_method!==method||
+          recovered.checkout_mode!=='pix'||
+          !recovered.pix_payload?.trim()
+        )continue
+        viewedPixCheckoutIds.current.add(recovered.checkout_id)
+        setRecoveredCheckout(true)
+        setPaymentMethod(method)
+        setCheckout(recovered)
+        setPixStatus('active')
+        setInitialPaymentReceived(recovered.initial_payment_received===true)
+        setCopyState('idle')
+        setError(null)
+        setOpenStep(2)
+        return
+      } catch (caught) {
+        if(caught instanceof ApiError&&caught.status===404)continue
+        trackEvent('checkout_recovery_failed',{
+          reason:caught instanceof ApiError
+            ?caught.status===401
+              ?'session_expired'
+              :caught.status===0
+                ?'network_error'
+                :caught.status>=500
+                  ?'server_error'
+                  :`http_${caught.status}`
+            :'unknown',
+          plan:planId,
+          billing_cycle:cycleParam,
+          payment_method:method,
+        },{
+          surface:'checkout',
+          businessId:trackingIdentity.current.businessId,
+          userId:trackingIdentity.current.userId,
+        })
+        return
+      }
+    }
+  },[cycleParam,planId])
+
   useEffect(()=>{
     if(!validSelection)return
     trackEventOnce(
@@ -320,7 +374,8 @@ export function CheckoutPage() {
       'session',
     )
     void loadProfile()
-  },[cycleParam,loadProfile,planId,user?.active_business_id,user?.id,validSelection])
+    void restoreActivePixCheckout()
+  },[cycleParam,loadProfile,planId,restoreActivePixCheckout,user?.active_business_id,user?.id,validSelection])
 
   const prepareCheckout=useCallback(async({
     method,
@@ -362,6 +417,7 @@ export function CheckoutPage() {
         !nextCheckout.pix_payload?.trim()||
         (method==='pix_automatic'&&!nextCheckout.pix_authorization_id)
       ))throw new Error('Invalid Pix checkout')
+      setRecoveredCheckout(false)
       setCheckout(nextCheckout)
       setPixStatus(method==='pix'||method==='pix_automatic'?'active':null)
       setInitialPaymentReceived(nextCheckout.initial_payment_received===true)
@@ -667,6 +723,7 @@ export function CheckoutPage() {
     setCopyState('idle')
     setInitialPaymentReceived(false)
     setPixReconciliationPending(false)
+    setRecoveredCheckout(false)
   }
 
   const prepareCardCheckout=(key:string)=>prepareCheckout({
@@ -1069,20 +1126,21 @@ export function CheckoutPage() {
         {!profileLoading&&!checkoutLoading&&!expired&&!hostedCheckout&&profile&&<form className="native-checkout-form" onSubmit={submit} noValidate>
           <IdentificationStep
             open={openStep===1}
-            complete={identificationComplete}
+            complete={identificationComplete||recoveredCheckout}
             profile={profile}
             values={{payerName,payerDocument,payerPhone,postalCode,addressNumber,addressComplement,cardHolderName}}
             refs={{payerDocumentRef,payerPhoneRef,postalCodeRef,addressNumberRef,addressComplementRef,cardHolderNameRef}}
-            onOpen={()=>setOpenStep(1)}
+            onOpen={()=>{if(!recoveredCheckout)setOpenStep(1)}}
             onAdvance={()=>{if(identificationComplete)setOpenStep(2)}}
             setters={{setPayerName,setPayerDocument,setPayerPhone,setPostalCode,setAddressNumber,setAddressComplement,setCardHolderName}}
             focusCard={paymentMethod==='credit_card'&&NATIVE_CARD_CHECKOUT_ENABLED}
+            recovered={recoveredCheckout}
           />
 
           <section className={`native-checkout-card checkout-accordion-card${openStep===2?' is-open':''}`}>
-            <button className="checkout-section-toggle" type="button" aria-expanded={openStep===2} aria-controls="checkout-payment-fields" disabled={!identificationComplete} onClick={()=>identificationComplete&&setOpenStep(2)}>
+            <button className="checkout-section-toggle" type="button" aria-expanded={openStep===2} aria-controls="checkout-payment-fields" disabled={!identificationComplete&&!recoveredCheckout} onClick={()=>{if(identificationComplete||recoveredCheckout)setOpenStep(2)}}>
               <span className="checkout-step-number">2</span>
-              <span className="checkout-step-copy"><strong>{paymentMethod==='pix_automatic'?'Pix Automático':paymentMethod==='pix'?'Pix':'Cartão de crédito'}</strong><small>{identificationComplete?paymentMethod==='pix_automatic'?'Pague o primeiro Pix e autorize as próximas renovações automaticamente.':paymentMethod==='pix'?'Pague agora por Pix. Na renovação, gere um novo Pix para continuar.':NATIVE_CARD_CHECKOUT_ENABLED?'Cobrança recorrente processada pelo Asaas.':'Você será redirecionado para o ambiente seguro do Asaas.':'Conclua a identificação primeiro'}</small></span>
+              <span className="checkout-step-copy"><strong>{paymentMethod==='pix_automatic'?'Pix Automático':paymentMethod==='pix'?'Pix':'Cartão de crédito'}</strong><small>{identificationComplete||recoveredCheckout?paymentMethod==='pix_automatic'?'Pague o primeiro Pix e autorize as próximas renovações automaticamente.':paymentMethod==='pix'?'Pague agora por Pix. Na renovação, gere um novo Pix para continuar.':NATIVE_CARD_CHECKOUT_ENABLED?'Cobrança recorrente processada pelo Asaas.':'Você será redirecionado para o ambiente seguro do Asaas.':'Conclua a identificação primeiro'}</small></span>
               {openStep===2?<ChevronUp size={20}/>:<ChevronDown size={20}/>}
             </button>
 
@@ -1101,7 +1159,7 @@ export function CheckoutPage() {
                   remaining={remaining}
                   error={error}
                   submitting={submitting}
-                  identificationComplete={identificationComplete}
+                  identificationComplete={identificationComplete||recoveredCheckout}
                   adminAccessNotice={adminAccessNotice}
                   planName={plan.name}
                   cycleLabel={cycle?.label??''}
@@ -1178,12 +1236,13 @@ type IdentificationProps = {
   onOpen:()=>void
   onAdvance:()=>void
   focusCard:boolean
+  recovered:boolean
 }
 
-function IdentificationStep({open,complete,profile,values,refs,setters,onOpen,onAdvance,focusCard}:IdentificationProps) {
+function IdentificationStep({open,complete,profile,values,refs,setters,onOpen,onAdvance,focusCard,recovered}:IdentificationProps) {
   return <section className={`native-checkout-card checkout-accordion-card${open?' is-open':''}`}>
-    <button className="checkout-section-toggle" type="button" aria-expanded={open} aria-controls="checkout-identification-fields" onClick={onOpen}>
-      <span className="checkout-step-number">{complete?<Check size={16}/>:1}</span><span className="checkout-step-copy"><strong>Identificação</strong><small>{complete?'Dados preenchidos':'Preencha seus dados para continuar'}</small></span>{open?<ChevronUp size={20}/>:<ChevronDown size={20}/>}
+    <button className="checkout-section-toggle" type="button" aria-expanded={open} aria-controls="checkout-identification-fields" onClick={onOpen} disabled={recovered}>
+      <span className="checkout-step-number">{complete?<Check size={16}/>:1}</span><span className="checkout-step-copy"><strong>Identificação</strong><small>{recovered?'Dados preservados nesta cobrança':complete?'Dados preenchidos':'Preencha seus dados para continuar'}</small></span>{open?<ChevronUp size={20}/>:<ChevronDown size={20}/>}
     </button>
     <div id="checkout-identification-fields" className="checkout-accordion-content" hidden={!open}>
       <div className="checkout-field-grid">
