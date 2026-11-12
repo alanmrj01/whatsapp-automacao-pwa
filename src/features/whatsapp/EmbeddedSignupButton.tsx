@@ -285,6 +285,7 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
         open={showMetaNotice}
         title="Antes de abrir a Meta"
         onClose={() => setShowMetaNotice(false)}
+        dismissible={false}
       >
         <div className="meta-signup-warning">
           Ao finalizar o fluxo da meta, clique na opção de 'concluir', não adicione nenhuma forma de pagamento ainda
