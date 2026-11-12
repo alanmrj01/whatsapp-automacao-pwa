@@ -76,6 +76,7 @@ test('commercial copy matches the Basic MVP and planned Plus offer', () => {
   assert.match(prompt,/600 mensagens por mês/)
   assert.doesNotMatch(prompt,/mensagens de serviço|mensagens de utilidade/)
   assert.match(page,/Em breve/)
+  assert.doesNotMatch(page,/O Plus está planejado para a próxima etapa do produto/)
   assert.match(catalog,/monthlyMessageLimit:600/)
   assert.match(catalog,/monthlyMessageLimit:1000/)
   assert.match(catalog,/Suporte para PMOC recorrente/)
@@ -89,8 +90,9 @@ test('commercial copy matches the Basic MVP and planned Plus offer', () => {
   assert.match(landing,/Oferta automática de PMOC para clientes com histórico de PMOC/)
 
   for (const signup of [coexistence,apiOnly]) {
-    assert.match(signup,/Adicionar forma de pagamento/)
-    assert.match(signup,/Toque em “Concluir”/)
-    assert.match(signup,/não é o pagamento da Alovia/)
+    assert.match(signup,/BottomSheet/)
+    assert.match(signup,/Ao finalizar o fluxo da meta, clique na opção de 'concluir', não adicione nenhuma forma de pagamento ainda/)
+    assert.match(signup,/>\s*Continuar\s*</)
+    assert.doesNotMatch(signup,/Na etapa final da Meta/)
   }
 })
