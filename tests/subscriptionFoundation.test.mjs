@@ -78,6 +78,8 @@ test('Basic is purchasable while planned Plus communicates simple allowances', (
   assert.match(checkout,/if\(!isPurchasablePlan\(planId\)\)/)
   assert.match(checkout,/unavailable=\$\{planId\}/)
   assert.match(checkout,/identificationAutoAdvanced/)
+  assert.doesNotMatch(checkout,/onBlur=\{onAdvance\}/)
+  assert.doesNotMatch(checkout,/onAdvance:\(\)=>void/)
   assert.match(checkout,/Expira em/)
   assert.doesNotMatch(checkout,/automatic&&props\.remaining!==null/)
   assert.match(router,/path="\/app\/checkout" element=\{<CheckoutPage \/>\}/)
