@@ -7,11 +7,13 @@ import { useEntitlements } from '../access/useEntitlements'
 import { SessionActions } from '../auth/SessionActions'
 import { useUpgradePrompt } from '../access/upgradePromptContext'
 import { useProductState } from '../product/productState'
+import { formatPlanRenewalDate, useSubscriptionStatus } from '../billing/api'
 
 export function MorePage(){
   const {state,membership,connection,setup}=useProductState()
   const entitlement=useEntitlements()
   const {openUpgrade}=useUpgradePrompt()
+  const subscription=useSubscriptionStatus()
   const paid=entitlement.isPaid
   const canExplore=paid||entitlement.usesDemoData
   const whatsappReady=connection.data?.status==='connected'||setup.data?.whatsapp||state==='ACTIVE'
@@ -21,6 +23,7 @@ export function MorePage(){
   const connectionLabel=connection.isPending?'Consultando':connection.isError||connection.data?.status==='error'?'Atenção necessária':connection.data?.status==='pending'?'Conectando':whatsappReady?'Conectado':'Não conectado'
   const planLabel=paid?'Acesso liberado':entitlement.isReadOnlyRetained?'Acesso pausado':'Gratuito'
   const gated=(label:string)=>()=>openUpgrade(label)
+  const renewalDate=formatPlanRenewalDate(subscription.data?.access_until)
 
   return <div className="page-stack operational-page compact-page">
     <section className="operational-heading"><div><span className="eyebrow">{membership?.business_name??'Sua empresa'}</span><h1>Configurações</h1></div><ActivateAloviaCta/></section>
@@ -64,5 +67,9 @@ export function MorePage(){
     <section className="settings-logout-section" aria-label="Sessão">
       <SessionActions/>
     </section>
+    {renewalDate&&<section className="plan-renewal-summary" aria-label="Renovação do plano">
+      <span>Renovação do plano</span>
+      <strong>{renewalDate}</strong>
+    </section>}
   </div>
 }
