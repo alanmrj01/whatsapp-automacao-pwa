@@ -28,7 +28,7 @@ import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { BrandMark } from '../../components/BrandMark'
 import { api } from '../../lib/api'
 import { ApiError } from '../../lib/httpClient'
-import { clearSessionDraft, readSessionDraft, writeSessionDraft } from '../../lib/sessionDraft'
+import { clearSessionDraft, readSessionDraft, writeSessionDraft } from '../forms/sessionDraft'
 import { trackEvent, trackEventOnce } from '../../lib/tracking'
 import { useAuth } from '../auth/useAuth'
 import {
