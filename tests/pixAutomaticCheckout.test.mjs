@@ -7,6 +7,10 @@ import {
   isTerminalCheckoutStatus,
   PIX_STATUS_POLL_MS,
 } from '../src/features/billing/pixAutomatic.ts'
+import {
+  cyclePrice,
+  plans,
+} from '../src/features/billing/planCatalog.ts'
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url),'utf8')
 
@@ -253,3 +257,22 @@ test('common Pix does not promise automatic renewal generation',()=>{
   assert.match(checkout,/Renovação manual por Pix a cada ciclo/)
 })
 
+
+
+test('Basic keeps the approved 147,90 base price while cycles and Plus stay unchanged',()=>{
+  const basic=plans.find(plan=>plan.id==='basic')
+  const plus=plans.find(plan=>plan.id==='plus')
+
+  assert.ok(basic)
+  assert.ok(plus)
+  assert.equal(basic.monthlyPrice,147.9)
+  assert.equal(cyclePrice(basic,'monthly').total,147.9)
+  assert.equal(cyclePrice(basic,'quarterly').total,399.33)
+  assert.equal(cyclePrice(basic,'annual').total,1508.58)
+  assert.equal(plus.monthlyPrice,397)
+  assert.equal(cyclePrice(plus,'quarterly').total,1071.9)
+  assert.equal(cyclePrice(plus,'annual').total,4049.4)
+
+  const prompt=read('src/features/access/UpgradePrompt.tsx')
+  assert.match(prompt,/Basic: R\$ 147,90\/mês/)
+})
