@@ -75,6 +75,17 @@ test('Meta coexistence keeps the provider launch inside the user gesture and sup
   assert.match(sdk,/featureType:\s*'whatsapp_business_app_onboarding'/)
 })
 
+test('mobile resume reuses the persisted server attempt when browser memory is lost', () => {
+  const button=read('src/features/whatsapp/EmbeddedSignupButton.tsx')
+  assert.match(button,/const reuseServerAttemptRef=useRef\(false\)/)
+  assert.match(button,/setResumeAvailable\(Boolean\(connection\.onboarding_attempt_id\)\)/)
+  assert.match(button,/const persistedAttemptId=reuseServerAttemptRef\.current/)
+  assert.match(button,/persistedAttemptId\s*\? Promise\.resolve\(null\)/)
+  assert.match(button,/else if \(serverAttemptIdRef\.current\)/)
+  assert.match(button,/reuseServerAttemptRef\.current=true/)
+  assert.match(button,/void run\(\)\.catch\(\(\) => \{\}\)/)
+})
+
 test('server validation is passive and does not ask the user to reopen Meta', () => {
   const journey=read('src/features/whatsapp/connectionJourney.ts')
   const page=read('src/features/whatsapp/WhatsAppPage.tsx')
