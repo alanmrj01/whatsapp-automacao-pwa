@@ -19,14 +19,21 @@ test('service worker uses only static precache and excludes private routes', () 
   assert.match(config, /globPatterns: \['\*\*\/\*\.\{js,css,html,svg,woff2\}'\]/)
 })
 
-test('client source has no persistent token storage or internal API calls', () => {
+test('client source keeps auth out of browser storage and isolates audited form drafts', () => {
   function sources(dir) {
     return readdirSync(dir,{withFileTypes:true}).flatMap(entry => entry.isDirectory()
       ? sources(join(dir,entry.name)) : /\.[jt]sx?$/.test(entry.name) ? [join(dir,entry.name)] : [])
   }
+  const allowedDraftFile=fileURLToPath(new URL('../src/features/forms/sessionDraft.ts', import.meta.url))
   for (const file of sources(fileURLToPath(new URL('../src/', import.meta.url)))) {
     const content = readFileSync(file,'utf8')
-    assert.doesNotMatch(content, /\b(localStorage|sessionStorage|indexedDB)\b/, file)
+    if(file===allowedDraftFile) {
+      assert.match(content,/window\.sessionStorage/)
+      assert.doesNotMatch(content,/\b(localStorage|indexedDB)\b/)
+      assert.doesNotMatch(content,/bearer|authorization|access[_-]?token|refresh[_-]?token|password|cardNumber|ccv/i)
+    } else {
+      assert.doesNotMatch(content, /\b(localStorage|sessionStorage|indexedDB)\b/, file)
+    }
     assert.doesNotMatch(content, /['"`]\/internal\//, file)
   }
 })
