@@ -21,10 +21,10 @@ test('pending banner continues to one explicit Meta authorization action', () =>
   assert.match(whatsapp,/continueConnection/)
   assert.match(whatsapp,/business\?auto=1/)
   assert.match(coexistence,/autoStart=\{searchParams\.get\('auto'\)==='1'\}/)
-  assert.match(embedded,/Continuar com a Meta/)
-  assert.match(embedded,/embedded-signup\/redirect\/start/)
-  assert.match(embedded,/window\.location\.assign/)
-  assert.doesNotMatch(embedded,/launchMetaEmbeddedSignup/)
+  assert.match(embedded,/Abrir a Meta e concluir conexão/)
+  assert.match(embedded,/launchMetaEmbeddedSignup/)
+  assert.doesNotMatch(embedded,/embedded-signup\/redirect\/start/)
+  assert.doesNotMatch(embedded,/window\.location\.assign/)
 })
 
 test('backend connected state immediately overrides stale local signup state', () => {
@@ -40,13 +40,15 @@ test('backend connected state immediately overrides stale local signup state', (
   assert.match(connection,/status === 'pending' \? 3_000 : false/)
 })
 
-test('coexistence authorization delegates OAuth completion to the server redirect callback', () => {
+test('coexistence authorization uses Meta Embedded Signup popup semantics', () => {
   const embedded=read('src/features/whatsapp/EmbeddedSignupButton.tsx')
-  assert.match(embedded,/embedded-signup\/redirect\/start/)
-  assert.match(embedded,/window\.location\.assign\(redirect\.authorization_url\)/)
-  assert.match(embedded,/redirect\.attempt_id !== pending\.onboarding_attempt_id/)
-  assert.doesNotMatch(embedded,/launchMetaEmbeddedSignup/)
-  assert.doesNotMatch(embedded,/embedded-signup\/complete/)
+  const sdk=read('src/features/whatsapp/embeddedSignup.ts')
+  assert.match(embedded,/launchMetaEmbeddedSignup/)
+  assert.match(embedded,/embedded-signup\/complete/)
+  assert.match(sdk,/featureType:\s*'whatsapp_business_app_onboarding'/)
+  assert.match(sdk,/configuration\.mode === 'coexistence'/)
+  assert.doesNotMatch(embedded,/embedded-signup\/redirect\/start/)
+  assert.doesNotMatch(embedded,/window\.location\.assign/)
 })
 
 test('every coexistence Embedded Signup is correlated to one server attempt', () => {
@@ -57,28 +59,20 @@ test('every coexistence Embedded Signup is correlated to one server attempt', ()
   assert.match(types,/wait_for_completion/)
   assert.match(button,/Idempotency-Key/)
   assert.match(button,/crypto\.randomUUID\(\)/)
-  assert.match(button,/attempt_id:pending\.onboarding_attempt_id/)
-  assert.match(button,/redirect\.attempt_id !== pending\.onboarding_attempt_id/)
-  assert.match(button,/return_to_onboarding:fromOnboarding/)
+  assert.match(button,/serverAttemptIdRef\.current=pending\.onboarding_attempt_id/)
+  assert.match(button,/body:JSON\.stringify\(\{attempt_id:attemptId,\.\.\.result\}\)/)
 })
 
-test('Meta coexistence uses full-page redirect so mobile completion does not depend on popup memory', () => {
+test('Meta coexistence keeps the provider launch inside the user gesture and supports mobile resume', () => {
   const button=read('src/features/whatsapp/EmbeddedSignupButton.tsx')
-  assert.match(button,/const beginRedirectSignup = useCallback/)
-  assert.match(button,/embedded-signup\/attempt/)
-  assert.match(button,/embedded-signup\/redirect\/start/)
-  assert.match(button,/window\.location\.assign\(redirect\.authorization_url\)/)
-  assert.doesNotMatch(button,/resumeMetaEmbeddedSignup/)
-  assert.doesNotMatch(button,/popupWindow/)
-})
-
-test('mobile connection state is server-authoritative across Meta redirect navigation', () => {
-  const button=read('src/features/whatsapp/EmbeddedSignupButton.tsx')
-  assert.match(button,/const liveConnection = useConnection\(\)/)
-  assert.match(button,/if \(liveConnection\.data\) applyServerConnection\(liveConnection\.data\)/)
-  assert.match(button,/window\.location\.assign\(redirect\.authorization_url\)/)
-  assert.doesNotMatch(button,/reuseServerAttemptRef/)
-  assert.doesNotMatch(button,/resumeMetaEmbeddedSignup/)
+  const sdk=read('src/features/whatsapp/embeddedSignup.ts')
+  assert.match(button,/const providerPromise=launchMetaEmbeddedSignup/)
+  assert.match(button,/const attemptPromise=api\.request/)
+  assert.match(button,/Promise\.all\(\[attemptPromise, providerPromise\]\)/)
+  assert.match(button,/resumeMetaEmbeddedSignup/)
+  assert.match(sdk,/popup_closed/)
+  assert.match(sdk,/window_focus/)
+  assert.match(sdk,/featureType:\s*'whatsapp_business_app_onboarding'/)
 })
 
 test('server validation is passive and does not ask the user to reopen Meta', () => {
