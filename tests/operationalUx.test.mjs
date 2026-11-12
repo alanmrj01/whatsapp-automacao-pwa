@@ -75,7 +75,7 @@ test('paid WhatsApp connection supports explicit disconnect while demo education
   assert.match(whatsapp,/Desconectar WhatsApp/)
   assert.match(whatsapp,/Confirmar desconexão/)
   assert.match(connection,/\/whatsapp\/disconnect/)
-  assert.match(whatsapp,/entitlement\.usesDemoData&&<section className="alovia-flow"/)
+  assert.match(whatsapp,/entitlement\.usesDemoData&&!preactivation&&<section className="alovia-flow"/)
 })
 
 test('materials onboarding supports an explicit no-separate-charge decision and simple units', () => {
