@@ -26,7 +26,7 @@ test('free demo and former operational account are different states', () => {
 
 test('commercial catalog uses Basic and Plus with quarterly as default', () => {
   assert.equal(defaultBillingCycle,'quarterly')
-  assert.deepEqual(plans.map(plan=>[plan.id,plan.monthlyPrice]),[['basic',197],['plus',397]])
+  assert.deepEqual(plans.map(plan=>[plan.id,plan.monthlyPrice]),[['basic',147.9],['plus',397]])
   assert.equal(billingCycles.find(item=>item.id==='quarterly')?.discount,0.10)
   assert.equal(billingCycles.find(item=>item.id==='quarterly')?.badge,'Recomendado')
   assert.equal(billingCycles.find(item=>item.id==='annual')?.discount,0.15)
@@ -34,8 +34,8 @@ test('commercial catalog uses Basic and Plus with quarterly as default', () => {
 
   const basic = plans.find(plan=>plan.id==='basic')
   const plus = plans.find(plan=>plan.id==='plus')
-  assert.equal(cyclePrice(basic,'quarterly').total,531.9)
-  assert.equal(cyclePrice(basic,'annual').total,2009.4)
+  assert.equal(cyclePrice(basic,'quarterly').total,399.33)
+  assert.equal(cyclePrice(basic,'annual').total,1508.58)
   assert.equal(cyclePrice(plus,'quarterly').total,1071.9)
   assert.equal(cyclePrice(plus,'annual').total,4049.4)
   assert.equal(isPurchasablePlan('basic'),true)
