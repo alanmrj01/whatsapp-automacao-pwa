@@ -1,8 +1,9 @@
-import { lazy, Suspense, type ReactNode } from 'react'
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { lazy, Suspense, useEffect, type ReactNode } from 'react'
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
 import { useEntitlements } from '../features/access/useEntitlements'
+import { useUpgradePrompt } from '../features/access/upgradePromptContext'
 import { ProtectedRoute, RoleGuard } from '../features/auth/ProtectedRoute'
 import { useSetupStatus } from '../features/operations/api'
 
@@ -52,10 +53,21 @@ function PaidOperationalGuard({children}:{children:ReactNode}) {
   return entitlement.isPaid ? children : <Navigate to="/app/mais" replace/>
 }
 
-function DemoOrPaidRoute({demo,paid}:{demo:ReactNode;paid:ReactNode}) {
+function UpgradeRequiredRoute({fallback}:{fallback:string}) {
+  const {openUpgrade}=useUpgradePrompt()
+  const navigate=useNavigate()
+  useEffect(()=>{
+    openUpgrade('Este recurso')
+    navigate(fallback,{replace:true})
+  },[fallback,navigate,openUpgrade])
+  return null
+}
+
+function DemoOrPaidRoute({demo,paid,fallback='/app'}:{demo:ReactNode;paid:ReactNode;fallback?:string}) {
   const entitlement = useEntitlements()
   if(entitlement.usesDemoData)return demo
   if(entitlement.isPaid)return paid
+  if(entitlement.isReadOnlyRetained)return <UpgradeRequiredRoute fallback={fallback}/>
   return <Navigate to="/app/mais" replace/>
 }
 
@@ -96,7 +108,7 @@ export function AppRouter() {
             <Route index element={<DashboardPage />} />
             <Route path="agenda" element={<AgendaPage />} />
             <Route path="conversas" element={<ConversationsPage />} />
-            <Route path="conversas/:conversationId" element={<DemoOrPaidRoute demo={<DemoConversationDetailPage/>} paid={<ConversationDetailPage/>}/>} />
+            <Route path="conversas/:conversationId" element={<DemoOrPaidRoute demo={<DemoConversationDetailPage/>} paid={<ConversationDetailPage/>} fallback="/app/conversas"/>} />
             <Route path="whatsapp" element={<WhatsAppPage />} />
             <Route path="whatsapp/business" element={<RoleGuard><CoexistenceInfoPage /></RoleGuard>} />
             <Route path="whatsapp/exclusivo" element={<RoleGuard><ApiOnlyInfoPage /></RoleGuard>} />
@@ -105,14 +117,14 @@ export function AppRouter() {
             <Route path="mais/usuario" element={<UserSettingsPage />} />
             <Route path="mais/seguranca" element={<SecuritySettingsPage />} />
             <Route path="mais/privacidade" element={<PrivacySettingsPage />} />
-            <Route path="mais/empresa" element={<DemoOrPaidRoute demo={<DemoSettingsPreviewPage kind="company"/>} paid={<CompanySettingsPage/>}/>} />
-            <Route path="mais/servicos" element={<DemoOrPaidRoute demo={<DemoSettingsPreviewPage kind="services"/>} paid={<ServiceCatalogPage/>}/>} />
-            <Route path="mais/catalogo" element={<DemoOrPaidRoute demo={<DemoSettingsPreviewPage kind="materials"/>} paid={<MaterialsCatalogPage/>}/>} />
-            <Route path="mais/horarios" element={<DemoOrPaidRoute demo={<DemoSettingsPreviewPage kind="hours"/>} paid={<WorkingHoursSettingsPage/>}/>} />
-            <Route path="mais/automacao" element={<DemoOrPaidRoute demo={<DemoSettingsPreviewPage kind="assistant"/>} paid={<AutomationSettingsPage/>}/>} />
-            <Route path="mais/relacionamento" element={<DemoOrPaidRoute demo={<DemoSettingsPreviewPage kind="preventives"/>} paid={<CustomerOutreachPage/>}/>} />
-            <Route path="mais/equipe" element={<DemoOrPaidRoute demo={<DemoSettingsPreviewPage kind="team"/>} paid={<TeamSettingsPage/>}/>} />
-            <Route path="mais/agenda" element={<DemoOrPaidRoute demo={<DemoSettingsPreviewPage kind="agenda"/>} paid={<AgendaSettingsPage/>}/>} />
+            <Route path="mais/empresa" element={<DemoOrPaidRoute demo={<DemoSettingsPreviewPage kind="company"/>} paid={<CompanySettingsPage/>} fallback="/app/mais"/>} />
+            <Route path="mais/servicos" element={<DemoOrPaidRoute demo={<DemoSettingsPreviewPage kind="services"/>} paid={<ServiceCatalogPage/>} fallback="/app/mais"/>} />
+            <Route path="mais/catalogo" element={<DemoOrPaidRoute demo={<DemoSettingsPreviewPage kind="materials"/>} paid={<MaterialsCatalogPage/>} fallback="/app/mais"/>} />
+            <Route path="mais/horarios" element={<DemoOrPaidRoute demo={<DemoSettingsPreviewPage kind="hours"/>} paid={<WorkingHoursSettingsPage/>} fallback="/app/mais"/>} />
+            <Route path="mais/automacao" element={<DemoOrPaidRoute demo={<DemoSettingsPreviewPage kind="assistant"/>} paid={<AutomationSettingsPage/>} fallback="/app/mais"/>} />
+            <Route path="mais/relacionamento" element={<DemoOrPaidRoute demo={<DemoSettingsPreviewPage kind="preventives"/>} paid={<CustomerOutreachPage/>} fallback="/app/mais"/>} />
+            <Route path="mais/equipe" element={<DemoOrPaidRoute demo={<DemoSettingsPreviewPage kind="team"/>} paid={<TeamSettingsPage/>} fallback="/app/mais"/>} />
+            <Route path="mais/agenda" element={<DemoOrPaidRoute demo={<DemoSettingsPreviewPage kind="agenda"/>} paid={<AgendaSettingsPage/>} fallback="/app/mais"/>} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/app" replace />} />
