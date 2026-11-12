@@ -701,3 +701,21 @@
   color: var(--color-text);
   font-size: .9rem;
 }
+
+
+.meta-signup-warning {
+  padding: 13px 14px;
+  border: 1px solid #e6c65c;
+  border-radius: var(--radius-md);
+  color: #5c4300;
+  background: #fff4c2;
+  font-size: .86rem;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.meta-signup-continue {
+  width: 100%;
+  margin-top: 12px;
+  justify-content: center;
+}
