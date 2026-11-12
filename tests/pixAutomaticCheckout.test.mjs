@@ -29,6 +29,23 @@ test('Pix comum is the production default and Pix Automático stays fail-closed'
   assert.doesNotMatch(profileLoader,/\/billing\/checkouts/)
 })
 
+test('active Pix survives page reload by recovering the server checkout without browser storage',()=>{
+  const checkout=read('src/features/billing/CheckoutPage.tsx')
+  const recovery=checkout.match(/const restoreActivePixCheckout=useCallback[\s\S]*?\},\[cycleParam,planId\]\)/)?.[0]??''
+
+  assert.match(recovery,/\/billing\/checkouts\/active\?/)
+  assert.match(recovery,/payment_method:method/)
+  assert.match(recovery,/setCheckout\(recovered\)/)
+  assert.match(recovery,/setPaymentMethod\(method\)/)
+  assert.match(recovery,/setPixStatus\('active'\)/)
+  assert.match(recovery,/setOpenStep\(2\)/)
+  assert.match(recovery,/viewedPixCheckoutIds\.current\.add\(recovered\.checkout_id\)/)
+  assert.match(checkout,/Dados preservados nesta cobrança/)
+  assert.match(checkout,/complete=\{identificationComplete\|\|recoveredCheckout\}/)
+  assert.match(checkout,/disabled=\{!identificationComplete&&!recoveredCheckout\}/)
+  assert.doesNotMatch(recovery,/localStorage|sessionStorage|indexedDB|payerDocument|cpf|cnpj/i)
+})
+
 test('Pix creation sends only the supported identification contract with its own idempotency key',()=>{
   const checkout=read('src/features/billing/CheckoutPage.tsx')
 
