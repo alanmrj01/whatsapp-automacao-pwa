@@ -21,6 +21,7 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
   let loggingOut: Promise<void> | null = null
   let blocked = false
   let onExpired = () => {}
+  let onPaymentRequired = () => {}
   const base = baseUrl.replace(/\/$/, '') + '/api/v1'
 
   function clear() { token = null; blocked = true; generation++ }
@@ -136,6 +137,7 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
       response = await raw(path, options, token)
       if (response.status === 401 && generation === expected) expire()
     }
+    if (response.status === 402) onPaymentRequired()
     const value = await body<T>(response)
     if (generation !== expected) throw new ApiError(401)
     return value
@@ -156,6 +158,7 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
       response = await raw(normalizedPath, options, token, 60_000)
       if (response.status === 401 && generation === expected) expire()
     }
+    if (response.status === 402) onPaymentRequired()
     if (!response.ok) throw new ApiError(response.status)
     const value = await response.blob()
     if (generation !== expected) throw new ApiError(401)
@@ -203,6 +206,7 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
       })
     },
     onExpired(listener: () => void) { onExpired = listener },
+    onPaymentRequired(listener: () => void) { onPaymentRequired = listener },
     async login<T = unknown>(email: string, password: string) {
       return startAuthentication<T>('/auth/login', {email,password})
     },
