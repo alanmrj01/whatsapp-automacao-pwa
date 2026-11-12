@@ -15,6 +15,8 @@ export function SignupPage() {
   const auth = useAuth()
   const navigate = useNavigate()
   const [businessName, setBusinessName] = useState('')
+  const [leadName, setLeadName] = useState('')
+  const [leadWhatsApp, setLeadWhatsApp] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
@@ -40,10 +42,23 @@ export function SignupPage() {
     setError('')
   }
 
+  function validLeadWhatsApp(value:string) {
+    const digits=value.replace(/\D/g,'')
+    return digits.length===10
+      || digits.length===11
+      || ((digits.length===12 || digits.length===13) && digits.startsWith('55'))
+  }
+
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     markStarted()
     trackEvent('signup_submit', {}, {surface:'signup'})
+    if (!leadName.trim() || !validLeadWhatsApp(leadWhatsApp)) {
+      trackEvent('signup_failed', {reason:'invalid_lead_contact'}, {surface:'signup'})
+      setError('Informe seu nome e um WhatsApp válido com DDD.')
+      return
+    }
     if (password !== confirmation) {
       trackEvent('signup_failed', {reason:'password_mismatch'}, {surface:'signup'})
       setError('As senhas precisam ser iguais.')
@@ -55,7 +70,14 @@ export function SignupPage() {
     setBusy(true)
     setError('')
     try {
-      const createdUser = await auth.signup(businessName.trim(), email.trim(), password, key)
+      const createdUser = await auth.signup(
+        businessName.trim(),
+        leadName.trim(),
+        leadWhatsApp.trim(),
+        email.trim(),
+        password,
+        key,
+      )
       idempotencyKey.current = ''
       const createdMembership = createdUser.memberships.find(item=>item.business_id===createdUser.active_business_id)
       const preactivation = createdMembership?.access_mode === 'free'
@@ -129,6 +151,37 @@ export function SignupPage() {
           disabled={busy}
           placeholder="Ex.: João Refrigeração"
         />
+
+        <label htmlFor="signup-lead-name">Seu nome</label>
+        <input
+          id="signup-lead-name"
+          autoComplete="name"
+          maxLength={120}
+          minLength={2}
+          required
+          value={leadName}
+          onChange={event => { markStarted(); setLeadName(event.target.value); resetAttempt() }}
+          disabled={busy}
+          placeholder="Ex.: João da Silva"
+        />
+
+        <label htmlFor="signup-lead-whatsapp">Seu WhatsApp</label>
+        <input
+          id="signup-lead-whatsapp"
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          maxLength={24}
+          required
+          value={leadWhatsApp}
+          onChange={event => { markStarted(); setLeadWhatsApp(event.target.value); resetAttempt() }}
+          disabled={busy}
+          placeholder="Ex.: (12) 99999-9999"
+          aria-describedby="signup-lead-whatsapp-help"
+        />
+        <small id="signup-lead-whatsapp-help" className="auth-field-help">
+          Este número é para falarmos com você sobre sua experiência com a Alovia. O WhatsApp da empresa será conectado depois.
+        </small>
 
         <label htmlFor="signup-email">Email</label>
         <input

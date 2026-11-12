@@ -206,9 +206,18 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
     async login<T = unknown>(email: string, password: string) {
       return startAuthentication<T>('/auth/login', {email,password})
     },
-    async signup<T = unknown>(businessName: string, email: string, password: string, idempotencyKey: string) {
+    async signup<T = unknown>(
+      businessName: string,
+      leadName: string,
+      leadWhatsApp: string,
+      email: string,
+      password: string,
+      idempotencyKey: string,
+    ) {
       return startAuthentication<T>('/auth/signup', {
         business_name: businessName,
+        lead_name: leadName,
+        lead_whatsapp: leadWhatsApp,
         email,
         password,
       }, {'Idempotency-Key': idempotencyKey})
