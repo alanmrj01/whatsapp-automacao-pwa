@@ -107,7 +107,7 @@ export type AnalyticsLeadRecovery = {
   business_name:string
   created_at:string
   last_activity_at:string
-  stage_key:'account'|'demo'|'whatsapp_connected_unpaid'|'offer'|'checkout'|'payment_failed'|'purchase'|'activated'|'refunded'
+  stage_key:'account'|'demo'|'whatsapp_connected_unpaid'|'offer'|'checkout'|'payment_failed'|'purchase'|'activated'|'refund_requested'|'refunded'
   stage_label:string
   purchased:boolean
   activated:boolean
