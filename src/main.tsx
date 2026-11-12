@@ -16,27 +16,10 @@ import './styles/operational-app.css'
 import './styles/account-billing.css'
 import './styles/billing-payment.css'
 
-const UPDATE_PROMPT_SESSION_KEY = 'alovia:pwa-update-prompt-shown'
-
 let updateSW = (_reloadPage?: boolean) => Promise.resolve()
 let swRegistration: ServiceWorkerRegistration | undefined
 let refreshPromptHandling = false
-
-function updatePromptAlreadyShown() {
-  try {
-    return window.sessionStorage.getItem(UPDATE_PROMPT_SESSION_KEY) === '1'
-  } catch {
-    return refreshPromptHandling
-  }
-}
-
-function markUpdatePromptShown() {
-  try {
-    window.sessionStorage.setItem(UPDATE_PROMPT_SESSION_KEY, '1')
-  } catch {
-    // The in-memory guard still prevents duplicate prompts in this page.
-  }
-}
+let refreshPromptShown = false
 
 function waitForWorkerInstall(worker: ServiceWorker | null) {
   if (!worker || ['installed', 'activated', 'redundant'].includes(worker.state)) {
@@ -71,10 +54,10 @@ async function prepareLatestServiceWorker() {
 }
 
 async function handlePwaRefresh() {
-  if (refreshPromptHandling || updatePromptAlreadyShown()) return
+  if (refreshPromptHandling || refreshPromptShown) return
 
   refreshPromptHandling = true
-  markUpdatePromptShown()
+  refreshPromptShown = true
 
   await prepareLatestServiceWorker()
 
