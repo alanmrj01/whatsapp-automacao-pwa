@@ -45,10 +45,10 @@ test('company onboarding preserves unsaved company data and clears the draft aft
   assert.match(onboarding,/alovia:onboarding:progress:v1:/)
 })
 
-test('session draft helper is session-scoped, versioned and expires stale drafts',()=>{
+test('form draft helper survives app close, stays versioned and expires stale drafts',()=>{
   const helper=read('src/features/forms/sessionDraft.ts')
-  assert.match(helper,/window\.sessionStorage/)
-  assert.doesNotMatch(helper,/localStorage|indexedDB/)
+  assert.match(helper,/window\.localStorage/)
+  assert.doesNotMatch(helper,/sessionStorage|indexedDB/)
   assert.match(helper,/expiresAt<=Date\.now\(\)/)
   assert.match(helper,/version:\s*1/)
 })
