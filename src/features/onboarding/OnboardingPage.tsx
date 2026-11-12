@@ -1,5 +1,5 @@
 import { ArrowLeft, ArrowRight, Check, MapPin, MessageCircleMore, Pencil, Plus, Save, Trash2, Wrench } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { ErrorState } from '../../components/ErrorState'
 import { LoadingState } from '../../components/LoadingState'
@@ -67,6 +67,10 @@ export function OnboardingPage(){
   const [finished,setFinished]=useState(false)
   const [whatsappDeferred,setWhatsappDeferred]=useState(false)
   const navigate=useNavigate()
+
+  useEffect(()=>{
+    if(initialProgress?.started)setStarted(true)
+  },[initialProgress?.started])
   const webPush=useWebPush()
 
   useEffect(()=>{
