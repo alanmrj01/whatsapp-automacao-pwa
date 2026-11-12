@@ -46,7 +46,7 @@ test('commercial catalog uses Basic and Plus with quarterly as default', () => {
   assert.equal('automaticAttendances' in plus,false)
 })
 
-test('Basic is purchasable while planned Plus communicates its future allowances', () => {
+test('Basic is purchasable while planned Plus communicates simple allowances', () => {
   const plan = read('src/features/billing/PlanPage.tsx')
   const checkout = read('src/features/billing/CheckoutPage.tsx')
   const subscription = read('src/features/billing/SubscriptionManagement.tsx')
@@ -66,7 +66,7 @@ test('Basic is purchasable while planned Plus communicates its future allowances
   assert.match(catalog,/Retomada de atendimentos parados/)
 
   assert.match(subscription,/\/billing\/usage/)
-  assert.match(subscription,/Sua franquia do Basic chegou ao limite/)
+  assert.match(subscription,/Seu crédito de mensagens do Basic chegou ao limite/)
   assert.match(subscription,/até a renovação mensal/)
   assert.doesNotMatch(subscription,/\/billing\/subscription\/upgrade/)
   assert.doesNotMatch(subscription,/Migrar para o Plus/)
