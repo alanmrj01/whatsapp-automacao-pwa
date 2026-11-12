@@ -9,7 +9,7 @@ type DraftEnvelope<T> = {
 export function readSessionDraft<T>(key:string):T|null {
   if(typeof window==='undefined')return null
   try {
-    const raw=window.sessionStorage.getItem(key)
+    const raw=window.localStorage.getItem(key)
     if(!raw)return null
     const parsed=JSON.parse(raw) as DraftEnvelope<T>
     if(
@@ -18,12 +18,12 @@ export function readSessionDraft<T>(key:string):T|null {
       parsed.expiresAt<=Date.now()||
       parsed.value===undefined
     ){
-      window.sessionStorage.removeItem(key)
+      window.localStorage.removeItem(key)
       return null
     }
     return parsed.value
   } catch {
-    try { window.sessionStorage.removeItem(key) } catch {}
+    try { window.localStorage.removeItem(key) } catch {}
     return null
   }
 }
@@ -40,11 +40,11 @@ export function writeSessionDraft<T>(
       expiresAt:Date.now()+ttlMs,
       value,
     }
-    window.sessionStorage.setItem(key,JSON.stringify(envelope))
+    window.localStorage.setItem(key,JSON.stringify(envelope))
   } catch {}
 }
 
 export function clearSessionDraft(key:string):void {
   if(typeof window==='undefined')return
-  try { window.sessionStorage.removeItem(key) } catch {}
+  try { window.localStorage.removeItem(key) } catch {}
 }
