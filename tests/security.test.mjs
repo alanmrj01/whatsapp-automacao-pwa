@@ -28,8 +28,8 @@ test('client source keeps auth out of browser storage and isolates audited form 
   for (const file of sources(fileURLToPath(new URL('../src/', import.meta.url)))) {
     const content = readFileSync(file,'utf8')
     if(file===allowedDraftFile) {
-      assert.match(content,/window\.sessionStorage/)
-      assert.doesNotMatch(content,/\b(localStorage|indexedDB)\b/)
+      assert.match(content,/window\.localStorage/)
+      assert.doesNotMatch(content,/\b(sessionStorage|indexedDB)\b/)
       assert.doesNotMatch(content,/bearer|authorization|access[_-]?token|refresh[_-]?token|password|cardNumber|ccv/i)
     } else {
       assert.doesNotMatch(content, /\b(localStorage|sessionStorage|indexedDB)\b/, file)
