@@ -106,14 +106,16 @@ export function WhatsAppPage() {
           <MessageCircleMore size={34} />
           <span className="connection-card__indicator" />
         </div>
-        <span className="eyebrow">Canal principal de atendimento</span>
-        <h1>WhatsApp</h1>
+        <span className="eyebrow">{preactivation?'Ative seu atendimento':'Canal principal de atendimento'}</span>
+        <h1>{preactivation&&status!=='connected'?'Conecte seu WhatsApp':'WhatsApp'}</h1>
         {metaReviewPending
           ? <StatusBadge tone="warning">Aguardando verificação da Meta</StatusBadge>
           : validatingConnection
             ? <StatusBadge tone="info">Validando conexão</StatusBadge>
             : <ConnectionStatusBadge status={status} errorReason={connection.data.error_reason} />}
-        <p>{journey.message}</p>
+        <p>{preactivation&&status==='disconnected'&&journey.nextAction==='choose_mode'
+          ? 'A conexão é feita pela Meta. Continue para autorizar seu número e avançar para a ativação da Alovia.'
+          : journey.message}</p>
         {status==='connected'&&<dl className="connection-facts">
           {connection.data.display_phone_number&&<div><dt>Número conectado</dt><dd>{connection.data.display_phone_number}</dd></div>}
           {mode&&<div><dt>Forma de operação</dt><dd>{connectionModeLabels[mode]}</dd></div>}
@@ -137,7 +139,9 @@ export function WhatsAppPage() {
             : metaReviewRejected
               ? 'Sua ação agora: não reconecte ainda. Revise os dados da empresa e da conta na Meta. Depois de corrigir a pendência indicada pela Meta, volte ao Alovia para uma nova tentativa.'
               : journey.nextAction==='choose_mode'
-                ? 'Sua ação agora: escolha como quer usar este número. A Alovia conduz as etapas seguintes e abre a Meta no momento certo.'
+                ? preactivation
+                  ? 'Continue para escolher como usar o número e abrir a autorização oficial da Meta.'
+                  : 'Sua ação agora: escolha como quer usar este número. A Alovia conduz as etapas seguintes e abre a Meta no momento certo.'
                 : journey.nextAction==='resolve_connection'
                   ? 'Sua ação agora: toque em “Resolver conexão”. A Alovia levará você ao ponto certo para tentar novamente.'
                   : journey.nextAction==='wait_for_completion'
@@ -211,7 +215,7 @@ export function WhatsAppPage() {
         {!canConfigure && !readOnly && <p>Acesso de leitura. A configuração é gerenciada pelo administrador.</p>}
       </section>
 
-      {entitlement.usesDemoData&&<section className="alovia-flow" aria-labelledby="alovia-flow-title">
+      {entitlement.usesDemoData&&!preactivation&&<section className="alovia-flow" aria-labelledby="alovia-flow-title">
         <div className="alovia-flow__heading">
           <span className="alovia-flow__mark"><Snowflake size={18}/></span>
           <div><span className="eyebrow">O diferencial da Alovia</span><h2 id="alovia-flow-title">Do pedido à visita técnica</h2></div>
@@ -227,7 +231,7 @@ export function WhatsAppPage() {
         <span><LockKeyhole size={19} /></span>
         <div>
           <strong>Conexão oficial e segura</strong>
-          <p>A autorização acontece com a Meta. Sua senha do WhatsApp não é solicitada pelo ALOVIA.</p>
+          <p>A autorização acontece diretamente na Meta. A Alovia não solicita sua senha do WhatsApp.</p>
         </div>
       </section>
 

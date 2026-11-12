@@ -15,18 +15,17 @@ export function CoexistenceInfoPage() {
     <ConnectionInfoPage
       mode="coexistence"
       icon={BriefcaseBusiness}
-      title="Continue com seu WhatsApp Business"
+      title="Conecte seu WhatsApp à Alovia"
       description={changingMode
-        ? 'Sua conexão atual pela Alovia continua funcionando enquanto você autoriza o uso conjunto com o WhatsApp Business.'
-        : 'Continue usando seu WhatsApp Business normalmente enquanto a automação atende em paralelo.'}
+        ? 'Sua conexão atual continua funcionando enquanto você autoriza o uso conjunto com o WhatsApp Business.'
+        : 'A autorização é feita pela Meta. Você continua usando o WhatsApp Business enquanto a Alovia fica pronta para atender em paralelo.'}
       benefits={[
-        'Seu aplicativo continua fazendo parte do atendimento.',
-        'A automação poderá apoiar as conversas e os agendamentos.',
-        'A Meta valida sua autorização antes de a conexão ser ativada.',
+        'Você continua usando o WhatsApp Business normalmente.',
+        'A automação só entra em operação depois da autorização da Meta e da ativação do plano.',
       ]}
       callout={changingMode
-        ? 'Nada é desligado antes da confirmação. A mudança só é aplicada depois que a Meta concluir a nova autorização.'
-        : 'A autorização acontece diretamente na Meta. A Alovia não recebe sua senha e não expõe credenciais no navegador.'}
+        ? 'Nada é desligado antes da confirmação. A mudança só acontece depois que a Meta concluir a nova autorização.'
+        : 'Para continuar, autorize a conexão na Meta. A Alovia não solicita sua senha do WhatsApp.'}
       action={<EmbeddedSignupButton autoStart={searchParams.get('auto')==='1'} />}
     />
   )

@@ -243,8 +243,8 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
         <p role="status">Conexão preparada. Toque abaixo para abrir a autorização da Meta.</p>
       )}
       <div className="account-note">
-        <strong>Na etapa final da Meta</strong>
-        <span>Se aparecer “Adicionar forma de pagamento”, não é o pagamento da Alovia e não é necessário agora. Toque em “Concluir” para finalizar a conexão e voltar à Alovia.</span>
+        <strong>Na Meta, finalize a autorização</strong>
+        <span>Se aparecer “Adicionar forma de pagamento”, ignore por enquanto. Toque em “Concluir”. Esse não é o pagamento da Alovia.</span>
       </div>
       <PrimaryButton
         fullWidth

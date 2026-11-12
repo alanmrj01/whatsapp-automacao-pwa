@@ -258,3 +258,29 @@ test('former subscribers can reconnect WhatsApp before reactivating while operat
   assert.match(embedded,/if \(unpaid\)/)
   assert.match(embedded,/mais\/plano\?activation=1/)
 })
+
+
+test('free upgrade actions require WhatsApp connection before showing the plan prompt', () => {
+  const prompt=read('src/features/access/UpgradePrompt.tsx')
+  assert.match(prompt,/useConnection/)
+  assert.match(prompt,/entitlement\.isFree && connection\.data\?\.status !== 'connected'/)
+  assert.match(prompt,/navigate\('\/app\/whatsapp\?from=activation'\)/)
+  assert.match(prompt,/setFeature\(name\)/)
+})
+
+test('preactivation connection is concise and keeps the Meta action as the focal point', () => {
+  const page=read('src/features/whatsapp/WhatsAppPage.tsx')
+  const info=read('src/features/whatsapp/ConnectionInfoPage.tsx')
+  const coexistence=read('src/features/whatsapp/CoexistenceInfoPage.tsx')
+  const embedded=read('src/features/whatsapp/EmbeddedSignupButton.tsx')
+
+  assert.match(page,/Conecte seu WhatsApp/)
+  assert.match(page,/A conexão é feita pela Meta/)
+  assert.match(page,/entitlement\.usesDemoData&&!preactivation/)
+  assert.doesNotMatch(info,/OnboardingPlanStatus/)
+  assert.doesNotMatch(info,/connection-mode-symbols/)
+  assert.match(coexistence,/Conecte seu WhatsApp à Alovia/)
+  assert.match(coexistence,/A automação só entra em operação depois da autorização da Meta e da ativação do plano/)
+  assert.match(embedded,/Na Meta, finalize a autorização/)
+  assert.match(embedded,/Esse não é o pagamento da Alovia/)
+})

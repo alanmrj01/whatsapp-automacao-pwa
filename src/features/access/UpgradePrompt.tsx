@@ -2,11 +2,23 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BottomSheet } from '../../components/BottomSheet'
 import { UpgradePromptContext } from './upgradePromptContext'
+import { useEntitlements } from './useEntitlements'
+import { useConnection } from '../whatsapp/useConnection'
 
 export function UpgradePromptProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
+  const entitlement = useEntitlements()
+  const connection = useConnection()
   const [feature, setFeature] = useState<string | null>(null)
-  const value = useMemo(() => ({openUpgrade: (name = 'Este recurso') => setFeature(name)}), [])
+  const value = useMemo(() => ({
+    openUpgrade: (name = 'Este recurso') => {
+      if (entitlement.isFree && connection.data?.status !== 'connected') {
+        navigate('/app/whatsapp?from=activation')
+        return
+      }
+      setFeature(name)
+    },
+  }), [connection.data?.status, entitlement.isFree, navigate])
 
   function viewPlans() {
     setFeature(null)
@@ -25,7 +37,7 @@ export function UpgradePromptProvider({ children }: { children: ReactNode }) {
         <div className="upgrade-prompt upgrade-prompt--compact">
           <p>Use esta função com os dados reais da sua empresa.</p>
           <div className="upgrade-prompt__offer">
-            <strong>Basic: R$ 197/mês no plano mensal · até 600 mensagens de serviço por mês.</strong>
+            <strong>Basic: R$ 147,90/mês no plano mensal · até 600 mensagens de serviço por mês.</strong>
             <span>Atendimento automático quando o cliente chama · 7 dias de garantia.</span>
           </div>
           <div className="upgrade-prompt__actions">
