@@ -16,11 +16,17 @@ import './styles/operational-app.css'
 import './styles/account-billing.css'
 import './styles/billing-payment.css'
 
-registerSW({
+let updateSW = (_reloadPage?: boolean) => Promise.resolve()
+updateSW = registerSW({
   immediate: true,
-  // A new build must never discard a form in progress. The waiting service
-  // worker is picked up after the user explicitly reloads/reopens the app.
-  onNeedRefresh: () => undefined,
+  // Never reload an active form automatically, but never keep a stale build
+  // silently either. The user explicitly chooses when to activate the update.
+  onNeedRefresh: () => {
+    const accepted = window.confirm(
+      'Uma nova versão da Alovia está disponível. Atualizar agora?',
+    )
+    if (accepted) void updateSW(true)
+  },
 })
 
 createRoot(document.getElementById('root')!).render(

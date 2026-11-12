@@ -110,7 +110,10 @@ test('checkout confirmation does not auto-reload or bounce through auth loading'
   assert.doesNotMatch(syncBlock,/setState\('loading'\)/)
   assert.match(vite,/registerType: 'prompt'/)
   assert.doesNotMatch(vite,/registerType: 'autoUpdate'/)
-  assert.match(main,/onNeedRefresh: \(\) => undefined/)
+  assert.match(main,/onNeedRefresh/)
+  assert.match(main,/window\.confirm/)
+  assert.match(main,/if \(accepted\) void updateSW\(true\)/)
+  assert.doesNotMatch(main,/onNeedRefresh:\s*\(\)\s*=>\s*undefined/)
 })
 
 

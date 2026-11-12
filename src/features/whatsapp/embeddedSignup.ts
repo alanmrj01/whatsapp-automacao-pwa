@@ -27,7 +27,7 @@ export type EmbeddedSignupConfiguration = {
   configuration_id: string
   graph_version: string
   embedded_signup_version: string
-  mode: 'coexistence'
+  mode: 'coexistence' | 'api_only'
 }
 
 export type EmbeddedSignupResult = {
@@ -317,10 +317,14 @@ function openEmbeddedSignup(
         auth_type: 'rerequest',
         response_type: 'code',
         override_default_response_type: true,
-        extras: {
-          setup: {},
-          featureType: 'whatsapp_business_app_onboarding',
-        },
+        extras: configuration.mode === 'coexistence'
+          ? {
+              setup: {},
+              featureType: 'whatsapp_business_app_onboarding',
+            }
+          : {
+              setup: {},
+            },
       }
     const requestLogin = (resume: boolean) => {
       if (settled || loginInProgress) return false
@@ -429,7 +433,7 @@ function validateConfiguration(configuration: EmbeddedSignupConfiguration) {
       || !/^\d{1,32}$/.test(configuration.configuration_id)
       || !/^v\d{1,3}\.\d{1,3}$/.test(configuration.graph_version)
       || !/^v(?:2|3|4)(?:-public-preview)?$/.test(configuration.embedded_signup_version)
-      || configuration.mode !== 'coexistence') {
+      || !['coexistence', 'api_only'].includes(configuration.mode)) {
     throw new EmbeddedSignupError()
   }
 }
