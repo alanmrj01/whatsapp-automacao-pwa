@@ -12,6 +12,7 @@ import { EmbeddedSignupButton } from '../features/whatsapp/EmbeddedSignupButton'
 import { deriveConnectionJourney } from '../features/whatsapp/connectionJourney'
 import { useEntitlements } from '../features/access/useEntitlements'
 import { DemoDataNotice } from '../features/access/DemoDataNotice'
+import { useMessageUsage } from '../features/billing/api'
 
 const titles: Record<string, string> = {
   '/app': 'Início',
@@ -32,6 +33,7 @@ const titles: Record<string, string> = {
 export function AppShell() {
   const { pathname } = useLocation()
   const entitlement = useEntitlements()
+  const usage = useMessageUsage()
   const demo = entitlement.usesDemoData
   const isConversationDetail = /^\/app\/conversas\/[^/]+$/.test(pathname)
   const isWhatsAppDetail = pathname.startsWith('/app/whatsapp/')
@@ -58,7 +60,18 @@ export function AppShell() {
     <div className="app-layout">
       <DesktopSidebar />
       <div className="app-column">
-        <AppHeader title={title} showBack={isDetail} backTo={isSettingsDetail?'/app/mais':'/app/whatsapp'} actions={<NotificationCenter/>} />
+        <AppHeader
+          title={title}
+          showBack={isDetail}
+          backTo={isSettingsDetail?'/app/mais':'/app/whatsapp'}
+          brandContent={entitlement.isPaid&&usage.data?.quota_applies&&usage.data.limit!==null
+            ? <div className="message-credit" aria-label={`Crédito de Mensagens: ${usage.data.used} de ${usage.data.limit}`}>
+                <span>Crédito de Mensagens</span>
+                <strong>{usage.data.used.toLocaleString('pt-BR')}/{usage.data.limit.toLocaleString('pt-BR')}</strong>
+              </div>
+            : undefined}
+          actions={<NotificationCenter/>}
+        />
         <main className="app-content" id="main-content">
           <div className="page-stack"><BusinessSelector /></div>
           {demo&&<DemoDataNotice />}
