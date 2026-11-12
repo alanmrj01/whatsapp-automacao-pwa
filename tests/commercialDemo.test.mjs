@@ -91,6 +91,7 @@ test('commercial copy matches the Basic MVP and planned Plus offer', () => {
 
   for (const signup of [coexistence,apiOnly]) {
     assert.match(signup,/BottomSheet/)
+    assert.match(signup,/dismissible=\{false\}/)
     assert.match(signup,/Ao finalizar o fluxo da meta, clique na opção de 'concluir', não adicione nenhuma forma de pagamento ainda/)
     assert.match(signup,/>\s*Continuar\s*</)
     assert.doesNotMatch(signup,/Na etapa final da Meta/)
