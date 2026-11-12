@@ -244,7 +244,7 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
       )}
       <div className="account-note">
         <strong>Na Meta, finalize a autorização</strong>
-        <span>Se aparecer “Adicionar forma de pagamento”, ignore por enquanto e toque em “Concluir”. Esse não é o pagamento da Alovia.</span>
+        <span>Se aparecer “Adicionar forma de pagamento”, ignore por enquanto. Toque em “Concluir”. Esse não é o pagamento da Alovia.</span>
       </div>
       <PrimaryButton
         fullWidth
