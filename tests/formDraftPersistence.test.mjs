@@ -46,7 +46,7 @@ test('company onboarding preserves unsaved company data and clears the draft aft
 })
 
 test('session draft helper is session-scoped, versioned and expires stale drafts',()=>{
-  const helper=read('src/lib/sessionDraft.ts')
+  const helper=read('src/features/forms/sessionDraft.ts')
   assert.match(helper,/window\.sessionStorage/)
   assert.doesNotMatch(helper,/localStorage|indexedDB/)
   assert.match(helper,/expiresAt<=Date\.now\(\)/)
