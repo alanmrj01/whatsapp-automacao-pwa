@@ -99,7 +99,7 @@ export function PlanPage() {
           <ChevronLeft size={18}/>{activationFlow?'WhatsApp':'Configurações'}
         </Link>
         <span className="eyebrow">{activationFlow?'WhatsApp conectado':'Assinatura'}</span>
-        <h1>{activationFlow?'Você está a 1 passo de ter seu atendimento automático no WhatsApp':'Escolha seu plano'}</h1>
+        <h1>{activationFlow?'Você está a 1 passo de ter seu atendimento automático no whatsapp':'Escolha seu plano'}</h1>
         <p>{activationFlow
           ? 'Seu WhatsApp já está conectado. Escolha o plano e conclua a ativação.'
           : 'No lançamento, o Basic atende quando seu cliente chama. O Plus adicionará mensagens proativas de utilidade, como lembretes e retomadas, após a próxima etapa do produto.'}</p>
