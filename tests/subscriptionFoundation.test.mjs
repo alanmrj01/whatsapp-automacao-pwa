@@ -56,6 +56,7 @@ test('Basic is purchasable while planned Plus communicates simple allowances', (
   assert.match(plan,/Escolher Basic/)
   assert.match(plan,/const comingSoon = plan\.id === 'plus'/)
   assert.match(plan,/disabled=\{comingSoon\}/)
+  assert.doesNotMatch(plan,/O Plus está planejado para a próxima etapa do produto/)
   assert.match(plan,/monthlyMessageLimit/)
   assert.match(plan,/mensagens\/mês/)
   assert.doesNotMatch(plan,/mensagens de serviço|mensagens de utilidade/)
@@ -76,6 +77,9 @@ test('Basic is purchasable while planned Plus communicates simple allowances', (
   assert.match(checkout,/Finalize sua assinatura/)
   assert.match(checkout,/if\(!isPurchasablePlan\(planId\)\)/)
   assert.match(checkout,/unavailable=\$\{planId\}/)
+  assert.match(checkout,/identificationAutoAdvanced/)
+  assert.match(checkout,/Expira em/)
+  assert.doesNotMatch(checkout,/automatic&&props\.remaining!==null/)
   assert.match(router,/path="\/app\/checkout" element=\{<CheckoutPage \/>\}/)
 })
 
@@ -87,6 +91,8 @@ test('compact upgrade prompt and account routes remain explicit', () => {
 
   assert.match(prompt,/Disponível com assinatura/)
   assert.match(prompt,/Ver planos/)
+  assert.match(prompt,/onPaymentRequired/)
+  assert.match(prompt,/syncSession/)
   assert.doesNotMatch(prompt,/Sua conta gratuita continua sem cobrança/)
   assert.match(router,/mais\/plano/)
   assert.match(router,/mais\/usuario/)
@@ -162,3 +168,20 @@ test('refund copy promises processing, not provider completion, within 24 hours'
   assert.doesNotMatch(source,/reembolso será concluído em até 24 horas/)
 })
 
+
+
+test('former paid accounts keep a global activation banner and paid routes open the same upgrade prompt', () => {
+  const shell = read('src/app/AppShell.tsx')
+  const router = read('src/app/router.tsx')
+  const client = read('src/lib/httpClient.ts')
+
+  assert.match(shell,/entitlement\.isReadOnlyRetained&&<RetainedAccessBanner \/>/)
+  assert.match(shell,/não deixe seus clientes esperando, ative o assistente virtual/)
+  assert.match(shell,/>\s*Ativar\s*</)
+  assert.match(shell,/subscription\.data\?\.access_until/)
+  assert.match(shell,/syncSession/)
+  assert.match(router,/if\(entitlement\.isReadOnlyRetained\)return <UpgradeRequiredRoute/)
+  assert.match(router,/openUpgrade\('Este recurso'\)/)
+  assert.match(client,/response\.status === 402/)
+  assert.match(client,/onPaymentRequired/)
+})
