@@ -146,6 +146,37 @@ test('coexistence v4 usa apenas os parâmetros atuais e combina code com sessão
   })
 })
 
+test('conclusão confirmada fecha a janela da Meta e devolve foco à Alovia', async () => {
+  let closeCalls = 0
+  let focusCalls = 0
+  const popup = {
+    closed:false,
+    close() {
+      closeCalls++
+      this.closed = true
+    },
+  }
+  const runtime = runtimeFor(({runtime, listeners, callback}) => {
+    runtime.open('https://www.facebook.com/dialog')
+    callback({authResponse:{code:'final-screen-code'}})
+    send(listeners, {
+      type:'WA_EMBEDDED_SIGNUP',
+      event:'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING',
+      data:{waba_id:'333333333333333', phone_number_id:'444444444444444'},
+    })
+  }, {popup})
+  runtime.focus = () => { focusCalls++ }
+
+  assert.deepEqual(await launchMetaEmbeddedSignup(configuration, runtime), {
+    authorization_code:'final-screen-code',
+    waba_id:'333333333333333',
+    phone_number_id:'444444444444444',
+  })
+  assert.equal(closeCalls, 1)
+  assert.equal(popup.closed, true)
+  assert.equal(focusCalls, 1)
+})
+
 test('authorization code sozinho conclui após grace period e delega descoberta ao servidor', async () => {
   let fallback
   let timerId = 0
