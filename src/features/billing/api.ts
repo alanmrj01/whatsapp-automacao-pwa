@@ -53,6 +53,8 @@ export function useSubscriptionStatus() {
     enabled:entitlement.isPaid&&canManage&&!!membership?.business_id,
     retry:false,
     staleTime:30_000,
+    refetchInterval:30_000,
+    refetchIntervalInBackground:false,
   })
 }
 

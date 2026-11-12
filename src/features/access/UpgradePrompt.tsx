@@ -1,15 +1,27 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BottomSheet } from '../../components/BottomSheet'
+import { api } from '../../lib/api'
+import { useAuth } from '../auth/useAuth'
 import { UpgradePromptContext } from './upgradePromptContext'
 import { useEntitlements } from './useEntitlements'
 import { useConnection } from '../whatsapp/useConnection'
 
 export function UpgradePromptProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
+  const {syncSession} = useAuth()
   const entitlement = useEntitlements()
   const connection = useConnection()
   const [feature, setFeature] = useState<string | null>(null)
+
+  useEffect(() => {
+    api.onPaymentRequired(() => {
+      setFeature('Este recurso')
+      void syncSession().catch(() => undefined)
+    })
+    return () => api.onPaymentRequired(() => {})
+  }, [syncSession])
+
   const value = useMemo(() => ({
     openUpgrade: (name = 'Este recurso') => {
       if (entitlement.isPreactivation && connection.data?.status !== 'connected') {

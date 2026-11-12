@@ -158,7 +158,6 @@ export function PlanPage() {
           <button className="primary-button plan-card__cta" type="button" disabled={comingSoon} onClick={()=>choosePlan(plan.id)}>
             {planCta(plan.id)}
           </button>
-          {comingSoon&&<p className="plan-coming-soon" role="status">O Plus está planejado para a próxima etapa do produto.</p>}
         </article>
       })}
     </section>

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ExternalLink, RotateCw, ShieldCheck } from 'lucide-react'
+import { BottomSheet } from '../../components/BottomSheet'
 import { PrimaryButton } from '../../components/PrimaryButton'
 import { api } from '../../lib/api'
 import { trackEvent, trackEventOnce } from '../../lib/tracking'
@@ -53,6 +54,7 @@ export function ApiOnlyEmbeddedSignupButton({
   const [preparedConfiguration, setPreparedConfiguration] = useState<string | null>(null)
   const [failedConfiguration, setFailedConfiguration] = useState<string | null>(null)
   const [sdkAttempt, setSdkAttempt] = useState(0)
+  const [showMetaNotice, setShowMetaNotice] = useState(false)
   const allowed = canStartEmbeddedSignup(
     membership?.access_mode,
     membership?.role,
@@ -301,6 +303,23 @@ export function ApiOnlyEmbeddedSignupButton({
     fromOnboarding,
   ])
 
+  const startMetaFlow = () => {
+    setShowMetaNotice(false)
+    trackEvent(
+      'whatsapp_connection_started',
+      {
+        preferred_mode:'api_only',
+        from_onboarding:fromOnboarding,
+      },
+      {
+        surface:'whatsapp_onboarding',
+        businessId:membership?.business_id,
+        userId:user?.id,
+      },
+    )
+    void run().catch(() => {})
+  }
+
   if (!allowed) {
     return (
       <PrimaryButton fullWidth disabled icon={<ShieldCheck size={18} />}>
@@ -350,10 +369,6 @@ export function ApiOnlyEmbeddedSignupButton({
             : 'Escolha um PIN de 6 dígitos para proteger a conexão deste número. Guarde-o em local seguro.'}
         </small>
       </label>
-      <div className="account-note">
-        <strong>Na etapa final da Meta</strong>
-        <span>Se aparecer “Adicionar forma de pagamento”, não é o pagamento da Alovia e não é necessário agora. Toque em “Concluir” para finalizar a conexão e voltar à Alovia.</span>
-      </div>
       <PrimaryButton
         fullWidth
         disabled={
@@ -384,23 +399,24 @@ export function ApiOnlyEmbeddedSignupButton({
             setSdkAttempt(value => value + 1)
             return
           }
-          trackEvent(
-            'whatsapp_connection_started',
-            {
-              preferred_mode:'api_only',
-              from_onboarding:fromOnboarding,
-            },
-            {
-              surface:'whatsapp_onboarding',
-              businessId:membership?.business_id,
-              userId:user?.id,
-            },
-          )
-          void run().catch(() => {})
+          setShowMetaNotice(true)
         }}
       >
         {buttonLabel}
       </PrimaryButton>
+      <BottomSheet
+        open={showMetaNotice}
+        title="Antes de abrir a Meta"
+        onClose={() => setShowMetaNotice(false)}
+        dismissible={false}
+      >
+        <div className="meta-signup-warning">
+          Ao finalizar o fluxo da meta, clique na opção de 'concluir', não adicione nenhuma forma de pagamento ainda
+        </div>
+        <button className="primary-button meta-signup-continue" type="button" onClick={startMetaFlow}>
+          Continuar
+        </button>
+      </BottomSheet>
       {phase === 'opening' && <p role="status">Aguardando conclusão na Meta…</p>}
       {phase === 'waiting' && resumeAvailable && <p role="status">
         Retome a validação com segurança. A tentativa atual será reutilizada.

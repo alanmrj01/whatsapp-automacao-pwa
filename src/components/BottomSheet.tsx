@@ -6,6 +6,7 @@ type BottomSheetProps = {
   title: string
   description?: string
   onClose: () => void
+  dismissible?: boolean
   children: ReactNode
 }
 
@@ -14,6 +15,7 @@ export function BottomSheet({
   title,
   description,
   onClose,
+  dismissible = true,
   children,
 }: BottomSheetProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
@@ -40,7 +42,7 @@ export function BottomSheet({
       aria-describedby={description ? descriptionId : undefined}
       onCancel={(event) => {
         event.preventDefault()
-        onClose()
+        if (dismissible) onClose()
       }}
     >
       <section className="bottom-sheet">
@@ -50,20 +52,22 @@ export function BottomSheet({
             <h2 id={titleId}>{title}</h2>
             {description && <p id={descriptionId}>{description}</p>}
           </div>
-          <button className="icon-button" type="button" aria-label="Fechar" onClick={onClose}>
+          {dismissible&&<button className="icon-button" type="button" aria-label="Fechar" onClick={onClose}>
             <X size={21} />
-          </button>
+          </button>}
         </div>
         <div className="bottom-sheet__content">{children}</div>
       </section>
-      <button
-        className="sheet-backdrop"
-        type="button"
-        aria-label="Fechar"
-        tabIndex={-1}
-        aria-hidden="true"
-        onClick={onClose}
-      />
+      {dismissible
+        ? <button
+            className="sheet-backdrop"
+            type="button"
+            aria-label="Fechar"
+            tabIndex={-1}
+            aria-hidden="true"
+            onClick={onClose}
+          />
+        : <div className="sheet-backdrop" aria-hidden="true" />}
     </dialog>
   )
 }

@@ -251,6 +251,7 @@ export function CheckoutPage() {
   const [submitting,setSubmitting]=useState(false)
   const [adminAccessNotice,setAdminAccessNotice]=useState(false)
   const [openStep,setOpenStep]=useState<1|2>(initialCheckoutDraft?.openStep===2?2:1)
+  const identificationAutoAdvanced=useRef(false)
   const [pixStatus,setPixStatus]=useState<CheckoutStatus|null>(null)
   const [pixQrCode,setPixQrCode]=useState<string|null>(null)
   const [pixQrLoading,setPixQrLoading]=useState(false)
@@ -737,7 +738,8 @@ export function CheckoutPage() {
     !!addressNumber.trim()
 
   useEffect(()=>{
-    if(!identificationComplete||openStep!==1)return
+    if(!identificationComplete||openStep!==1||identificationAutoAdvanced.current)return
+    identificationAutoAdvanced.current=true
     const timer=window.setTimeout(()=>setOpenStep(2),700)
     return()=>window.clearTimeout(timer)
   },[identificationComplete,openStep])
@@ -1183,7 +1185,6 @@ export function CheckoutPage() {
             values={{payerName,payerDocument,payerPhone,postalCode,addressNumber,addressComplement,cardHolderName}}
             refs={{payerDocumentRef,payerPhoneRef,postalCodeRef,addressNumberRef,addressComplementRef,cardHolderNameRef}}
             onOpen={()=>{if(!recoveredCheckout)setOpenStep(1)}}
-            onAdvance={()=>{if(identificationComplete)setOpenStep(2)}}
             setters={{setPayerName,setPayerDocument,setPayerPhone,setPostalCode,setAddressNumber,setAddressComplement,setCardHolderName}}
             focusCard={paymentMethod==='credit_card'&&NATIVE_CARD_CHECKOUT_ENABLED}
             recovered={recoveredCheckout}
@@ -1286,12 +1287,11 @@ type IdentificationProps = {
   refs:{payerDocumentRef:RefObject<HTMLInputElement|null>;payerPhoneRef:RefObject<HTMLInputElement|null>;postalCodeRef:RefObject<HTMLInputElement|null>;addressNumberRef:RefObject<HTMLInputElement|null>;addressComplementRef:RefObject<HTMLInputElement|null>;cardHolderNameRef:RefObject<HTMLInputElement|null>}
   setters:{setPayerName:Dispatch<SetStateAction<string>>;setPayerDocument:Dispatch<SetStateAction<string>>;setPayerPhone:Dispatch<SetStateAction<string>>;setPostalCode:Dispatch<SetStateAction<string>>;setAddressNumber:Dispatch<SetStateAction<string>>;setAddressComplement:Dispatch<SetStateAction<string>>;setCardHolderName:Dispatch<SetStateAction<string>>}
   onOpen:()=>void
-  onAdvance:()=>void
   focusCard:boolean
   recovered:boolean
 }
 
-function IdentificationStep({open,complete,profile,values,refs,setters,onOpen,onAdvance,focusCard,recovered}:IdentificationProps) {
+function IdentificationStep({open,complete,profile,values,refs,setters,onOpen,focusCard,recovered}:IdentificationProps) {
   return <section className={`native-checkout-card checkout-accordion-card${open?' is-open':''}`}>
     <button className="checkout-section-toggle" type="button" aria-expanded={open} aria-controls="checkout-identification-fields" onClick={onOpen} disabled={recovered}>
       <span className="checkout-step-number">{complete?<Check size={16}/>:1}</span><span className="checkout-step-copy"><strong>Identificação</strong><small>{recovered?'Dados preservados nesta cobrança':complete?'Dados preenchidos':'Preencha seus dados para continuar'}</small></span>{open?<ChevronUp size={20}/>:<ChevronDown size={20}/>}
@@ -1303,8 +1303,8 @@ function IdentificationStep({open,complete,profile,values,refs,setters,onOpen,on
         <label className="checkout-field"><span>Celular</span><input ref={refs.payerPhoneRef} inputMode="tel" autoComplete="tel" maxLength={15} value={values.payerPhone} onChange={event=>{const formatted=formatPhone(event.target.value);setters.setPayerPhone(formatted);if(digits(formatted,11).length===11)focusNext(refs.postalCodeRef)}} placeholder="Celular com DDD" required/></label>
         <label className="checkout-field checkout-field--wide"><span>E-mail da conta</span><input value={profile.email} readOnly aria-readonly="true"/></label>
         <label className="checkout-field"><span>CEP</span><input ref={refs.postalCodeRef} inputMode="numeric" autoComplete="postal-code" maxLength={9} value={values.postalCode} onChange={event=>{const formatted=formatPostalCode(event.target.value);setters.setPostalCode(formatted);if(digits(formatted,8).length===8)focusNext(refs.addressNumberRef)}} placeholder="CEP" required/></label>
-        <label className="checkout-field"><span>Número</span><input ref={refs.addressNumberRef} autoComplete="address-line2" maxLength={32} value={values.addressNumber} onChange={event=>{const value=event.target.value.slice(0,32);setters.setAddressNumber(value);if(value.length===32)focusNext(refs.addressComplementRef)}} onBlur={onAdvance} placeholder="Número" required/></label>
-        <label className="checkout-field checkout-field--wide"><span>Complemento <small>opcional</small></span><input ref={refs.addressComplementRef} autoComplete="address-line2" maxLength={80} value={values.addressComplement} onChange={event=>{const value=event.target.value.slice(0,80);setters.setAddressComplement(value);if(value.length===80){onAdvance();if(focusCard)window.requestAnimationFrame(()=>refs.cardHolderNameRef.current?.focus())}}} onBlur={onAdvance} placeholder="Sala, bloco, apartamento…"/></label>
+        <label className="checkout-field"><span>Número</span><input ref={refs.addressNumberRef} autoComplete="address-line2" maxLength={32} value={values.addressNumber} onChange={event=>{const value=event.target.value.slice(0,32);setters.setAddressNumber(value);if(value.length===32)focusNext(refs.addressComplementRef)}} placeholder="Número" required/></label>
+        <label className="checkout-field checkout-field--wide"><span>Complemento <small>opcional</small></span><input ref={refs.addressComplementRef} autoComplete="address-line2" maxLength={80} value={values.addressComplement} onChange={event=>{const value=event.target.value.slice(0,80);setters.setAddressComplement(value);if(value.length===80&&focusCard)window.requestAnimationFrame(()=>refs.cardHolderNameRef.current?.focus())}} placeholder="Sala, bloco, apartamento…"/></label>
       </div>
     </div>
   </section>
@@ -1349,7 +1349,7 @@ function PixPaymentContent(props:PixPaymentProps) {
       <div className="checkout-pix-heading"><span className="checkout-pix-icon"><QrCode size={24}/></span><div><strong>{automatic?'Pague e autorize o Pix Automático':'Pague por Pix'}</strong><span>{automatic?'Abra o app do seu banco, escaneie o QR Code e confirme o pagamento e a autorização das próximas renovações.':'Abra o app do seu banco, escaneie o QR Code e confirme o pagamento. Na renovação, gere um novo Pix pela Alovia.'}</span></div></div>
       <div className="checkout-pix-grid">
         <div className="checkout-pix-qr" aria-live="polite">{props.qrLoading&&<div className="checkout-loading-spinner" aria-label="Gerando QR Code"/>}{props.qrCode&&<img src={props.qrCode} alt={automatic?'QR Code do Pix Automático':'QR Code do Pix'}/>}{!props.qrLoading&&!props.qrCode&&<span>QR Code indisponível.</span>}</div>
-        <div className="checkout-pix-details"><span>Pix Copia e Cola</span><textarea readOnly value={props.checkout.pix_payload??''} aria-label="Código Pix Copia e Cola"/><button className="secondary-button" type="button" onClick={props.onCopy}><Copy size={17}/>{props.copyState==='copied'?'Código copiado':'Copiar código Pix'}</button>{props.copyState==='failed'&&<small role="alert">Não foi possível copiar. Selecione o código acima.</small>}<dl><div><dt>Valor</dt><dd>{formatBRL(props.checkout.amount_cents/100)}</dd></div><div><dt>Plano</dt><dd>{props.planName} · {props.cycleLabel}</dd></div>{automatic&&props.remaining!==null&&<div><dt>Validade</dt><dd>{formatRemaining(props.remaining)}</dd></div>}</dl></div>
+        <div className="checkout-pix-details"><span>Pix Copia e Cola</span><textarea readOnly value={props.checkout.pix_payload??''} aria-label="Código Pix Copia e Cola"/><button className="secondary-button" type="button" onClick={props.onCopy}><Copy size={17}/>{props.copyState==='copied'?'Código copiado':'Copiar código Pix'}</button>{props.copyState==='failed'&&<small role="alert">Não foi possível copiar. Selecione o código acima.</small>}<dl><div><dt>Valor</dt><dd>{formatBRL(props.checkout.amount_cents/100)}</dd></div><div><dt>Plano</dt><dd>{props.planName} · {props.cycleLabel}</dd></div>{props.remaining!==null&&<div><dt>Expira em</dt><dd>{formatRemaining(props.remaining)}</dd></div>}</dl></div>
       </div>
       <section className="checkout-pix-receiver-notice" aria-label="Pagamento seguro">
         <ShieldCheck size={20} aria-hidden="true"/>

@@ -218,6 +218,12 @@
   font-weight:850;
 }
 .tracking-whatsapp-link:hover{background:rgb(31 137 92 / 20%)}
+.tracking-leads tbody tr.is-refund-priority td{
+  background:rgb(221 154 31 / 7%);
+}
+.tracking-leads tbody tr.is-refund-priority td:first-child{
+  box-shadow:inset 3px 0 0 #d99a20;
+}
 .tracking-table-wrap{
   width:100%;
   overflow:auto;

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ExternalLink, RotateCw, ShieldCheck } from 'lucide-react'
+import { BottomSheet } from '../../components/BottomSheet'
 import { PrimaryButton } from '../../components/PrimaryButton'
 import { api } from '../../lib/api'
 import { trackEventOnce } from '../../lib/tracking'
@@ -31,6 +32,7 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
   const [message, setMessage] = useState<string | null>(null)
   const [connected, setConnected] = useState<WhatsAppConnection | null>(null)
   const [failedAttempts, setFailedAttempts] = useState(0)
+  const [showMetaNotice, setShowMetaNotice] = useState(false)
   const liveConnection = useConnection()
   const queryKey = useMemo(
     () => ['whatsapp-connection', user?.id, membership?.business_id],
@@ -213,6 +215,29 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
     window.location.assign(redirect.authorization_url)
   }, [applyServerConnection, configuration.data, fromOnboarding, membership?.business_id, user?.id])
 
+  const startMetaFlow = () => {
+    setShowMetaNotice(false)
+    void beginRedirectSignup().catch(() => {
+      trackEventOnce(
+        `whatsapp_connection_redirect_failed:${membership?.business_id ?? 'unknown'}`,
+        'whatsapp_connection_failed',
+        {
+          reason:'redirect_start_failed',
+          from_onboarding:fromOnboarding,
+        },
+        {
+          surface:'whatsapp_onboarding',
+          businessId:membership?.business_id,
+          userId:user?.id,
+        },
+        'session',
+      )
+      setFailedAttempts(value => value + 1)
+      setPhase('error')
+      setMessage('Não foi possível abrir a autorização da Meta. Tente novamente.')
+    })
+  }
+
   if (!allowed) {
     return (
       <PrimaryButton fullWidth disabled icon={<ShieldCheck size={18} />}>
@@ -242,10 +267,6 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
       {autoStart && phase === 'idle' && !preparing && !configuration.isError && (
         <p role="status">Conexão preparada. Toque abaixo para abrir a autorização da Meta.</p>
       )}
-      <div className="account-note">
-        <strong>Na etapa final da Meta</strong>
-        <span>Se aparecer “Adicionar forma de pagamento”, não é o pagamento da Alovia e não é necessário agora. Toque em “Concluir” para finalizar a conexão e voltar à Alovia.</span>
-      </div>
       <PrimaryButton
         fullWidth
         disabled={busy || preparing || phase === 'success'}
@@ -255,29 +276,24 @@ export function EmbeddedSignupButton({autoStart=false}:{autoStart?:boolean} = {}
             void configuration.refetch()
             return
           }
-          void beginRedirectSignup().catch(() => {
-            trackEventOnce(
-              `whatsapp_connection_redirect_failed:${membership?.business_id ?? 'unknown'}`,
-              'whatsapp_connection_failed',
-              {
-                reason:'redirect_start_failed',
-                from_onboarding:fromOnboarding,
-              },
-              {
-                surface:'whatsapp_onboarding',
-                businessId:membership?.business_id,
-                userId:user?.id,
-              },
-              'session',
-            )
-            setFailedAttempts(value => value + 1)
-            setPhase('error')
-            setMessage('Não foi possível abrir a autorização da Meta. Tente novamente.')
-          })
+          setShowMetaNotice(true)
         }}
       >
         {buttonLabel}
       </PrimaryButton>
+      <BottomSheet
+        open={showMetaNotice}
+        title="Antes de abrir a Meta"
+        onClose={() => setShowMetaNotice(false)}
+        dismissible={false}
+      >
+        <div className="meta-signup-warning">
+          Ao finalizar o fluxo da meta, clique na opção de 'concluir', não adicione nenhuma forma de pagamento ainda
+        </div>
+        <button className="primary-button meta-signup-continue" type="button" onClick={startMetaFlow}>
+          Continuar
+        </button>
+      </BottomSheet>
       {phase === 'opening' && <p role="status">
         Abrindo a autorização oficial da Meta…
       </p>}
