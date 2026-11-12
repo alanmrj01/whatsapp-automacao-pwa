@@ -16,7 +16,9 @@ test('Pix comum is the production default and Pix Automático stays fail-closed'
   const selection=checkout.match(/const selectPaymentMethod=[\s\S]*?\n  const changePaymentMethod=/)?.[0]??''
 
   assert.match(checkout,/VITE_BILLING_PIX_AUTOMATIC_ENABLED/)
-  assert.match(checkout,/useState<PaymentMethod>\('pix'\)/)
+  assert.match(checkout,/useState<PaymentMethod>\(initialPaymentMethod\)/)
+  assert.match(checkout,/initialPaymentMethod:PaymentMethod=/)
+  assert.match(checkout,/:\s*'pix'\n\s*const checkoutAttempt/)
   assert.match(checkout,/profile\.pix_available&&<label/)
   assert.match(checkout,/value="pix" checked=\{paymentMethod==='pix'\}/)
   assert.match(checkout,/PIX_AUTOMATIC_ENABLED&&profile\.pix_automatic_available&&<label/)
