@@ -17,15 +17,65 @@ import './styles/account-billing.css'
 import './styles/billing-payment.css'
 
 let updateSW = (_reloadPage?: boolean) => Promise.resolve()
+let swRegistration: ServiceWorkerRegistration | undefined
+let refreshPromptHandling = false
+let refreshPromptShown = false
+
+function waitForWorkerInstall(worker: ServiceWorker | null) {
+  if (!worker || ['installed', 'activated', 'redundant'].includes(worker.state)) {
+    return Promise.resolve()
+  }
+
+  return new Promise<void>((resolve) => {
+    const finish = () => {
+      if (!['installed', 'activated', 'redundant'].includes(worker.state)) return
+      worker.removeEventListener('statechange', finish)
+      window.clearTimeout(timeout)
+      resolve()
+    }
+    const timeout = window.setTimeout(() => {
+      worker.removeEventListener('statechange', finish)
+      resolve()
+    }, 10_000)
+
+    worker.addEventListener('statechange', finish)
+  })
+}
+
+async function prepareLatestServiceWorker() {
+  if (!swRegistration) return
+
+  try {
+    await swRegistration.update()
+    await waitForWorkerInstall(swRegistration.installing)
+  } catch {
+    // If the update check fails, keep the already waiting build available.
+  }
+}
+
+async function handlePwaRefresh() {
+  if (refreshPromptHandling || refreshPromptShown) return
+
+  refreshPromptHandling = true
+  refreshPromptShown = true
+
+  await prepareLatestServiceWorker()
+
+  const accepted = window.confirm(
+    'Uma nova versão da Alovia está disponível. Atualizar agora?',
+  )
+  if (accepted) {
+    await updateSW(true)
+  }
+}
+
 updateSW = registerSW({
   immediate: true,
-  // Never reload an active form automatically, but never keep a stale build
-  // silently either. The user explicitly chooses when to activate the update.
+  onRegisteredSW: (_swUrl, registration) => {
+    swRegistration = registration
+  },
   onNeedRefresh: () => {
-    const accepted = window.confirm(
-      'Uma nova versão da Alovia está disponível. Atualizar agora?',
-    )
-    if (accepted) void updateSW(true)
+    void handlePwaRefresh()
   },
 })
 
