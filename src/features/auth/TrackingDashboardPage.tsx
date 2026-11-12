@@ -256,7 +256,8 @@ function LeadRecoveryTable({items}:{items:AnalyticsLeadRecovery[]}) {
         </tr></thead>
         <tbody>{items.map(item=>{
           const digits=item.whatsapp_e164.replace(/\D/g,'')
-          return <tr key={item.business_id}>
+          const refundPriority=item.stage_key==='refund_requested'||item.stage_key==='refunded'
+          return <tr key={item.business_id} className={refundPriority?'is-refund-priority':undefined}>
             <td><strong>{item.lead_name}</strong>{item.ad_name&&<small>{item.ad_name}</small>}</td>
             <td>{formatLeadWhatsApp(item.whatsapp_e164)}</td>
             <td>{item.business_name}</td>
