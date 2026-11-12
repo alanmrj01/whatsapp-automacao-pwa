@@ -27,7 +27,7 @@ export const plans: Plan[] = [
     id:'basic',
     name:'Basic',
     positioning:'Para quem toca a operação de perto.',
-    monthlyPrice:197,
+    monthlyPrice:147.90,
     users:1,
     monthlyMessageLimit:600,
     features:['1 WhatsApp','Atendimento automático quando o cliente chama','Conversas e agenda reais','Dashboard operacional'],
