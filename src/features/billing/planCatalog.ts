@@ -39,7 +39,7 @@ export const plans: Plan[] = [
     monthlyPrice:397,
     users:5,
     monthlyMessageLimit:1000,
-    features:['1 WhatsApp','Tudo do Basic','Até 300 mensagens de utilidade/mês','Lembretes de limpeza','Retomada de atendimentos parados','Gestão de equipe'],
+    features:['1 WhatsApp','Tudo do Basic','Suporte para PMOC recorrente','Suporte para limpezas recorrentes','Retomada de atendimentos parados','Gestão de equipe'],
   },
 ]
 

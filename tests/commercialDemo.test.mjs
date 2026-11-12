@@ -73,11 +73,14 @@ test('commercial copy matches the Basic MVP and planned Plus offer', () => {
   const coexistence=read('src/features/whatsapp/EmbeddedSignupButton.tsx')
   const apiOnly=read('src/features/whatsapp/ApiOnlyEmbeddedSignupButton.tsx')
 
-  assert.match(prompt,/600 mensagens de serviço/)
+  assert.match(prompt,/600 mensagens por mês/)
+  assert.doesNotMatch(prompt,/mensagens de serviço|mensagens de utilidade/)
   assert.match(page,/Em breve/)
   assert.match(catalog,/monthlyMessageLimit:600/)
   assert.match(catalog,/monthlyMessageLimit:1000/)
-  assert.match(catalog,/Até 300 mensagens de utilidade\/mês/)
+  assert.match(catalog,/Suporte para PMOC recorrente/)
+  assert.match(catalog,/Suporte para limpezas recorrentes/)
+  assert.doesNotMatch(catalog,/mensagens de utilidade|Lembretes de limpeza/)
   assert.match(catalog,/return plan === 'basic'/)
 
   assert.match(landing,/Até 600 mensagens por mês/)

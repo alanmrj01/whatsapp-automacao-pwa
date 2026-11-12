@@ -8,9 +8,10 @@ type AppHeaderProps = {
   showBack?: boolean
   backTo?: string
   actions?: ReactNode
+  brandContent?: ReactNode
 }
 
-export function AppHeader({ title, showBack = false, backTo = '/app/whatsapp', actions }: AppHeaderProps) {
+export function AppHeader({ title, showBack = false, backTo = '/app/whatsapp', actions, brandContent }: AppHeaderProps) {
   const navigate = useNavigate()
 
   return (
@@ -30,7 +31,7 @@ export function AppHeader({ title, showBack = false, backTo = '/app/whatsapp', a
         )}
         <span className="app-header__title">{title}</span>
       </div>
-      <div className="app-header__actions">{!showBack && <span className="app-header__brand-name">Alovia</span>}{actions}</div>
+      <div className="app-header__actions">{!showBack && (brandContent ?? <span className="app-header__brand-name">Alovia</span>)}{actions}</div>
     </header>
   )
 }

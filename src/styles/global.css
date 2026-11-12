@@ -1458,3 +1458,34 @@ a.list-row:active {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+.message-credit {
+  min-width: 92px;
+  display: grid;
+  gap: 1px;
+  justify-items: end;
+  color: var(--color-text);
+  text-align: right;
+  line-height: 1.05;
+}
+
+.message-credit span {
+  color: var(--color-text-muted);
+  font-size: .58rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.message-credit strong {
+  font-size: .78rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+@media (max-width: 420px) {
+  .app-header__actions { gap: 5px; }
+  .message-credit { min-width: 82px; }
+  .message-credit span { font-size: .53rem; }
+  .message-credit strong { font-size: .72rem; }
+}

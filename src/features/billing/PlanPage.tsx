@@ -102,7 +102,7 @@ export function PlanPage() {
         <h1>{activationFlow?'Você está a 1 passo de ter seu atendimento automático no whatsapp':'Escolha seu plano'}</h1>
         <p>{activationFlow
           ? 'Seu WhatsApp já está conectado. Escolha o plano e conclua a ativação.'
-          : 'No lançamento, o Basic atende quando seu cliente chama. O Plus adicionará mensagens proativas de utilidade, como lembretes e retomadas, após a próxima etapa do produto.'}</p>
+          : 'Compare os planos e escolha a opção mais adequada para sua operação.'}</p>
       </div>
     </section>
 
@@ -151,14 +151,14 @@ export function PlanPage() {
 
           <ul className="plan-features">
             <li><Check size={17}/>{plan.users===1?'1 usuário':`Até ${plan.users} usuários`}</li>
-            <li><Check size={17}/>Até {plan.monthlyMessageLimit.toLocaleString('pt-BR')} {plan.id==='basic'?'mensagens de serviço':'mensagens de serviço + utilidade'}/mês</li>
+            <li><Check size={17}/>Até {plan.monthlyMessageLimit.toLocaleString('pt-BR')} mensagens/mês</li>
             {plan.features.map(feature=><li key={feature}><Check size={17}/>{feature}</li>)}
           </ul>
 
           <button className="primary-button plan-card__cta" type="button" disabled={comingSoon} onClick={()=>choosePlan(plan.id)}>
             {planCta(plan.id)}
           </button>
-          {comingSoon&&<p className="plan-coming-soon" role="status">O Plus está planejado para o pós-lançamento. Lembretes e retomadas só serão liberados quando os templates de utilidade estiverem prontos.</p>}
+          {comingSoon&&<p className="plan-coming-soon" role="status">O Plus está planejado para a próxima etapa do produto.</p>}
         </article>
       })}
     </section>

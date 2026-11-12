@@ -8,6 +8,7 @@ import { useEntitlements } from '../access/useEntitlements'
 import { SessionActions } from '../auth/SessionActions'
 import { useAuth } from '../auth/useAuth'
 import type { MembershipRole } from '../auth/types'
+import { formatPlanRenewalDate, useSubscriptionStatus } from '../billing/api'
 
 const roleLabels: Record<MembershipRole,string> = {
   owner:'Proprietário',
@@ -30,7 +31,9 @@ function AccountHeader({eyebrow,title,description}:{eyebrow:string;title:string;
 export function UserSettingsPage() {
   const {user,membership} = useAuth()
   const entitlement = useEntitlements()
+  const subscription = useSubscriptionStatus()
   const accessLabel = entitlement.isPaid ? 'Acesso operacional liberado' : entitlement.isReadOnlyRetained ? 'Acesso pausado · dados preservados' : 'Conta gratuita demonstrativa'
+  const renewalDate = formatPlanRenewalDate(subscription.data?.access_until)
 
   return <div className="page-stack operational-page compact-page account-page">
     <AccountHeader eyebrow="Conta" title="Usuário" description="Informações da sua conta e do acesso atual."/>
@@ -39,6 +42,7 @@ export function UserSettingsPage() {
       <div className="account-detail"><span className="account-detail__icon"><Building2 size={19}/></span><div><span>Empresa</span><strong>{membership?.business_name??'—'}</strong></div></div>
       <div className="account-detail"><span className="account-detail__icon"><UserRound size={19}/></span><div><span>Perfil</span><strong>{membership?roleLabels[membership.role]:'—'}</strong></div></div>
       <div className="account-detail"><span className="account-detail__icon"><ShieldCheck size={19}/></span><div><span>Acesso</span><strong>{accessLabel}</strong></div></div>
+      {renewalDate&&<div className="account-detail"><span className="account-detail__icon"><ShieldCheck size={19}/></span><div><span>Renovação do plano</span><strong>{renewalDate}</strong></div></div>}
     </section>
 
     <section className="account-action-section">
