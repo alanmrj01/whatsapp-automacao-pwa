@@ -113,6 +113,10 @@ function planStatusText(business:PlatformBusiness) {
   if (business.commercial_refund_status==='requested') return 'Reembolso solicitado'
   if (business.commercial_refund_status==='reconcile_required') return 'Reembolso em reconciliação'
   if (business.commercial_subscription_status==='past_due') return 'Pagamento pendente'
+  if (business.commercial_payment_status==='failed') return 'Falha no pagamento'
+  if (business.commercial_payment_status==='expired') return 'Cobrança expirada'
+  if (business.commercial_payment_status==='canceled' && !business.commercial_subscription_status) return 'Cobrança cancelada'
+  if (business.commercial_payment_status==='creating' || business.commercial_payment_status==='active') return 'Pagamento em andamento'
   if (business.commercial_subscription_status==='suspended') return 'Plano suspenso'
   if (business.commercial_subscription_status==='canceled') {
     return business.commercial_access_until
