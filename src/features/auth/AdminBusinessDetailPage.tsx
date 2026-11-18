@@ -20,11 +20,13 @@ import { BottomSheet } from '../../components/BottomSheet'
 import { PrimaryButton } from '../../components/PrimaryButton'
 import { ApiError } from '../../lib/httpClient'
 import {
-  getPlatformBusiness,
   setPlatformBusinessAccess,
   setPlatformBusinessActive,
-  type PlatformBusinessDetail,
 } from './platformAdmin'
+import {
+  getPlatformBusiness,
+  type PlatformBusinessDetail,
+} from './platformAdminDetail'
 import './AdminPage.css'
 
 const planLabels = {basic:'Básico',plus:'Plus'} as const
