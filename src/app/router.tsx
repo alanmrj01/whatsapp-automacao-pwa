@@ -39,6 +39,7 @@ const ForgotPasswordPage = lazy(async () => ({default:(await PasswordRecoveryPag
 const ResetPasswordPage = lazy(async () => ({default:(await PasswordRecoveryPages()).ResetPasswordPage}))
 const SignupPage = lazy(async () => ({default:(await import('../features/auth/SignupPage')).SignupPage}))
 const AdminPage = lazy(async () => ({default:(await import('../features/auth/AdminPage')).AdminPage}))
+const AdminBusinessDetailPage = lazy(async () => ({default:(await import('../features/auth/AdminBusinessDetailPage')).AdminBusinessDetailPage}))
 const TrackingDashboardPage = lazy(async () => ({default:(await import('../features/auth/TrackingDashboardPage')).TrackingDashboardPage}))
 const PlatformPreviewPage = lazy(async () => ({default:(await import('../features/preview/PlatformPreviewPage')).PlatformPreviewPage}))
 const QuizFunnelPage = lazy(async () => ({default:(await import('../features/public/QuizFunnelPage')).QuizFunnelPage}))
@@ -97,6 +98,7 @@ export function AppRouter() {
         <Route path="/criar-conta" element={<SignupPage />} />
         <Route element={<ProtectedRoute platform />}>
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin/empresas/:businessId" element={<AdminBusinessDetailPage />} />
           <Route path="/admin/indicadores" element={<TrackingDashboardPage />} />
           <Route path="/admin/preview" element={<PlatformPreviewPage />} />
         </Route>

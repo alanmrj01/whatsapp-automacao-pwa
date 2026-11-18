@@ -5,6 +5,7 @@ export type PlatformBusiness = {
   name: string
   timezone: string
   active: boolean
+  created_at: string | null
   access_mode: 'free' | 'paid'
   admin_full_access: boolean
   commercial_access_active: boolean
@@ -22,6 +23,11 @@ export type PlatformBusiness = {
   commercial_contact_email: string | null
   commercial_contact_phone: string | null
   commercial_refund_deadline_at: string | null
+  commercial_payment_method: 'credit_card' | 'pix' | 'pix_automatic' | null
+  commercial_amount_cents: number | null
+  commercial_paid_at: string | null
+  commercial_payment_status: 'creating' | 'active' | 'paid' | 'canceled' | 'expired' | 'failed' | null
+  contact_whatsapp: string | null
   owners: string[]
   whatsapp_status: 'disconnected' | 'pending' | 'connected' | 'error'
 }
