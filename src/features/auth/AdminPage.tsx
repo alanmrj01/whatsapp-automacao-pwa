@@ -492,7 +492,7 @@ export function AdminPage() {
               })}
             </tbody>
           </table>
-        </div>
+        </div>}
 
       <div className="platform-admin__logout"><SessionActions /></div>
     </main>
