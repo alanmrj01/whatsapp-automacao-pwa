@@ -26,6 +26,7 @@ export type PlatformBusiness = {
   commercial_payment_method: 'credit_card' | 'pix' | 'pix_automatic' | null
   commercial_amount_cents: number | null
   commercial_paid_at: string | null
+  commercial_payment_status: 'creating' | 'active' | 'paid' | 'canceled' | 'expired' | 'failed' | null
   contact_whatsapp: string | null
   owners: string[]
   whatsapp_status: 'disconnected' | 'pending' | 'connected' | 'error'
