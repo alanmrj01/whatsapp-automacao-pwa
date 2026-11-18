@@ -61,6 +61,7 @@ test('admin directory supports card and list views with direct WhatsApp contact'
 })
 
 test('admin business detail route consolidates account billing WhatsApp and acquisition data', () => {
+  const baseApi = read('src/features/auth/platformAdmin.ts')
   const api = read('src/features/auth/platformAdminDetail.ts')
   const page = read('src/features/auth/AdminBusinessDetailPage.tsx')
   const router = read('src/app/router.tsx')
@@ -68,8 +69,8 @@ test('admin business detail route consolidates account billing WhatsApp and acqu
   assert.match(api,/getPlatformBusiness/)
   assert.match(api,/\/admin\/businesses\/\$\{id\}/)
   assert.match(api,/acquisition_ad_id/)
-  assert.match(api,/commercial_payment_method/)
-  assert.match(api,/contact_whatsapp/)
+  assert.match(baseApi,/commercial_payment_method/)
+  assert.match(baseApi,/contact_whatsapp/)
   assert.match(router,/\/admin\/empresas\/:businessId/)
   assert.match(page,/Conta e responsável/)
   assert.match(page,/Pagamento e cobrança/)
