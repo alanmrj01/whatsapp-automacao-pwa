@@ -1,4 +1,4 @@
-import { AlertTriangle, BarChart3, Building2, CirclePower, Clock3, Eye, KeyRound, Mail, Phone, Plus, RefreshCw, ShieldCheck } from 'lucide-react'
+import { AlertTriangle, BarChart3, Building2, CirclePower, Clock3, Eye, KeyRound, LayoutGrid, List, Mail, MessageCircle, Phone, Plus, RefreshCw, ShieldCheck } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppHeader } from '../../components/AppHeader'
@@ -85,9 +85,47 @@ function formatAdminDate(value:string|null) {
 function formatAdminPhone(value:string|null) {
   if (!value) return 'Celular não informado'
   const digits=value.replace(/\D/g,'')
-  if (digits.length===11)return digits.replace(/^(\d{2})(\d{5})(\d{4})$/,'($1) $2-$3')
-  if (digits.length===10)return digits.replace(/^(\d{2})(\d{4})(\d{4})$/,'($1) $2-$3')
+  const national=(digits.length===12||digits.length===13)&&digits.startsWith('55')?digits.slice(2):digits
+  if (national.length===11) {
+    const formatted=national.replace(/^(\d{2})(\d{5})(\d{4})$/,'($1) $2-$3')
+    return digits.startsWith('55')?`+55 ${formatted}`:formatted
+  }
+  if (national.length===10) {
+    const formatted=national.replace(/^(\d{2})(\d{4})(\d{4})$/,'($1) $2-$3')
+    return digits.startsWith('55')?`+55 ${formatted}`:formatted
+  }
   return value
+}
+
+function whatsappChatHref(value:string|null) {
+  if (!value) return null
+  const digits=value.replace(/\D/g,'')
+  if (!digits) return null
+  return `https://wa.me/${digits.startsWith('55')?digits:`55${digits}`}`
+}
+
+function planStatusText(business:PlatformBusiness) {
+  if (business.commercial_refund_status==='refunded') {
+    return business.commercial_refunded_at
+      ? `Reembolsado em ${formatAdminDate(business.commercial_refunded_at)}`
+      : 'Reembolsado'
+  }
+  if (business.commercial_refund_status==='requested') return 'Reembolso solicitado'
+  if (business.commercial_refund_status==='reconcile_required') return 'Reembolso em reconciliação'
+  if (business.commercial_subscription_status==='past_due') return 'Pagamento pendente'
+  if (business.commercial_subscription_status==='suspended') return 'Plano suspenso'
+  if (business.commercial_subscription_status==='canceled') {
+    return business.commercial_access_until
+      ? `Cancelado · acesso até ${formatAdminDate(business.commercial_access_until)}`
+      : 'Plano cancelado'
+  }
+  if (business.commercial_access_active) {
+    return business.commercial_access_until
+      ? `Vence em ${formatAdminDate(business.commercial_access_until)}`
+      : 'Plano ativo'
+  }
+  if (business.access_mode==='paid') return 'Liberação administrativa'
+  return 'Sem plano contratado'
 }
 
 const emptyForm = () => ({
@@ -106,6 +144,7 @@ export function AdminPage() {
   const [success, setSuccess] = useState('')
   const [creating, setCreating] = useState(false)
   const [busyId, setBusyId] = useState('')
+  const [viewMode, setViewMode] = useState<'cards'|'list'>('cards')
   const [accessConfirmation, setAccessConfirmation] = useState<PlatformBusiness|null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [form, setForm] = useState(emptyForm)
@@ -126,6 +165,10 @@ export function AdminPage() {
   }, [])
 
   useEffect(() => { void Promise.resolve().then(load) }, [load])
+
+  function openBusiness(business:PlatformBusiness) {
+    window.open(`/admin/empresas/${business.id}`, '_blank', 'noopener,noreferrer')
+  }
 
   const pendingRefunds=businesses
     .filter(item=>item.commercial_refund_status==='requested'||item.commercial_refund_status==='reconcile_required')
@@ -328,9 +371,19 @@ export function AdminPage() {
 
       <section className="platform-admin__list-header">
         <div><h2>Empresas cadastradas</h2><p>{businesses.length} {businesses.length === 1 ? 'empresa' : 'empresas'}</p></div>
-        <button className="platform-admin__refresh" type="button" onClick={()=>void load()} disabled={loading} aria-label="Atualizar empresas">
-          <RefreshCw size={18}/>
-        </button>
+        <div className="platform-admin__list-tools">
+          <div className="platform-admin__view-toggle" aria-label="Modo de visualização">
+            <button type="button" className={viewMode==='cards'?'is-active':''} aria-pressed={viewMode==='cards'} onClick={()=>setViewMode('cards')}>
+              <LayoutGrid size={16}/> Cards
+            </button>
+            <button type="button" className={viewMode==='list'?'is-active':''} aria-pressed={viewMode==='list'} onClick={()=>setViewMode('list')}>
+              <List size={16}/> Lista
+            </button>
+          </div>
+          <button className="platform-admin__refresh" type="button" onClick={()=>void load()} disabled={loading} aria-label="Atualizar empresas">
+            <RefreshCw size={18}/>
+          </button>
+        </div>
       </section>
 
       {loading ? <div className="platform-admin__empty">Carregando empresas…</div> :
@@ -341,8 +394,17 @@ export function AdminPage() {
         businesses.length === 0 ? <div className="platform-admin__empty">
           <Building2 size={28}/><strong>Nenhuma empresa cadastrada</strong><span>Crie o primeiro tenant da Alovia.</span>
         </div> :
-        <div className="platform-admin__businesses">
-          {businesses.map(business => <article className="platform-admin__business" key={business.id}>
+        viewMode==='cards' ? <div className="platform-admin__businesses">
+          {businesses.map(business => <article
+            className="platform-admin__business platform-admin__business--clickable"
+            key={business.id}
+            role="button"
+            tabIndex={0}
+            onClick={()=>openBusiness(business)}
+            onKeyDown={event=>{
+              if(event.key==='Enter'||event.key===' '){event.preventDefault();openBusiness(business)}
+            }}
+          >
             <div className="platform-admin__business-top">
               <div className="platform-admin__business-icon"><Building2 size={20}/></div>
               <div className="platform-admin__business-name"><h3>{business.name}</h3><span>{business.owners.join(', ') || 'Sem OWNER'}</span></div>
@@ -367,7 +429,7 @@ export function AdminPage() {
                 {business.commercial_provider_subscription_id&&<> · Assinatura Asaas: <code>{business.commercial_provider_subscription_id}</code></>}
               </span>}
             </div>
-            <div className="platform-admin__actions">
+            <div className="platform-admin__actions" onClick={event=>event.stopPropagation()}>
               {!business.commercial_access_active&&<button className="platform-admin__toggle" type="button" disabled={busyId === business.id}
                 onClick={()=>setAccessConfirmation(business)}>
                 <KeyRound size={18}/>{busyId === business.id ? 'Salvando…' : business.access_mode==='free' ? 'Liberar funcionalidades' : 'Revogar liberação'}
@@ -378,7 +440,59 @@ export function AdminPage() {
               </button>
             </div>
           </article>)}
-        </div>}
+        </div> : <div className="platform-admin__table-wrap">
+          <table className="platform-admin__table">
+            <thead>
+              <tr>
+                <th>Empresa</th>
+                <th>E-mail</th>
+                <th>WhatsApp</th>
+                <th>Atividade</th>
+                <th>Plano</th>
+                <th>Status plano</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {businesses.map(business=>{
+                const chatHref=whatsappChatHref(business.contact_whatsapp)
+                return <tr
+                  key={business.id}
+                  className="platform-admin__table-row"
+                  tabIndex={0}
+                  onClick={()=>openBusiness(business)}
+                  onKeyDown={event=>{
+                    if(event.key==='Enter'){event.preventDefault();openBusiness(business)}
+                  }}
+                >
+                  <td><strong>{business.name}</strong></td>
+                  <td>{business.owners[0]||'—'}</td>
+                  <td>
+                    <div className="platform-admin__phone-cell">
+                      <span>{business.contact_whatsapp?formatAdminPhone(business.contact_whatsapp):'—'}</span>
+                      {chatHref&&<a href={chatHref} target="_blank" rel="noreferrer" onClick={event=>event.stopPropagation()} aria-label={`Conversar com ${business.name} no WhatsApp`}>
+                        <MessageCircle size={15}/>
+                      </a>}
+                    </div>
+                  </td>
+                  <td><span className={`platform-admin__status ${business.active?'is-active':'is-inactive'}`}>{business.active?'Ativa':'Inativa'}</span></td>
+                  <td>{business.commercial_plan_code?planLabel[business.commercial_plan_code]:(business.access_mode==='paid'?'Liberado':'Gratuito')}</td>
+                  <td>{planStatusText(business)}</td>
+                  <td>
+                    <div className="platform-admin__row-actions" onClick={event=>event.stopPropagation()}>
+                      {!business.commercial_access_active&&<button className="platform-admin__toggle platform-admin__toggle--small" type="button" disabled={busyId===business.id} onClick={()=>setAccessConfirmation(business)}>
+                        <KeyRound size={15}/>{business.access_mode==='free'?'Liberar funcionalidades':'Revogar liberação'}
+                      </button>}
+                      <button className="platform-admin__toggle platform-admin__toggle--small" type="button" disabled={busyId===business.id} onClick={()=>void toggleBusiness(business)}>
+                        <CirclePower size={15}/>{business.active?'Desativar':'Reativar'}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              })}
+            </tbody>
+          </table>
+        </div>
 
       <div className="platform-admin__logout"><SessionActions /></div>
     </main>
