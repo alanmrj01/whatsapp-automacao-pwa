@@ -416,3 +416,60 @@
 @media(max-width:390px){
   .tracking-headline-grid,.tracking-metric-grid,.tracking-future__grid{grid-template-columns:1fr}
 }
+
+.tracking-diagnostic-panel{
+  width:min(1500px,100%);
+  margin:0 auto 10px;
+  min-width:0;
+}
+.tracking-diagnostic-note,.tracking-period-note{
+  color:#a0b3cc;
+  font-size:.72rem;
+  line-height:1.5;
+}
+.tracking-period-note{
+  display:grid;
+  gap:4px;
+  padding:10px 12px;
+  border:1px solid #26364d;
+  border-radius:8px;
+  background:#172135;
+}
+.tracking-period-note strong{color:#dce9fa}
+.tracking-activation-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+}
+.tracking-activation-group{
+  min-width:0;
+  padding:12px;
+  border:1px solid #293a52;
+  border-radius:7px;
+  background:#131e30;
+}
+.tracking-activation-group h3{
+  margin:0 0 10px;
+  font-size:.77rem;
+  color:#8fbcff;
+}
+.tracking-activation-group>div{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:8px 0;
+  border-bottom:1px solid #26364d;
+  font-size:.69rem;
+  color:#a9bdd5;
+}
+.tracking-activation-group>div:last-child{border-bottom:0}
+.tracking-activation-group strong{color:#fff}
+.tracking-ad-performance table{min-width:1550px}
+.tracking-leads table{min-width:1220px}
+@media(max-width:1000px){
+  .tracking-activation-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:620px){
+  .tracking-activation-grid{grid-template-columns:1fr}
+}

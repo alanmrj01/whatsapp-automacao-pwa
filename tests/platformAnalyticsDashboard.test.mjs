@@ -115,3 +115,28 @@ test('tracking dashboard uses lightweight local charts without a chart dependenc
   assert.match(styles,/tracking-quiz__grid/)
   assert.doesNotMatch(packageJson,/(recharts|chart\.js|highcharts|apexcharts)/)
 })
+
+
+test('dashboard exposes separated traffic and activation without assuming missing data is zero', () => {
+  const page = read('src/features/auth/TrackingDashboardPage.tsx')
+  const api = read('src/features/auth/platformAnalytics.ts')
+  assert.match(api,/traffic_funnels\?:AnalyticsTrafficFunnel\[\]/)
+  assert.match(api,/activation_progress\?:AnalyticsActivationProgress/)
+  assert.ok(page.includes('Funil por origem'))
+  assert.ok(page.includes('Etapas de ativação'))
+  assert.ok(page.includes('summary.traffic_funnels'))
+  assert.ok(page.includes('summary.activation_progress'))
+  assert.ok(page.includes('summary.period_start'))
+  assert.ok(page.includes('summary.period_end'))
+})
+
+test('dashboard shows individual ad stages and independent connection history', () => {
+  const page = read('src/features/auth/TrackingDashboardPage.tsx')
+  for (const field of ['quiz_started','quiz_completed','vsl_started','vsl_completed',
+    'whatsapp_connection_last_event','whatsapp_connection_started_at',
+    'whatsapp_connection_last_event_at','whatsapp_connected_at']) {
+    assert.ok(page.includes('item.' + field),field)
+  }
+  assert.ok(page.includes('Não informado pela versão atual'))
+  assert.ok(page.includes('Não comprova atendimento realizado'))
+})
