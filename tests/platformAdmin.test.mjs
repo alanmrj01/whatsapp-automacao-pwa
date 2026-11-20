@@ -41,3 +41,46 @@ test('admin distinguishes load failure, empty success and access confirmation', 
   assert.match(page,/!business\.commercial_access_active&&<button/)
   assert.match(page,/business\.owners\.join/)
 })
+
+
+test('admin directory supports card and list views with direct WhatsApp contact', () => {
+  const page = read('src/features/auth/AdminPage.tsx')
+  const styles = read('src/features/auth/AdminPage.css')
+
+  assert.match(page,/viewMode/)
+  assert.ok(page.includes('Cards'))
+  assert.ok(page.includes('Lista'))
+  for (const column of ['Empresa','E-mail','WhatsApp','Atividade','Plano','Status plano','Ações']) {
+    assert.ok(page.includes(column), column)
+  }
+  assert.match(page,/business\.contact_whatsapp/)
+  assert.match(page,/https:\/\/wa\.me\//)
+  assert.match(page,/window\.open\(\`\/admin\/empresas\/\$\{business\.id\}/)
+  assert.match(styles,/\.platform-admin__table-wrap/)
+  assert.match(styles,/\.platform-admin__view-toggle/)
+})
+
+test('admin business detail route consolidates account billing WhatsApp and acquisition data', () => {
+  const baseApi = read('src/features/auth/platformAdmin.ts')
+  const api = read('src/features/auth/platformAdminDetail.ts')
+  const page = read('src/features/auth/AdminBusinessDetailPage.tsx')
+  const router = read('src/app/router.tsx')
+
+  assert.match(api,/getPlatformBusiness/)
+  assert.match(api,/\/admin\/businesses\/\$\{id\}/)
+  assert.match(api,/acquisition_ad_id/)
+  assert.match(baseApi,/commercial_payment_method/)
+  assert.match(baseApi,/contact_whatsapp/)
+  assert.match(router,/\/admin\/empresas\/:businessId/)
+  assert.match(page,/Conta e responsável/)
+  assert.match(page,/Pagamento e cobrança/)
+  assert.match(page,/WhatsApp \/ Meta/)
+  assert.match(page,/Aquisição/)
+  assert.match(page,/Jornada no funil/)
+  assert.match(page,/Anúncio \/ criativo/)
+  assert.match(page,/Campaign ID/)
+  assert.match(page,/Adset ID/)
+  assert.match(page,/Ad ID/)
+  assert.match(page,/Liberar funcionalidades/)
+  assert.match(page,/Desativar empresa/)
+})

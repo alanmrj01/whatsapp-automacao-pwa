@@ -9,7 +9,7 @@ test('root is the approved refrigeration quiz journey', () => {
   const quiz = read('src/features/public/QuizFunnelPage.tsx')
 
   assert.match(router, /path="\/" element={<QuizFunnelPage \/>}/)
-  assert.match(quiz, /Refrigerista/)
+  assert.match(quiz, /Técnico Climatização/)
   assert.match(quiz, /Atendimento automático pelo WhatsApp/)
   assert.match(quiz, /Enquanto você está instalando ou fazendo manutenção/)
   assert.match(quiz, /Nos dias corridos, o que mais acontece com seu WhatsApp/)

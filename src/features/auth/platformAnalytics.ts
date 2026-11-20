@@ -90,7 +90,10 @@ export type AnalyticsAdPerformance = {
   cpc:number|null
   cpm:number|null
   quiz_visitors:number
+  quiz_started?:number
   quiz_completed:number
+  vsl_started?:number
+  vsl_completed?:number
   accounts:number
   subscriptions:number
   activations:number
@@ -109,6 +112,10 @@ export type AnalyticsLeadRecovery = {
   last_activity_at:string
   stage_key:'account'|'demo'|'whatsapp_connected_unpaid'|'offer'|'checkout'|'payment_failed'|'purchase'|'activated'|'refund_requested'|'refunded'
   stage_label:string
+  whatsapp_connection_started_at?:string|null
+  whatsapp_connection_last_event?:string|null
+  whatsapp_connection_last_event_at?:string|null
+  whatsapp_connected_at?:string|null
   purchased:boolean
   activated:boolean
   needs_follow_up:boolean
@@ -133,6 +140,40 @@ export type AnalyticsSeriesPoint = {
   activations:number
 }
 
+export type AnalyticsTrafficFunnel = {
+  key:'meta_paid'|'organic'|'paid_unverified'|'unattributed'
+  label:string
+  quiz_views:number
+  quiz_started:number
+  quiz_completed:number
+  vsl_started:number
+  vsl_completed:number
+  accounts:number
+  demo_entries:number
+  checkout_started:number
+  subscriptions:number
+  activations:number
+}
+
+export type AnalyticsActivationProgress = {
+  accounts:number
+  demo_entries:number
+  demo_interactions:number
+  connection_attempted:number
+  connection_failed:number
+  connection_blocked:number
+  connection_completed_event:number
+  connection_confirmed:number
+  plan_views:number
+  plan_selected:number
+  checkout_started:number
+  checkout_created:number
+  payment_submitted:number
+  payment_failed:number
+  paid_businesses:number
+  commercially_activated:number
+}
+
 export type PlatformAnalyticsSummary = {
   generated_at:string
   period_days:number
@@ -148,6 +189,8 @@ export type PlatformAnalyticsSummary = {
   onboarding_issues:AnalyticsBreakdown
   quiz_questions:AnalyticsQuizQuestion[]
   ad_performance:AnalyticsAdPerformance[]
+  traffic_funnels?:AnalyticsTrafficFunnel[]
+  activation_progress?:AnalyticsActivationProgress
   lead_recovery:AnalyticsLeadRecovery[]
   meta_ads_status:'ready'|'awaiting_integration'
   meta_ads_note:string|null

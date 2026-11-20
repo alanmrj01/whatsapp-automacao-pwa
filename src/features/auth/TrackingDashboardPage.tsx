@@ -18,6 +18,8 @@ import { ApiError } from '../../lib/httpClient'
 import {
   getPlatformAnalytics,
   type AnalyticsAdPerformance,
+  type AnalyticsActivationProgress,
+  type AnalyticsTrafficFunnel,
   type AnalyticsBreakdown,
   type AnalyticsConversionBreakdown,
   type AnalyticsKpi,
@@ -100,10 +102,11 @@ function formatMetric(metric:AnalyticsKpi) {
 }
 
 function MetricCard({metric,compact=false}:{metric:AnalyticsKpi;compact?:boolean}) {
-  return <article className={`tracking-kpi${compact?' tracking-kpi--compact':''}${metric.status!=='ready'?' is-future':''}`}>
+  const status=metric.status==='ready'&&metric.value===null?'insufficient_data':metric.status
+  return <article className={`tracking-kpi${compact?' tracking-kpi--compact':''}${status!=='ready'?' is-future':''}`}>
     <div className="tracking-kpi__heading">
       <span>{labelWithMeaning(metric.label)}</span>
-      <i className={`tracking-status is-${metric.status}`}>{statusCopy[metric.status]}</i>
+      <i className={`tracking-status is-${status}`}>{statusCopy[status]}</i>
     </div>
     <strong>{formatMetric(metric)}</strong>
     {metric.note&&<small className="tracking-kpi__note">{metric.note}</small>}
@@ -124,7 +127,7 @@ function Funnel({summary}:{summary:PlatformAnalyticsSummary}) {
       <span className="tracking-card__hint">Pessoas/empresas únicas sempre que aplicável</span>
     </header>
     <div className="tracking-funnel__scroll">
-      <div className="tracking-funnel__steps">
+      <div className="tracking-funnel__steps" style={{gridTemplateColumns:`repeat(${Math.max(1,summary.funnel.length)},minmax(125px,1fr))`,minWidth:summary.funnel.length*125}}>
         {summary.funnel.map((step,index)=><article key={step.key} className={`tracking-funnel__step${step.status!=='ready'?' is-future':''}`}>
           <div className="tracking-funnel__label">{step.label}</div>
           <strong>{formatNumber(step.value)}</strong>
@@ -205,6 +208,122 @@ function ConversionTable({breakdown}:{breakdown:AnalyticsConversionBreakdown}) {
   </section>
 }
 
+
+const trafficStages = [
+  ['quiz_views','Quiz aberto'],
+  ['quiz_started','Quiz iniciado'],
+  ['quiz_completed','Quiz concluído'],
+  ['vsl_started','Vídeo iniciado'],
+  ['vsl_completed','Vídeo concluído'],
+  ['accounts','Contas'],
+  ['demo_entries','Demonstrações'],
+  ['checkout_started','Checkouts'],
+  ['subscriptions','Vendas'],
+  ['activations','Ativações comerciais'],
+] as const
+
+function TrafficFunnels({items}:{items?:AnalyticsTrafficFunnel[]}) {
+  return <section className="tracking-card tracking-diagnostic-panel">
+    <header className="tracking-card__header">
+      <div><span className="tracking-eyebrow"><Target size={15}/> ORIGENS</span><h2>Funil por origem</h2></div>
+    </header>
+    {items?.length?<div className="tracking-table-wrap tracking-table-wrap--wide">
+      <table>
+        <thead><tr><th>Etapa</th>{items.map(item=><th key={item.key}>{item.label}</th>)}</tr></thead>
+        <tbody>{trafficStages.map(([key,label])=><tr key={key}>
+          <td><strong>{label}</strong></td>
+          {items.map(item=><td key={item.key}>{formatNumber(item[key])}</td>)}
+        </tr>)}</tbody>
+      </table>
+    </div>:<EmptyBlock text="Separação por origem ainda indisponível."/>}
+    <p className="tracking-diagnostic-note">Contagens independentes por etapa. Tráfego sem atribuição não é considerado orgânico. Visitantes de diferentes origens podem coincidir.</p>
+  </section>
+}
+
+const activationGroups = [
+  {
+    label:'Conta e demonstração',
+    stages:[
+      ['accounts','Contas criadas'],
+      ['demo_entries','Demonstrações'],
+      ['demo_interactions','Interação na demonstração'],
+    ],
+  },
+  {
+    label:'Conexão do WhatsApp',
+    stages:[
+      ['connection_attempted','Tentaram conectar'],
+      ['connection_failed','Falhas registradas'],
+      ['connection_blocked','Bloqueios registrados'],
+      ['connection_completed_event','Evento de conclusão'],
+      ['connection_confirmed','Conexões registradas no banco'],
+    ],
+  },
+  {
+    label:'Oferta e checkout',
+    stages:[
+      ['plan_views','Planos exibidos'],
+      ['plan_selected','Planos selecionados'],
+      ['checkout_started','Checkouts iniciados'],
+      ['checkout_created','Cobranças criadas'],
+    ],
+  },
+  {
+    label:'Pagamento e ativação',
+    stages:[
+      ['payment_submitted','Pagamentos submetidos'],
+      ['payment_failed','Falhas de pagamento'],
+      ['paid_businesses','Empresas pagantes'],
+      ['commercially_activated','Ativação comercial'],
+    ],
+  },
+] as const
+
+function ActivationProgress({progress}:{progress?:AnalyticsActivationProgress}) {
+  return <section className="tracking-card tracking-diagnostic-panel">
+    <header className="tracking-card__header">
+      <div><span className="tracking-eyebrow"><ListChecks size={15}/> ATIVAÇÃO</span><h2>Etapas de ativação</h2></div>
+      <span className="tracking-card__hint">Empresas cadastradas no período</span>
+    </header>
+    {progress?<div className="tracking-activation-grid">
+      {activationGroups.map(group=><article key={group.label} className="tracking-activation-group">
+        <h3>{group.label}</h3>
+        {group.stages.map(([key,label])=><div key={key}>
+          <span>{label}</span>
+          <strong>{formatNumber(progress[key])}</strong>
+        </div>)}
+      </article>)}
+    </div>:<EmptyBlock text="Detalhamento de ativação ainda indisponível."/>}
+    <p className="tracking-diagnostic-note">Etapas independentes: uma empresa pode ter falhado e conectado depois. Ativação comercial não comprova atendimento realizado.</p>
+  </section>
+}
+
+function formatDateTime(value:string|null|undefined) {
+  if(!value)return '—'
+  const date=new Date(value)
+  return Number.isNaN(date.getTime())?'—':new Intl.DateTimeFormat('pt-BR',{
+    dateStyle:'short',timeStyle:'short',timeZone:'America/Sao_Paulo',
+  }).format(date)
+}
+
+const connectionEventLabels:Record<string,string> = {
+  whatsapp_connection_started:'Tentativa iniciada',
+  whatsapp_connection_failed:'Falha registrada',
+  whatsapp_connection_blocked:'Bloqueio registrado',
+  whatsapp_connection_completed:'Conclusão informada',
+}
+
+function LeadConnection({item}:{item:AnalyticsLeadRecovery}) {
+  if(item.whatsapp_connection_last_event===undefined)return <span>Não informado pela versão atual</span>
+  const event=item.whatsapp_connection_last_event
+  return <>
+    <strong>{event?connectionEventLabels[event]??'Evento registrado':'Sem tentativa registrada'}</strong>
+    {item.whatsapp_connection_last_event_at&&<small>Último evento: {formatDateTime(item.whatsapp_connection_last_event_at)}</small>}
+    {item.whatsapp_connection_started_at&&<small>Tentativa: {formatDateTime(item.whatsapp_connection_started_at)}</small>}
+    {item.whatsapp_connected_at&&<small>Conexão registrada: {formatDateTime(item.whatsapp_connected_at)}</small>}
+  </>
+}
+
 function AdPerformanceTable({items,metaStatus,metaNote}:{items:AnalyticsAdPerformance[];metaStatus:PlatformAnalyticsSummary['meta_ads_status'];metaNote:string|null}) {
   return <section className="tracking-card tracking-ad-performance">
     <header className="tracking-card__header">
@@ -214,16 +333,23 @@ function AdPerformanceTable({items,metaStatus,metaNote}:{items:AnalyticsAdPerfor
     {items.length?<div className="tracking-table-wrap tracking-table-wrap--wide">
       <table>
         <thead><tr>
-          <th>Anúncio</th><th>Gasto</th><th>{labelWithMeaning('CTR')}</th><th>Quiz</th><th>Contas</th><th>Vendas</th><th>Ativações</th><th>{labelWithMeaning('CAC')}</th><th>{labelWithMeaning('ROAS')}</th>
+          <th>Anúncio</th><th>Gasto</th><th>Cliques</th><th>{labelWithMeaning('CTR')}</th><th>Quiz aberto</th><th>Quiz iniciado</th><th>Quiz concluído</th><th>VSL iniciada</th><th>VSL concluída</th><th>Contas</th><th>Conversão em conta</th><th>Vendas</th><th>Ativações</th><th>Receita líquida</th><th>{labelWithMeaning('CAC')}</th><th>{labelWithMeaning('ROAS')}</th>
         </tr></thead>
         <tbody>{items.map(item=><tr key={item.ad_id}>
           <td><strong>{item.ad_name}</strong><small>{item.ad_id}</small></td>
           <td>{formatCurrency(item.spend_brl)}</td>
+          <td>{formatNumber(item.link_clicks)}</td>
           <td>{formatPercent(item.ctr)}</td>
           <td>{item.quiz_visitors}</td>
+          <td>{formatNumber(item.quiz_started??null)}</td>
+          <td>{item.quiz_completed}</td>
+          <td>{formatNumber(item.vsl_started??null)}</td>
+          <td>{formatNumber(item.vsl_completed??null)}</td>
           <td>{item.accounts}</td>
+          <td>{formatPercent(item.account_conversion_rate)}</td>
           <td>{item.subscriptions}</td>
           <td>{item.activations}</td>
+          <td>{formatCurrency(item.revenue_brl)}</td>
           <td>{formatCurrency(item.cac_brl)}</td>
           <td>{formatRatio(item.roas)}</td>
         </tr>)}</tbody>
@@ -252,7 +378,7 @@ function LeadRecoveryTable({items}:{items:AnalyticsLeadRecovery[]}) {
     {items.length?<div className="tracking-table-wrap tracking-table-wrap--wide">
       <table>
         <thead><tr>
-          <th>Lead</th><th>WhatsApp</th><th>Empresa</th><th>Última etapa</th><th>Última atividade</th><th>Status</th><th>Ação</th>
+          <th>Lead</th><th>WhatsApp</th><th>Empresa</th><th>Etapa comercial</th><th>Conexão do WhatsApp</th><th>Última atividade</th><th>Status</th><th>Ação</th>
         </tr></thead>
         <tbody>{items.map(item=>{
           const digits=item.whatsapp_e164.replace(/\D/g,'')
@@ -262,6 +388,7 @@ function LeadRecoveryTable({items}:{items:AnalyticsLeadRecovery[]}) {
             <td>{formatLeadWhatsApp(item.whatsapp_e164)}</td>
             <td>{item.business_name}</td>
             <td><strong>{item.stage_label}</strong>{item.angle&&<small>{item.angle.replaceAll('_',' ')}</small>}</td>
+            <td><LeadConnection item={item}/></td>
             <td>{new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short',timeZone:'America/Sao_Paulo'}).format(new Date(item.last_activity_at))}</td>
             <td><span className={`tracking-lead-status ${item.needs_follow_up?'is-followup':'is-customer'}`}>{item.needs_follow_up?'Recuperar':'Cliente'}</span></td>
             <td><a className="tracking-whatsapp-link" href={`https://wa.me/${digits}`} target="_blank" rel="noreferrer"><MessageCircle size={14}/> Abrir WhatsApp</a></td>
@@ -313,7 +440,7 @@ function TrendChart({series}:{series:AnalyticsSeriesPoint[]}) {
         {(Object.keys(seriesLabels) as TrendMetric[]).map(key=><button key={key} type="button" className={metric===key?'is-active':''} onClick={()=>setMetric(key)}>{seriesLabels[key]}</button>)}
       </div>
     </header>
-    <div className="tracking-trend__summary"><strong>{formatNumber(total)}</strong><span>{seriesLabels[metric]} no período</span></div>
+    <div className="tracking-trend__summary"><strong>{formatNumber(total)}</strong><span>{seriesLabels[metric]} · soma diária</span></div>
     <div className="tracking-trend__chart" role="img" aria-label={`Evolução de ${seriesLabels[metric]}`}>
       <svg viewBox="0 0 100 100" preserveAspectRatio="none">
         <line x1="0" x2="100" y1="25" y2="25"/>
@@ -355,7 +482,7 @@ export function TrackingDashboardPage() {
 
   const readyByKey=useMemo(()=>new Map(summary?.kpis.map(metric=>[metric.key,metric])??[]),[summary])
   const headlineKeys=['ad_spend','cac','roas','net_revenue','subscriptions','accounts','activations','mrr']
-  const acquisitionKeys=['impressions','link_clicks','ctr','cpc','cpm','quiz_views','quiz_completion_rate','vsl_completion_rate']
+  const acquisitionKeys=['impressions','link_clicks','ctr','cpc','cpm','quiz_views','quiz_views_all','quiz_completion_rate','vsl_completion_rate']
   const internalKeys=['signup_cta','signup_conversion_rate','demo_entries','plan_views','checkout_started','trial_to_paid','activation_rate','refunds']
   const headline=headlineKeys.map(key=>readyByKey.get(key)).filter((item):item is AnalyticsKpi=>!!item)
   const acquisition=acquisitionKeys.map(key=>readyByKey.get(key)).filter((item):item is AnalyticsKpi=>!!item)
@@ -397,7 +524,16 @@ export function TrackingDashboardPage() {
       {loading&&!summary?<div className="tracking-loading">Carregando indicadores…</div>:summary&&<>
         <section className="tracking-headline-grid">{headline.map(metric=><MetricCard key={metric.key} metric={metric}/>)}</section>
 
+        <section className="tracking-diagnostic-panel tracking-period-note">
+          <strong>Período efetivo: {formatDateTime(summary.period_start)} até {formatDateTime(summary.period_end)}</strong>
+          <span>Horário de Brasília. A Meta reporta por dia e pode incluir horas anteriores ao início do período.</span>
+          <span>VSL = Video Sales Letter / vídeo de vendas. Taxas indisponíveis não significam conversão zero.</span>
+          {!summary.activation_progress&&<span>Versão anterior do backend: os indicadores podem utilizar a metodologia anterior.</span>}
+        </section>
+
         <Funnel summary={summary}/>
+
+        <TrafficFunnels items={summary.traffic_funnels}/>
 
         <section className="tracking-section">
           <header className="tracking-section__header">
@@ -410,6 +546,8 @@ export function TrackingDashboardPage() {
         <AdPerformanceTable items={summary.ad_performance} metaStatus={summary.meta_ads_status} metaNote={summary.meta_ads_note}/>
 
         <LeadRecoveryTable items={summary.lead_recovery}/>
+
+        <ActivationProgress progress={summary.activation_progress}/>
 
         <section className="tracking-dual-grid">
           <ConversionTable breakdown={summary.conversions_by_angle}/>
@@ -449,7 +587,7 @@ export function TrackingDashboardPage() {
 
         <footer className="tracking-footer">
           <span>Atualizado em {new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short',timeZone:'America/Sao_Paulo'}).format(new Date(summary.generated_at))}</span>
-          <span>Ativação = pagamento confirmado + WhatsApp conectado. Receita líquida = recebimentos − reembolsos confirmados.</span>
+          <span>Ativação = pagamento confirmado + WhatsApp conectado (registro histórico). Não comprova atendimento realizado. Receita líquida = recebimentos − reembolsos confirmados.</span>
         </footer>
       </>}
     </main>

@@ -91,11 +91,19 @@ test('signup captures responsible name and WhatsApp without adding PII to tracki
   const page = read('src/features/auth/SignupPage.tsx')
   const client = read('src/lib/httpClient.ts')
 
+  const gate = read('src/features/public/QuizLeadContactGate.tsx')
+  const quiz = read('src/features/public/QuizFunnelPage.tsx')
+
   assert.match(page,/signup-lead-name/)
-  assert.match(page,/signup-lead-whatsapp/)
   assert.match(page,/Seu nome/)
-  assert.match(page,/Seu WhatsApp/)
-  assert.match(page,/O WhatsApp da empresa será conectado depois/)
+  assert.doesNotMatch(page,/id="signup-lead-whatsapp"/)
+  assert.match(page,/<QuizLeadContactGate/)
+  assert.match(page,/validLeadWhatsApp\(leadWhatsApp\)/)
+  assert.match(page,/navigationPhone/)
+  assert.match(quiz,/state=\{\{ leadWhatsApp: quizWhatsApp \}\}/)
+  assert.match(gate,/Número do WhatsApp com DDD/)
+  assert.match(gate,/validLeadWhatsApp\(phone\)/)
+  assert.match(gate,/onConfirm\(phone\.trim\(\)\)/)
   assert.match(client,/lead_name: leadName/)
   assert.match(client,/lead_whatsapp: leadWhatsApp/)
 
@@ -114,4 +122,29 @@ test('tracking dashboard uses lightweight local charts without a chart dependenc
   assert.match(styles,/tracking-table-wrap/)
   assert.match(styles,/tracking-quiz__grid/)
   assert.doesNotMatch(packageJson,/(recharts|chart\.js|highcharts|apexcharts)/)
+})
+
+
+test('dashboard exposes separated traffic and activation without assuming missing data is zero', () => {
+  const page = read('src/features/auth/TrackingDashboardPage.tsx')
+  const api = read('src/features/auth/platformAnalytics.ts')
+  assert.match(api,/traffic_funnels\?:AnalyticsTrafficFunnel\[\]/)
+  assert.match(api,/activation_progress\?:AnalyticsActivationProgress/)
+  assert.ok(page.includes('Funil por origem'))
+  assert.ok(page.includes('Etapas de ativação'))
+  assert.ok(page.includes('summary.traffic_funnels'))
+  assert.ok(page.includes('summary.activation_progress'))
+  assert.ok(page.includes('summary.period_start'))
+  assert.ok(page.includes('summary.period_end'))
+})
+
+test('dashboard shows individual ad stages and independent connection history', () => {
+  const page = read('src/features/auth/TrackingDashboardPage.tsx')
+  for (const field of ['quiz_started','quiz_completed','vsl_started','vsl_completed',
+    'whatsapp_connection_last_event','whatsapp_connection_started_at',
+    'whatsapp_connection_last_event_at','whatsapp_connected_at']) {
+    assert.ok(page.includes('item.' + field),field)
+  }
+  assert.ok(page.includes('Não informado pela versão atual'))
+  assert.ok(page.includes('Não comprova atendimento realizado'))
 })
