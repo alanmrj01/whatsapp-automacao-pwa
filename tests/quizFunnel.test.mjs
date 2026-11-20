@@ -129,7 +129,7 @@ test('quiz requires a valid WhatsApp before revealing the profile, without sendi
   assert.match(quiz, /if \(!result \|\| !quizWhatsApp\) return/)
   assert.match(quiz, /state=\{\{ leadWhatsApp: quizWhatsApp, leadName: quizLeadName \}\}/)
   assert.match(gate, /Veja seu Resultado/)
-  assert.match(gate, /preencha o campo para ver seu resultado/)
+  assert.match(gate, /Preencha os campos para ver seu resultado/)
   assert.match(gate, /Ver Resultado/)
   assert.match(gate, /validLeadWhatsApp\(phone\)/)
   assert.match(validation, /normalized\.startsWith\('55'\)/)
@@ -137,7 +137,9 @@ test('quiz requires a valid WhatsApp before revealing the profile, without sendi
   assert.match(signup, /<QuizLeadContactGate/)
   assert.match(signup, /auth\.signup\([\s\S]*leadWhatsApp\.trim\(\)/)
   assert.match(quiz, /quiz_contact_provided/)
-  assert.doesNotMatch(quiz, /lead_whatsapp:|whatsapp_e164:/)
+  assert.match(quiz, /lead_whatsapp: phone/)
+  assert.match(quiz, /contact_permission: true/)
+  assert.match(quiz, /if \\(!saved\\.accepted\\) throw/)
 })
 
 test('result has bounded animated stars, keeps only the dynamic title and banner, and autoplay uses actual Vimeo play', () => {
