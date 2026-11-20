@@ -91,11 +91,19 @@ test('signup captures responsible name and WhatsApp without adding PII to tracki
   const page = read('src/features/auth/SignupPage.tsx')
   const client = read('src/lib/httpClient.ts')
 
+  const gate = read('src/features/public/QuizLeadContactGate.tsx')
+  const quiz = read('src/features/public/QuizFunnelPage.tsx')
+
   assert.match(page,/signup-lead-name/)
-  assert.match(page,/signup-lead-whatsapp/)
   assert.match(page,/Seu nome/)
-  assert.match(page,/Seu WhatsApp/)
-  assert.match(page,/O WhatsApp da empresa será conectado depois/)
+  assert.doesNotMatch(page,/id="signup-lead-whatsapp"/)
+  assert.match(page,/<QuizLeadContactGate/)
+  assert.match(page,/validLeadWhatsApp\(leadWhatsApp\)/)
+  assert.match(page,/navigationPhone/)
+  assert.match(quiz,/state=\{\{ leadWhatsApp: quizWhatsApp \}\}/)
+  assert.match(gate,/Número do WhatsApp com DDD/)
+  assert.match(gate,/validLeadWhatsApp\(phone\)/)
+  assert.match(gate,/onConfirm\(phone\.trim\(\)\)/)
   assert.match(client,/lead_name: leadName/)
   assert.match(client,/lead_whatsapp: leadWhatsApp/)
 
