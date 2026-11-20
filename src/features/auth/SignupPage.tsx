@@ -276,7 +276,7 @@ export function SignupPage() {
             setLeadWhatsApp(phone)
             setEditingWhatsApp(false)
             resetAttempt()
-          }
+          }}
         />
       )}
 
