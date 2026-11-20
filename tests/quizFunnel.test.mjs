@@ -139,7 +139,7 @@ test('quiz requires a valid WhatsApp before revealing the profile, without sendi
   assert.match(quiz, /quiz_contact_provided/)
   assert.match(quiz, /lead_whatsapp: phone/)
   assert.match(quiz, /contact_permission: true/)
-  assert.match(quiz, /if \\(!saved\\.accepted\\) throw/)
+  assert.match(quiz, /if \(!saved\.accepted\) throw/)
 })
 
 test('result has bounded animated stars, keeps only the dynamic title and banner, and autoplay uses actual Vimeo play', () => {
