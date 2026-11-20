@@ -100,10 +100,10 @@ test('signup captures responsible name and WhatsApp without adding PII to tracki
   assert.match(page,/<QuizLeadContactGate/)
   assert.match(page,/validLeadWhatsApp\(leadWhatsApp\)/)
   assert.match(page,/navigationPhone/)
-  assert.match(quiz,/state=\{\{ leadWhatsApp: quizWhatsApp \}\}/)
+  assert.match(quiz,/state=\{\{ leadWhatsApp: quizWhatsApp, leadName: quizLeadName \}\}/)
   assert.match(gate,/Número do WhatsApp com DDD/)
   assert.match(gate,/validLeadWhatsApp\(phone\)/)
-  assert.match(gate,/onConfirm\(phone\.trim\(\)\)/)
+  assert.match(gate,/onConfirm\(\{ name: name\.trim\(\), phone: phone\.trim\(\) \}\)/)
   assert.match(client,/lead_name: leadName/)
   assert.match(client,/lead_whatsapp: leadWhatsApp/)
 
@@ -147,4 +147,16 @@ test('dashboard shows individual ad stages and independent connection history', 
   }
   assert.ok(page.includes('Não informado pela versão atual'))
   assert.ok(page.includes('Não comprova atendimento realizado'))
+})
+
+
+test('dashboard keeps quiz-only contacts in a separate list and preserves account recovery list', () => {
+  const page=read('src/features/auth/TrackingDashboardPage.tsx')
+  const api=read('src/features/auth/platformAnalytics.ts')
+  assert.match(api,/quiz_leads_only\?:AnalyticsQuizLead\[\]/)
+  assert.match(page,/<QuizOnlyLeadsTable items=\{summary\.quiz_leads_only\}/)
+  assert.match(page,/Contatos que criaram conta/)
+  assert.match(page,/Concluíram o quiz, mas não criaram conta/)
+  assert.match(page,/https:\/\/wa\.me\//)
+  assert.match(page,/items===undefined/)
 })

@@ -103,6 +103,15 @@ export type AnalyticsAdPerformance = {
   roas:number|null
 }
 
+export type AnalyticsQuizLead = {
+  id:string
+  lead_name:string
+  whatsapp_e164:string
+  quiz_profile:string
+  ad_id:string|null
+  created_at:string
+}
+
 export type AnalyticsLeadRecovery = {
   business_id:string
   lead_name:string
@@ -192,6 +201,7 @@ export type PlatformAnalyticsSummary = {
   traffic_funnels?:AnalyticsTrafficFunnel[]
   activation_progress?:AnalyticsActivationProgress
   lead_recovery:AnalyticsLeadRecovery[]
+  quiz_leads_only?:AnalyticsQuizLead[]
   meta_ads_status:'ready'|'awaiting_integration'
   meta_ads_note:string|null
   series:AnalyticsSeriesPoint[]

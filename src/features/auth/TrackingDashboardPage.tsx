@@ -24,6 +24,7 @@ import {
   type AnalyticsConversionBreakdown,
   type AnalyticsKpi,
   type AnalyticsLeadRecovery,
+  type AnalyticsQuizLead,
   type AnalyticsQuizQuestion,
   type AnalyticsSeriesPoint,
   type AnalyticsStatus,
@@ -371,7 +372,7 @@ function LeadRecoveryTable({items}:{items:AnalyticsLeadRecovery[]}) {
     <header className="tracking-card__header">
       <div>
         <span className="tracking-eyebrow"><MessageCircle size={15}/> RECUPERAÇÃO</span>
-        <h2>Leads e ponto de abandono</h2>
+        <h2>Contatos que criaram conta</h2>
       </div>
       <span className="tracking-card__hint">Oportunidades sem compra aparecem primeiro</span>
     </header>
@@ -396,6 +397,47 @@ function LeadRecoveryTable({items}:{items:AnalyticsLeadRecovery[]}) {
         })}</tbody>
       </table>
     </div>:<EmptyBlock text="Novos cadastros com nome e WhatsApp aparecerão aqui automaticamente."/>}
+  </section>
+}
+
+
+function QuizOnlyLeadsTable({items}:{items?:AnalyticsQuizLead[]}) {
+  const profileLabels:Record<string,string>={
+    service_first:'Serviço em primeiro lugar',
+    multitask:'Multitarefa',
+    at_risk:'Atendimento no limite',
+  }
+  return <section className="tracking-card tracking-leads">
+    <header className="tracking-card__header">
+      <div>
+        <span className="tracking-eyebrow"><MessageCircle size={15}/> CONTATOS DO QUIZ</span>
+        <h2>Concluíram o quiz, mas não criaram conta</h2>
+      </div>
+      <span className="tracking-card__hint">Lista exclusiva: contatos cadastrados aparecem acima</span>
+    </header>
+    {items===undefined
+      ? <EmptyBlock text="Contatos do quiz ainda indisponíveis nesta versão do backend."/>
+      : items.length
+        ? <div className="tracking-table-wrap tracking-table-wrap--wide">
+          <table>
+            <thead><tr>
+              <th>Lead</th><th>WhatsApp</th><th>Perfil do quiz</th><th>Anúncio</th><th>Resultado liberado em</th><th>Ação</th>
+            </tr></thead>
+            <tbody>{items.map(item => {
+              const digits=item.whatsapp_e164.replace(/\D/g,'')
+              return <tr key={item.id}>
+                <td><strong>{item.lead_name}</strong></td>
+                <td>{formatLeadWhatsApp(item.whatsapp_e164)}</td>
+                <td>{profileLabels[item.quiz_profile]??item.quiz_profile}</td>
+                <td>{item.ad_id??'Não identificado'}</td>
+                <td>{formatDateTime(item.created_at)}</td>
+                <td><a className="tracking-whatsapp-link" href={`https://wa.me/${digits}`} target="_blank" rel="noreferrer"><MessageCircle size={14}/> Abrir WhatsApp</a></td>
+              </tr>
+            })}</tbody>
+          </table>
+          <p className="tracking-diagnostic-note">Telefones informados pelo visitante; o número ainda não foi verificado por mensagem.</p>
+        </div>
+        : <EmptyBlock text="Nenhum contato exclusivo do quiz no período. Quando criar conta, ele passará para a lista de cadastrados."/>}
   </section>
 }
 
@@ -546,6 +588,8 @@ export function TrackingDashboardPage() {
         <AdPerformanceTable items={summary.ad_performance} metaStatus={summary.meta_ads_status} metaNote={summary.meta_ads_note}/>
 
         <LeadRecoveryTable items={summary.lead_recovery}/>
+
+        <QuizOnlyLeadsTable items={summary.quiz_leads_only}/>
 
         <ActivationProgress progress={summary.activation_progress}/>
 

@@ -586,6 +586,30 @@
   outline-offset: 2px;
 }
 
+.quiz-lead-dialog__permission {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  color: #3b4e67;
+  font-size: .81rem;
+  line-height: 1.4;
+}
+
+.quiz-lead-dialog__permission input {
+  flex: 0 0 auto;
+  width: 17px;
+  height: 17px;
+  margin-top: 1px;
+  accent-color: #237bdb;
+}
+
+.quiz-lead-dialog__cta:disabled {
+  opacity: .75;
+  cursor: progress;
+  animation: none;
+  transform: none;
+}
+
 .quiz-lead-dialog__error {
   margin: 0;
   color: #ad253c;
