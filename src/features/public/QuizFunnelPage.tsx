@@ -2,6 +2,7 @@ import { ArrowLeft, ArrowRight, Play, Star } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { BrandMark } from '../../components/BrandMark'
+import { api } from '../../lib/api'
 import { QuizLeadContactGate } from './QuizLeadContactGate'
 import { trackEvent, trackEventOnce } from '../../lib/tracking'
 import { homeFor } from '../auth/types'
@@ -228,7 +229,7 @@ function QuizDemoVideo({ profile }: { profile: ProfileId }) {
     let disposed = false
     let player: VimeoPlayerInstance | null = null
     let autoplayTimer: number | null = null
-    const earliestAutoplayAt = performance.now() + 2500
+    const earliestAutoplayAt = performance.now() + 3500
 
     const onPlay = (data: VimeoPlaybackData) => {
       if (started.current) return
@@ -332,6 +333,7 @@ export function QuizFunnelPage() {
   const [selected, setSelected] = useState<AnswerId | null>(null)
   const [result, setResult] = useState<QuizProfile | null>(null)
   const [quizWhatsApp, setQuizWhatsApp] = useState('')
+  const [quizLeadName, setQuizLeadName] = useState('')
   const advanceTimer = useRef<number | null>(null)
 
   const question = questions[currentIndex]
@@ -436,7 +438,18 @@ export function QuizFunnelPage() {
           </header>
           <p className="quiz-gate-complete">Quiz concluído.</p>
         </section>
-        <QuizLeadContactGate onConfirm={phone => {
+        <QuizLeadContactGate onConfirm={async ({ name, phone }) => {
+          const saved = await api.optionalAuthRequest<{accepted:boolean}>('/marketing/quiz-leads', {
+            method: 'POST',
+            body: JSON.stringify({
+              lead_name: name,
+              lead_whatsapp: phone,
+              quiz_profile: result.id,
+              contact_permission: true,
+            }),
+          })
+          if (!saved.accepted) throw new Error('Contact was not saved')
+          setQuizLeadName(name)
           setQuizWhatsApp(phone)
           void trackEvent('quiz_contact_provided', {
             funnel_stage: 'quiz_contact_provided',
@@ -481,7 +494,7 @@ export function QuizFunnelPage() {
             <Link
               className="quiz-primary-cta"
               to={signupUrl}
-              state={{ leadWhatsApp: quizWhatsApp }}
+              state={{ leadWhatsApp: quizWhatsApp, leadName: quizLeadName }}
               data-track-action="quiz_signup_cta"
               onClick={() => trackEvent('quiz_signup_cta_clicked', {
                 funnel_stage: 'signup_cta',

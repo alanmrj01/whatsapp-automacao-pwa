@@ -29,9 +29,15 @@ export function SignupPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const initialDraft = useRef(readSessionDraft<SignupDraft>(SIGNUP_DRAFT_KEY)).current
-  const navigationPhone = (location.state as { leadWhatsApp?: unknown } | null)?.leadWhatsApp
+  const navigationContact = location.state as { leadWhatsApp?: unknown; leadName?: unknown } | null
+  const navigationPhone = navigationContact?.leadWhatsApp
+  const navigationName = navigationContact?.leadName
   const [businessName, setBusinessName] = useState(initialDraft?.businessName??'')
-  const [leadName, setLeadName] = useState(initialDraft?.leadName??'')
+  const [leadName, setLeadName] = useState(
+    typeof navigationName === 'string' && navigationName.trim().length >= 2
+      ? navigationName.trim()
+      : initialDraft?.leadName ?? '',
+  )
   const [leadWhatsApp, setLeadWhatsApp] = useState(
     typeof navigationPhone === 'string' && validLeadWhatsApp(navigationPhone)
       ? navigationPhone
@@ -265,12 +271,12 @@ export function SignupPage() {
         <QuizLeadContactGate
           mode="signup"
           initialValue={leadWhatsApp}
-          onConfirm={phone => {
+          onConfirm={({ phone }) => {
             markStarted()
             setLeadWhatsApp(phone)
             setEditingWhatsApp(false)
             resetAttempt()
-          }}
+          }
         />
       )}
 
