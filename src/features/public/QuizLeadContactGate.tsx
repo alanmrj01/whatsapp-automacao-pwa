@@ -14,7 +14,6 @@ export function QuizLeadContactGate({ mode = 'quiz', initialValue = '', onConfir
   const dialogRef = useRef<HTMLDialogElement>(null)
   const [name, setName] = useState('')
   const [phone, setPhone] = useState(initialValue)
-  const [permission, setPermission] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -34,10 +33,6 @@ export function QuizLeadContactGate({ mode = 'quiz', initialValue = '', onConfir
     }
     if (!validLeadWhatsApp(phone)) {
       setError('Informe um WhatsApp brasileiro válido com DDD.')
-      return
-    }
-    if (mode === 'quiz' && !permission) {
-      setError('Confirme a autorização de contato para continuar.')
       return
     }
     setError('')
@@ -98,26 +93,19 @@ export function QuizLeadContactGate({ mode = 'quiz', initialValue = '', onConfir
           aria-describedby={error ? 'quiz-lead-dialog-error' : 'quiz-lead-dialog-hint'}
         />
         {mode === 'quiz' && (
-          <label className="quiz-lead-dialog__permission">
-            <input
-              type="checkbox"
-              required
-              checked={permission}
-              disabled={busy}
-              onChange={event => setPermission(event.target.checked)}
-            />
-            <span>Autorizo a Alovia a entrar em contato pelo WhatsApp sobre meu resultado.</span>
-          </label>
+          <small className="quiz-lead-dialog__hint" id="quiz-lead-dialog-hint">
+            Ao clicar em Ver Resultado, você concorda em receber contato da Alovia pelo WhatsApp sobre seu resultado.
+          </small>
         )}
         {error && <p className="quiz-lead-dialog__error" id="quiz-lead-dialog-error" role="alert">{error}</p>}
         <button className="quiz-lead-dialog__cta" type="submit" disabled={busy} aria-busy={busy}>
           {busy ? 'Salvando…' : mode === 'quiz' ? 'Ver Resultado' : 'Continuar cadastro'}
         </button>
-        <small className="quiz-lead-dialog__hint" id="quiz-lead-dialog-hint">
-          {mode === 'quiz'
-            ? 'Nome e WhatsApp serão registrados pela Alovia para acompanhar sua experiência. O número não será exibido publicamente.'
-            : 'O WhatsApp da empresa será conectado depois. Este é apenas seu contato.'}
-        </small>
+        {mode === 'signup' && (
+          <small className="quiz-lead-dialog__hint" id="quiz-lead-dialog-hint">
+            O WhatsApp da empresa será conectado depois. Este é apenas seu contato.
+          </small>
+        )}
       </form>
     </dialog>
   )
