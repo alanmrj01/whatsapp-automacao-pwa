@@ -1,7 +1,8 @@
-import { ArrowLeft, ArrowRight, CheckCircle2, Play } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Play, Star } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { BrandMark } from '../../components/BrandMark'
+import { QuizLeadContactGate } from './QuizLeadContactGate'
 import { trackEvent, trackEventOnce } from '../../lib/tracking'
 import { homeFor } from '../auth/types'
 import { useAuth } from '../auth/useAuth'
@@ -114,6 +115,12 @@ const profiles: Record<ProfileId, QuizProfile> = {
   },
 }
 
+const profileStars: Record<ProfileId, 2 | 3> = {
+  service_first: 3,
+  multitask: 2,
+  at_risk: 2,
+}
+
 const dimensionByAnswer: Record<AnswerId, ProfileId> = {
   A: 'service_first',
   B: 'multitask',
@@ -146,6 +153,8 @@ type VimeoPlaybackData = { seconds: number; duration: number; percent: number }
 type VimeoPlayerInstance = {
   on: (event: 'play' | 'timeupdate' | 'ended', callback: (data: VimeoPlaybackData) => void) => void
   off: (event: 'play' | 'timeupdate' | 'ended', callback: (data: VimeoPlaybackData) => void) => void
+  play: () => Promise<void>
+  setMuted: (muted: boolean) => Promise<void>
 }
 type VimeoConstructor = new (element: HTMLIFrameElement) => VimeoPlayerInstance
 type VimeoWindow = Window & { Vimeo?: { Player: VimeoConstructor } }
@@ -218,6 +227,8 @@ function QuizDemoVideo({ profile }: { profile: ProfileId }) {
 
     let disposed = false
     let player: VimeoPlayerInstance | null = null
+    let autoplayTimer: number | null = null
+    const earliestAutoplayAt = performance.now() + 2500
 
     const onPlay = (data: VimeoPlaybackData) => {
       if (started.current) return
@@ -262,10 +273,20 @@ function QuizDemoVideo({ profile }: { profile: ProfileId }) {
       player.on('play', onPlay)
       player.on('timeupdate', onTimeupdate)
       player.on('ended', onEnded)
+      autoplayTimer = window.setTimeout(() => {
+        if (disposed || !player) return
+        void player.play().catch(() => {
+          if (disposed || !player) return
+          void player.setMuted(true).then(() => {
+            if (!disposed && player) return player.play()
+          }).catch(() => undefined)
+        })
+      }, Math.max(0, earliestAutoplayAt - performance.now()))
     }).catch(() => undefined)
 
     return () => {
       disposed = true
+      if (autoplayTimer !== null) window.clearTimeout(autoplayTimer)
       if (!player) return
       player.off('play', onPlay)
       player.off('timeupdate', onTimeupdate)
@@ -310,6 +331,7 @@ export function QuizFunnelPage() {
   const [answers, setAnswers] = useState<Partial<Record<QuestionId, AnswerId>>>({})
   const [selected, setSelected] = useState<AnswerId | null>(null)
   const [result, setResult] = useState<QuizProfile | null>(null)
+  const [quizWhatsApp, setQuizWhatsApp] = useState('')
   const advanceTimer = useRef<number | null>(null)
 
   const question = questions[currentIndex]
@@ -337,12 +359,12 @@ export function QuizFunnelPage() {
   }, [currentIndex, question, result])
 
   useEffect(() => {
-    if (!result) return
+    if (!result || !quizWhatsApp) return
     trackEventOnce(`quiz_result_viewed:${result.id}`, 'quiz_result_viewed', {
       funnel_stage: 'quiz_result',
       result_profile: result.id,
     }, { surface: 'quiz' })
-  }, [result])
+  }, [result, quizWhatsApp])
 
   useEffect(() => () => {
     if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current)
@@ -404,6 +426,27 @@ export function QuizFunnelPage() {
     setCurrentIndex(index => Math.max(0, index - 1))
   }
 
+  if (result && !quizWhatsApp) {
+    return (
+      <main className="quiz-page">
+        <section className="quiz-shell">
+          <header className="quiz-brand">
+            <span className="quiz-brand__mark"><BrandMark /></span>
+            <span><strong>Alovia</strong></span>
+          </header>
+          <p className="quiz-gate-complete">Quiz concluído.</p>
+        </section>
+        <QuizLeadContactGate onConfirm={phone => {
+          setQuizWhatsApp(phone)
+          void trackEvent('quiz_contact_provided', {
+            funnel_stage: 'quiz_contact_provided',
+            result_profile: result.id,
+          }, { surface: 'quiz' })
+        }} />
+      </main>
+    )
+  }
+
   if (result) {
     return (
       <main className="quiz-page quiz-page--result">
@@ -414,12 +457,15 @@ export function QuizFunnelPage() {
           </header>
 
           <section className="quiz-result" aria-live="polite">
-            <span className="quiz-result__check"><CheckCircle2 /></span>
-            <span className="quiz-kicker">Seu perfil</span>
-            <h1>{result.title}</h1>
-            <div className="quiz-result__body">
-              {result.body.map(paragraph => <p key={paragraph}>{paragraph}</p>)}
+            <div className="quiz-result__identity">
+              <span className="quiz-kicker">Seu perfil</span>
+              <span className="quiz-result__stars" role="img" aria-label={`${profileStars[result.id]} de 3 estrelas`}>
+                {Array.from({ length: profileStars[result.id] }, (_, index) => (
+                  <Star key={index} className="quiz-result__star" size={26} style={{ animationDelay: `${index * 140}ms` }} />
+                ))}
+              </span>
             </div>
+            <h1>{result.title}</h1>
             <p className="quiz-result__nudge">
               Você precisa ver isso funcionando. Assista ao vídeo abaixo agora e veja como a Alovia atende seus clientes enquanto você continua no serviço.
             </p>
@@ -435,6 +481,7 @@ export function QuizFunnelPage() {
             <Link
               className="quiz-primary-cta"
               to={signupUrl}
+              state={{ leadWhatsApp: quizWhatsApp }}
               data-track-action="quiz_signup_cta"
               onClick={() => trackEvent('quiz_signup_cta_clicked', {
                 funnel_stage: 'signup_cta',
@@ -484,7 +531,7 @@ export function QuizFunnelPage() {
         </header>
 
         <section className="quiz-hero">
-          <h1>Refrigerista</h1>
+          <h1>Técnico Climatização</h1>
           <p className="quiz-hero__subtitle">Atendimento automático pelo WhatsApp</p>
           <p className="quiz-hero__support">Descubra como o atendimento está impactando sua rotina hoje.</p>
         </section>

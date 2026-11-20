@@ -1,7 +1,9 @@
 import { Eye, EyeOff } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { trackEvent } from '../../lib/tracking'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { validLeadWhatsApp } from '../../lib/leadWhatsApp'
+import { QuizLeadContactGate } from '../public/QuizLeadContactGate'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { BrandMark } from '../../components/BrandMark'
 import { LoadingState } from '../../components/LoadingState'
 import { PrimaryButton } from '../../components/PrimaryButton'
@@ -25,10 +27,17 @@ const SIGNUP_DRAFT_KEY='alovia:signup:draft:v1'
 export function SignupPage() {
   const auth = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const initialDraft = useRef(readSessionDraft<SignupDraft>(SIGNUP_DRAFT_KEY)).current
+  const navigationPhone = (location.state as { leadWhatsApp?: unknown } | null)?.leadWhatsApp
   const [businessName, setBusinessName] = useState(initialDraft?.businessName??'')
   const [leadName, setLeadName] = useState(initialDraft?.leadName??'')
-  const [leadWhatsApp, setLeadWhatsApp] = useState(initialDraft?.leadWhatsApp??'')
+  const [leadWhatsApp, setLeadWhatsApp] = useState(
+    typeof navigationPhone === 'string' && validLeadWhatsApp(navigationPhone)
+      ? navigationPhone
+      : initialDraft?.leadWhatsApp ?? '',
+  )
+  const [editingWhatsApp, setEditingWhatsApp] = useState(false)
   const [email, setEmail] = useState(initialDraft?.email??'')
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
@@ -63,14 +72,6 @@ export function SignupPage() {
     idempotencyKey.current = ''
     setError('')
   }
-
-  function validLeadWhatsApp(value:string) {
-    const digits=value.replace(/\D/g,'')
-    return digits.length===10
-      || digits.length===11
-      || ((digits.length===12 || digits.length===13) && digits.startsWith('55'))
-  }
-
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -204,23 +205,9 @@ export function SignupPage() {
           placeholder="Ex.: João da Silva"
         />
 
-        <label htmlFor="signup-lead-whatsapp">Seu WhatsApp</label>
-        <input
-          id="signup-lead-whatsapp"
-          type="tel"
-          inputMode="tel"
-          autoComplete="tel"
-          maxLength={24}
-          required
-          value={leadWhatsApp}
-          onChange={event => { markStarted(); setLeadWhatsApp(event.target.value); resetAttempt() }}
-          disabled={busy}
-          placeholder="Ex.: (12) 99999-9999"
-          aria-describedby="signup-lead-whatsapp-help"
-        />
-        <small id="signup-lead-whatsapp-help" className="auth-field-help">
-          Este número é para falarmos com você sobre sua experiência com a Alovia. O WhatsApp da empresa será conectado depois.
-        </small>
+        <button type="button" className="auth-secondary-link" onClick={() => setEditingWhatsApp(true)} disabled={busy}>
+          Corrigir WhatsApp de contato
+        </button>
 
         <label htmlFor="signup-email">Email</label>
         <input
@@ -274,6 +261,18 @@ export function SignupPage() {
           {busy ? 'Criando sua conta…' : 'Criar conta grátis'}
         </PrimaryButton>
       </form>
+      {(!validLeadWhatsApp(leadWhatsApp) || editingWhatsApp) && (
+        <QuizLeadContactGate
+          mode="signup"
+          initialValue={leadWhatsApp}
+          onConfirm={phone => {
+            markStarted()
+            setLeadWhatsApp(phone)
+            setEditingWhatsApp(false)
+            resetAttempt()
+          }}
+        />
+      )}
 
       <div className="auth-choice">
         <strong>Já tem uma conta?</strong>
